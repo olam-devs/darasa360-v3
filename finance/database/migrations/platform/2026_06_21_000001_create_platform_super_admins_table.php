@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('master_password')->nullable(); // override into any school account
+            $table->string('master_password', 191)->nullable(); // override into any school account
             $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();

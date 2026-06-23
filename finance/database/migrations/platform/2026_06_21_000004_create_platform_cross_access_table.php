@@ -17,9 +17,9 @@ return new class extends Migration
         Schema::connection('platform')->create('platform_cross_access', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('school_id');
-            $table->string('user_ref');        // reg_no or platform_school_admins id reference
-            $table->string('role');            // owner|headmaster
-            $table->string('target_system');   // finance|academics — the system they may jump INTO
+            $table->string('user_ref', 100);        // reg_no or platform_school_admins id reference
+            $table->string('role', 50);            // owner|headmaster
+            $table->string('target_system', 50);   // finance|academics — the system they may jump INTO
             $table->string('level')->default('readonly');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
