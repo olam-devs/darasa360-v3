@@ -50,15 +50,49 @@ Manual checks to do before opening a sandbox PR:
 
 ## Checks Before Merging `sandbox` → `main`
 
-- [ ] CI passes green on the sandbox branch
-- [ ] Smoke-test on sandbox server — log in as super-admin, accountant, headmaster, parent
-- [ ] Cross-system handoff tested (Finance ↔ Academics jump button works)
-- [ ] CSV student import tested with real data on sandbox
-- [ ] No `APP_DEBUG=true` in production `.env`
-- [ ] `php artisan config:cache` and `php artisan route:cache` run after deploy
-- [ ] Platform migrations confirmed to run cleanly (`--path=database/migrations/platform`)
-- [ ] One school fully provisioned on sandbox: classes synced, students synced to both systems
-- [ ] Get sign-off from Jackson before merging
+### Automated (CI must be green)
+- [ ] CI passes green on the sandbox branch — PHP syntax, route:list, composer validate
+
+### Finance portal smoke-tests
+- [ ] **Super-admin** — log in, create/toggle a school, view platform student registry
+- [ ] **Accountant** — log in, open student list, record a payment, generate invoice PDF
+- [ ] **Headmaster** (Finance read-only) — log in, view ledgers, download a report
+- [ ] **Parent** — log in, view child fees and invoice
+
+### Academics portal smoke-tests
+- [ ] **Platform super-admin** — log in to Academics `/superadmin`, view schools list
+- [ ] **Olam admin / system admin** — log in, confirm school list and settings visible
+- [ ] **School owner** — log in to owner dashboard, view classes and staff
+- [ ] **Headmaster** — log in, view dashboard stats, student list, upcoming events
+- [ ] **Academic teacher** — log in, open marks entry for a subject, save marks
+- [ ] **Class teacher** — log in, open attendance sheet, mark attendance
+- [ ] **Teacher** (general) — log in, confirm correct dashboard and subject access
+- [ ] **School accountant** (Academics) — log in, view finance summary if visible
+- [ ] **School admin / staff** — log in to school_admin portal, manage settings
+- [ ] **Student** — log in, view report card, timetable, attendance record
+- [ ] **Parent** (Academics) — log in, view child's attendance and marks
+
+### Cross-system SSO
+- [ ] Finance headmaster → "Open Academics" button appears, click → lands in Academics headmaster dashboard without re-login
+- [ ] Academics headmaster → "Open Finance" button appears, click → lands in Finance headmaster portal without re-login
+- [ ] Button is **hidden** when `cross_jump_enabled = false` for the school
+- [ ] Button is **hidden** for a user with no grant in `platform_cross_access`
+- [ ] Direct portal login (without handoff) still requires credentials after SSO jump session
+
+### Data integrity
+- [ ] CSV student import: 10+ students imported, reg numbers generated, visible in both Finance and Academics
+- [ ] One school provisioned end-to-end: classes synced, students synced to both systems
+- [ ] Delete a test school → code freed, tenant DBs dropped, platform rows purged
+
+### Deployment config
+- [ ] `APP_DEBUG=false` in production `.env` for both apps
+- [ ] `php artisan config:cache && route:cache && view:cache` run for both apps after deploy
+- [ ] Platform migrations run cleanly: `php artisan migrate --path=database/migrations/platform --force`
+- [ ] Academics did NOT run platform migrations (Finance owns them)
+- [ ] No `.env` file committed (`git show HEAD --name-only | grep '.env'` returns nothing)
+
+### Sign-off
+- [ ] Jackson tested and approved on sandbox before merging to main
 
 ---
 
