@@ -1,0 +1,2834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>Accountant Dashboard - Darasa Finance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Top Header -->
+        <nav class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 shadow-lg fixed top-0 left-0 right-0 z-30">
+            <div class="flex justify-between items-center px-4">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <h1 class="text-xl font-bold">Darasa Finance ERP</h1>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <span class="bg-white bg-opacity-20 px-3 py-1 rounded text-sm">👤 Accountant</span>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded transition text-sm">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Sidebar -->
+        <div id="sidebar" class="fixed left-0 top-12 bottom-0 w-64 bg-gray-800 text-white shadow-2xl z-20 transform transition-transform duration-300">
+            <div class="p-4 bg-gray-900">
+                <h2 class="text-lg font-bold text-blue-400">Navigation</h2>
+            </div>
+            <nav class="flex-1 overflow-y-auto">
+                <a href="#" onclick="showDashboard(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-blue-500">
+                    <span class="text-2xl">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" onclick="showBooksModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-blue-500">
+                    <span class="text-2xl">📚</span>
+                    <span>Books Management</span>
+                </a>
+                <a href="#" onclick="showParticularsModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-green-500">
+                    <span class="text-2xl">📋</span>
+                    <span>Particulars</span>
+                </a>
+                <a href="#" onclick="showVouchersModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-purple-500">
+                    <span class="text-2xl">💰</span>
+                    <span>Fee Entry</span>
+                </a>
+                <a href="#" onclick="showLedgersModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-orange-500">
+                    <span class="text-2xl">📊</span>
+                    <span>Ledgers</span>
+                </a>
+                <a href="#" onclick="showParticularLedgerModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-teal-500">
+                    <span class="text-2xl">📋</span>
+                    <span>Particular Ledger</span>
+                </a>
+                <a href="#" onclick="showOverdueModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-red-500">
+                    <span class="text-2xl">💸</span>
+                    <span>Overdue Payments</span>
+                </a>
+                <a href="#" onclick="showSuspenseAccountsModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-amber-500">
+                    <span class="text-2xl">⏳</span>
+                    <span>Suspense Accounts</span>
+                </a>
+                <a href="#" onclick="showPayrollModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-yellow-500">
+                    <span class="text-2xl">💵</span>
+                    <span>Payroll</span>
+                </a>
+                <a href="#" onclick="showSmsModule(); return false;" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-indigo-500">
+                    <span class="text-2xl">📱</span>
+                    <span>SMS</span>
+                </a>
+                <a href="/accountant/invoices" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-purple-500">
+                    <span class="text-2xl">📄</span>
+                    <span>Student Invoices</span>
+                </a>
+                <div class="border-t border-gray-700 my-2"></div>
+                <a href="/accountant/settings" class="sidebar-link flex items-center gap-3 px-4 py-3 hover:bg-gray-700 transition border-l-4 border-transparent hover:border-gray-500">
+                    <span class="text-2xl">⚙️</span>
+                    <span>School Settings</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" class="ml-64 mt-12 p-6 transition-all duration-300">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <!-- Books Module Card -->
+                <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer" onclick="showBooksModule()">
+                    <div class="text-4xl mb-3">📚</div>
+                    <h2 class="text-xl font-bold mb-2 text-blue-600">Books Management</h2>
+                    <p class="text-gray-600 text-sm mb-4">Manage bank accounts and cash book</p>
+                    <button class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full transition">Manage Books</button>
+                </div>
+
+                <!-- Particulars Module Card -->
+                <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer" onclick="showParticularsModule()">
+                    <div class="text-4xl mb-3">📋</div>
+                    <h2 class="text-xl font-bold mb-2 text-green-600">Particulars</h2>
+                    <p class="text-gray-600 text-sm mb-4">Create fee categories and assign students</p>
+                    <button class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded w-full transition">Manage Particulars</button>
+                </div>
+
+                <!-- Fee Entry Module Card -->
+                <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer" onclick="showVouchersModule()">
+                    <div class="text-4xl mb-3">💰</div>
+                    <h2 class="text-xl font-bold mb-2 text-purple-600">Fee Entry</h2>
+                    <p class="text-gray-600 text-sm mb-4">Record sales, receipts, and payments</p>
+                    <button class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded w-full transition">Record Entry</button>
+                </div>
+
+                <!-- Ledgers Module Card -->
+                <div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer" onclick="showLedgersModule()">
+                    <div class="text-4xl mb-3">📊</div>
+                    <h2 class="text-xl font-bold mb-2 text-orange-600">Ledgers</h2>
+                    <p class="text-gray-600 text-sm mb-4">View student, class, and book ledgers</p>
+                    <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded w-full transition">View Ledgers</button>
+                </div>
+            </div>
+
+            <!-- Overdue Payments Section -->
+            <div class="mb-6">
+                <h3 class="text-2xl font-bold text-gray-700 mb-4 border-b-2 border-red-500 pb-2">⚠️ Overdue Payments</h3>
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
+                    <!-- Overdue Summary Card -->
+                    <div class="bg-gradient-to-br from-red-500 to-pink-600 rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer transform hover:scale-105" onclick="showOverdueModule()">
+                        <div class="text-5xl mb-3 text-white">💸</div>
+                        <h2 class="text-xl font-bold mb-2 text-white">View Overdue Payments</h2>
+                        <p class="text-red-100 text-sm mb-4">Track and manage payments past their deadline</p>
+                        <div id="overdueSummaryDisplay" class="bg-white bg-opacity-20 rounded p-3 mb-4">
+                            <div class="grid grid-cols-3 gap-2 text-white text-center">
+                                <div>
+                                    <p class="text-xs opacity-80">Total Overdue</p>
+                                    <p id="totalOverdueAmount" class="text-lg font-bold">Loading...</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs opacity-80">Students</p>
+                                    <p id="totalOverdueStudents" class="text-lg font-bold">-</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs opacity-80">Particulars</p>
+                                    <p id="totalOverdueParticulars" class="text-lg font-bold">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="bg-white text-red-600 hover:bg-red-50 px-4 py-2 rounded w-full font-semibold transition">
+                            View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SMS & Communication Section -->
+            <div class="mb-6">
+                <h3 class="text-2xl font-bold text-gray-700 mb-4 border-b-2 border-indigo-500 pb-2">📱 SMS & Communication</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Send SMS Card -->
+                    <div class="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer transform hover:scale-105" onclick="window.location.href='{{ route('sms.index') }}'">
+                        <div class="text-5xl mb-3 text-white">📤</div>
+                        <h2 class="text-xl font-bold mb-2 text-white">Send SMS</h2>
+                        <p class="text-purple-100 text-sm mb-4">Send fee reminders and notifications to parents</p>
+                        <button class="bg-white text-purple-600 hover:bg-purple-50 px-4 py-2 rounded w-full font-semibold transition">
+                            Send Messages
+                        </button>
+                    </div>
+
+                    <!-- Manage Phone Numbers Card -->
+                    <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer transform hover:scale-105" onclick="window.location.href='{{ route('sms.manage-phones') }}'">
+                        <div class="text-5xl mb-3 text-white">📞</div>
+                        <h2 class="text-xl font-bold mb-2 text-white">Manage Phones</h2>
+                        <p class="text-green-100 text-sm mb-4">Upload and manage parent phone numbers</p>
+                        <button class="bg-white text-green-600 hover:bg-green-50 px-4 py-2 rounded w-full font-semibold transition">
+                            Manage Numbers
+                        </button>
+                    </div>
+
+                    <!-- SMS Logs Card -->
+                    <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer transform hover:scale-105" onclick="window.location.href='{{ route('sms.logs') }}'">
+                        <div class="text-5xl mb-3 text-white">📋</div>
+                        <h2 class="text-xl font-bold mb-2 text-white">SMS Logs</h2>
+                        <p class="text-blue-100 text-sm mb-4">View SMS history and delivery status</p>
+                        <button class="bg-white text-blue-600 hover:bg-blue-50 px-4 py-2 rounded w-full font-semibold transition">
+                            View Logs
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Features Section -->
+            <div class="mb-6">
+                <h3 class="text-2xl font-bold text-gray-700 mb-4 border-b-2 border-teal-500 pb-2">⚙️ Advanced Features</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Particular Ledger Card -->
+                    <div class="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer transform hover:scale-105" onclick="showParticularLedgerModule()">
+                        <div class="text-5xl mb-3 text-white">📋</div>
+                        <h2 class="text-xl font-bold mb-2 text-white">Particular Ledger</h2>
+                        <p class="text-teal-100 text-sm mb-4">View transactions by fee type/particular</p>
+                        <button class="bg-white text-teal-600 hover:bg-teal-50 px-4 py-2 rounded w-full font-semibold transition">
+                            View Particulars
+                        </button>
+                    </div>
+
+                    <!-- Suspense Accounts Card -->
+                    <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer transform hover:scale-105" onclick="showSuspenseAccountsModule()">
+                        <div class="text-5xl mb-3 text-white">⏳</div>
+                        <h2 class="text-xl font-bold mb-2 text-white">Suspense Accounts</h2>
+                        <p class="text-amber-100 text-sm mb-4">Manage unallocated payments and adjustments</p>
+                        <button class="bg-white text-amber-600 hover:bg-amber-50 px-4 py-2 rounded w-full font-semibold transition">
+                            View Suspense
+                        </button>
+                    </div>
+
+                    <!-- Payroll Card -->
+                    <div class="bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg shadow-lg p-6 hover:shadow-xl transition cursor-pointer transform hover:scale-105" onclick="showPayrollModule()">
+                        <div class="text-5xl mb-3 text-white">👥</div>
+                        <h2 class="text-xl font-bold mb-2 text-white">Payroll</h2>
+                        <p class="text-violet-100 text-sm mb-4">Manage staff salaries and payroll</p>
+                        <button class="bg-white text-violet-600 hover:bg-violet-50 px-4 py-2 rounded w-full font-semibold transition">
+                            Manage Payroll
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Module Content Area -->
+            <div id="moduleContent" class="bg-white rounded-lg shadow-lg p-6">
+                <div class="text-center text-gray-500 py-12">
+                    <div class="text-6xl mb-4">🏦</div>
+                    <h3 class="text-2xl font-bold mb-4">Welcome to Darasa Finance Accountant Dashboard</h3>
+                    <p class="text-lg">Select a module above to get started</p>
+                    <div class="mt-6 text-sm text-gray-400">
+                        <p>All amounts are displayed in Tanzania Shillings (TSh)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let allBooks = [];
+        let allParticulars = [];
+        let allStudents = [];
+        let allClasses = [];
+
+        // Configure axios to send CSRF token and credentials
+        axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        axios.defaults.withCredentials = true;
+
+        // Format amount in Tanzania Shillings
+        function formatTSh(amount) {
+            return 'TSh ' + parseFloat(amount).toLocaleString('en-TZ', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Load initial data
+        async function loadInitialData() {
+            try {
+                const [booksRes, studentsRes, classesRes] = await Promise.all([
+                    axios.get(`${API_BASE}/books`),
+                    axios.get(`${API_BASE}/students`),
+                    axios.get(`${API_BASE}/classes`)
+                ]);
+
+                allBooks = booksRes.data;
+                allStudents = studentsRes.data;
+                allClasses = classesRes.data;
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+            }
+        }
+
+        // Initialize
+        loadInitialData();
+        loadOverdueSummary();
+
+        // Load overdue summary on dashboard load
+        async function loadOverdueSummary() {
+            try {
+                const response = await axios.get(`${API_BASE}/overdue-amounts`);
+                const data = response.data;
+
+                document.getElementById('totalOverdueAmount').textContent = formatTSh(data.summary.total_overdue_amount);
+                document.getElementById('totalOverdueStudents').textContent = Math.round(data.summary.total_students_with_overdue);
+                document.getElementById('totalOverdueParticulars').textContent = Math.round(data.summary.total_overdue_particulars);
+            } catch (error) {
+                console.error('Error loading overdue summary:', error);
+                document.getElementById('totalOverdueAmount').textContent = 'Error';
+            }
+        }
+
+        // ===== BOOKS MODULE =====
+        async function showBooksModule() {
+            const content = `
+                <div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-blue-600">📚 Books Management</h2>
+                        <button onclick="showCreateBookForm()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg shadow transition">
+                            ➕ Create New Book
+                        </button>
+                    </div>
+                    <div id="booksList" class="mt-4"></div>
+                    <div id="bookFormContainer"></div>
+                </div>
+            `;
+            document.getElementById('moduleContent').innerHTML = content;
+            await loadBooks();
+        }
+
+        async function loadBooks() {
+            try {
+                const response = await axios.get(`${API_BASE}/books`);
+                allBooks = response.data;
+
+                let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">';
+                allBooks.forEach(book => {
+                    html += `
+                        <div class="border-2 rounded-lg p-4 ${book.is_cash_book ? 'border-green-500 bg-green-50' : 'border-blue-300 bg-blue-50'}">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="font-bold text-lg">${book.name}</h3>
+                                    <p class="text-sm text-gray-600">${book.bank_account_number || 'No Account Number'}</p>
+                                    <p class="text-xs font-semibold mt-2 ${book.is_cash_book ? 'text-green-600' : 'text-blue-600'}">
+                                        ${book.is_cash_book ? '💵 Cash Book' : '🏦 Bank Account'}
+                                    </p>
+                                </div>
+                                ${!book.is_cash_book ? `
+                                    <button onclick="deleteBook(${book.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition">
+                                        Delete
+                                    </button>
+                                ` : '<span class="text-xs text-green-600 font-bold">Protected</span>'}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('booksList').innerHTML = html;
+            } catch (error) {
+                alert('Error loading books: ' + error.message);
+            }
+        }
+
+        function showCreateBookForm() {
+            const formHtml = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg p-8 max-w-md w-full shadow-2xl">
+                        <h3 class="text-2xl font-bold mb-6 text-blue-600">Create New Book</h3>
+                        <form onsubmit="createBook(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">Book Name *</label>
+                                <input type="text" id="bookName" required
+                                    class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                    placeholder="e.g., NMB 002, CRDB 800">
+                                <p class="text-xs text-gray-500 mt-1">Include last 3 digits of account number</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">Bank Account Number *</label>
+                                <input type="text" id="bookAccount" required
+                                    class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
+                                    placeholder="e.g., 1234567002">
+                            </div>
+                            <div class="flex gap-3 pt-4">
+                                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-bold transition">
+                                    💾 Save Book
+                                </button>
+                                <button type="button" onclick="closeBookForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
+                                    ✖️ Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.getElementById('bookFormContainer').innerHTML = formHtml;
+        }
+
+        function closeBookForm() {
+            document.getElementById('bookFormContainer').innerHTML = '';
+        }
+
+        async function createBook(event) {
+            event.preventDefault();
+            const name = document.getElementById('bookName').value;
+            const accountNumber = document.getElementById('bookAccount').value;
+
+            try {
+                await axios.post(`${API_BASE}/books`, {
+                    name: name,
+                    bank_account_number: accountNumber
+                });
+                alert('✅ Book created successfully!');
+                closeBookForm();
+                loadBooks();
+            } catch (error) {
+                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+            }
+        }
+
+        async function deleteBook(id) {
+            if (confirm('⚠️ Are you sure you want to delete this book?')) {
+                try {
+                    await axios.delete(`${API_BASE}/books/${id}`);
+                    alert('✅ Book deleted successfully!');
+                    loadBooks();
+                } catch (error) {
+                    alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                }
+            }
+        }
+
+        // ===== PARTICULARS MODULE =====
+        async function showParticularsModule() {
+            const content = `
+                <div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-green-600">📋 Particulars Management</h2>
+                        <button onclick="showCreateParticularForm()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg shadow transition">
+                            ➕ Create New Particular
+                        </button>
+                    </div>
+                    <div id="particularsList" class="mt-4"></div>
+                    <div id="particularFormContainer"></div>
+                </div>
+            `;
+            document.getElementById('moduleContent').innerHTML = content;
+            await loadParticulars();
+        }
+
+        async function loadParticulars() {
+            try {
+                const response = await axios.get(`${API_BASE}/particulars`);
+                allParticulars = response.data;
+
+                let html = '<div class="space-y-4">';
+                allParticulars.forEach(particular => {
+                    html += `
+                        <div class="border-2 border-green-300 rounded-lg p-6 bg-green-50">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-xl text-green-700">${particular.name}</h3>
+                                    <p class="text-sm text-gray-600 mt-2">📚 Books: ${particular.book_ids?.length || 0} assigned</p>
+                                    <p class="text-sm text-gray-600">👥 Students: ${particular.students?.length || 0} assigned</p>
+                                </div>
+                                <button onclick="showAssignStudentsForm(${particular.id}, '${particular.name}')"
+                                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition">
+                                    👥 Assign Students
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('particularsList').innerHTML = html;
+            } catch (error) {
+                alert('Error loading particulars: ' + error.message);
+            }
+        }
+
+        function showCreateParticularForm() {
+            const booksOptions = allBooks.map(book =>
+                `<option value="${book.id}">${book.name}</option>`
+            ).join('');
+
+            const formHtml = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+                    <div class="bg-white rounded-lg p-8 max-w-2xl w-full shadow-2xl m-4">
+                        <h3 class="text-2xl font-bold mb-6 text-green-600">Create New Particular</h3>
+                        <form onsubmit="createParticular(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-2">Particular Name *</label>
+                                <input type="text" id="particularName" required
+                                    class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-green-500 focus:outline-none"
+                                    placeholder="e.g., Tuition Fees, Food Fees, Transport">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-2">Assign Books * (Hold Ctrl/Cmd to select multiple)</label>
+                                <select id="particularBooks" multiple required
+                                    class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-green-500 focus:outline-none h-32">
+                                    ${booksOptions}
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">Select one or more books where this fee can be paid</p>
+                            </div>
+                            <div class="flex gap-3 pt-4">
+                                <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold transition">
+                                    💾 Save Particular
+                                </button>
+                                <button type="button" onclick="closeParticularForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
+                                    ✖️ Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.getElementById('particularFormContainer').innerHTML = formHtml;
+        }
+
+        function closeParticularForm() {
+            document.getElementById('particularFormContainer').innerHTML = '';
+        }
+
+        async function createParticular(event) {
+            event.preventDefault();
+            const name = document.getElementById('particularName').value;
+            const bookSelect = document.getElementById('particularBooks');
+            const bookIds = Array.from(bookSelect.selectedOptions).map(option => parseInt(option.value));
+
+            if (bookIds.length === 0) {
+                alert('⚠️ Please select at least one book');
+                return;
+            }
+
+            try {
+                await axios.post(`${API_BASE}/particulars`, {
+                    name: name,
+                    book_ids: bookIds,
+                    class_names: []
+                });
+                alert('✅ Particular created successfully!');
+                closeParticularForm();
+                loadParticulars();
+            } catch (error) {
+                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+            }
+        }
+
+        // ===== ASSIGN STUDENTS TO PARTICULAR =====
+        async function showAssignStudentsForm(particularId, particularName) {
+            // Always reload classes and students fresh
+            try {
+                console.log('Loading classes...');
+                const classesResponse = await axios.get(`${API_BASE}/classes`);
+                allClasses = classesResponse.data;
+                console.log('Classes loaded:', allClasses);
+            } catch (error) {
+                console.error('Error loading classes:', error);
+                alert('Error loading classes: ' + error.message + '. Please check the console and refresh the page.');
+                return;
+            }
+
+            try {
+                console.log('Loading students...');
+                const studentsResponse = await axios.get(`${API_BASE}/students`);
+                allStudents = studentsResponse.data;
+                console.log('Students loaded:', allStudents.length);
+            } catch (error) {
+                console.error('Error loading students:', error);
+                alert('Error loading students: ' + error.message);
+            }
+
+            // If no classes loaded, show all classes manually
+            if (!allClasses || allClasses.length === 0) {
+                console.error('No classes loaded! Using fallback.');
+                allClasses = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Form 1', 'Form 2', 'Form 3', 'Form 4'];
+            }
+
+            const classButtons = allClasses.map(cls =>
+                `<button type="button" onclick="loadStudentsByClass(${particularId}, '${cls}')"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold transition transform hover:scale-105">
+                    ${cls}
+                </button>`
+            ).join('');
+
+            const formHtml = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+                    <div class="bg-white rounded-lg p-8 max-w-6xl w-full shadow-2xl m-4 max-h-[90vh] overflow-y-auto">
+                        <h3 class="text-2xl font-bold mb-4 text-green-600">Assign Students to: ${particularName}</h3>
+
+                        <div class="mb-6 p-6 bg-green-50 rounded-lg border-2 border-green-300">
+                            <label class="block text-lg font-bold mb-4 text-center">📚 Select Class by Clicking Below:</label>
+                            <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                ${classButtons}
+                            </div>
+                        </div>
+
+                        <div id="studentsListContainer" class="mb-6"></div>
+
+                        <div id="assignActionsContainer"></div>
+
+                        <div class="flex gap-3 pt-4 border-t-2">
+                            <button type="button" onclick="closeAssignForm()"
+                                class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
+                                ✖️ Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('particularFormContainer').innerHTML = formHtml;
+        }
+
+        async function loadStudentsByClass(particularId, selectedClass) {
+            if (!selectedClass) {
+                document.getElementById('studentsListContainer').innerHTML = '';
+                document.getElementById('assignActionsContainer').innerHTML = '';
+                return;
+            }
+
+            // Show loading message
+            document.getElementById('studentsListContainer').innerHTML = '<p class="text-center text-blue-600 p-4">⏳ Loading students...</p>';
+
+            // Reload students if not already loaded
+            if (!allStudents || allStudents.length === 0) {
+                try {
+                    const response = await axios.get(`${API_BASE}/students`);
+                    allStudents = response.data;
+                } catch (error) {
+                    console.error('Error loading students:', error);
+                    document.getElementById('studentsListContainer').innerHTML = '<p class="text-center text-red-600 p-4">❌ Error loading students. Please refresh the page.</p>';
+                    return;
+                }
+            }
+
+            // Load existing assignments for this particular
+            let existingAssignments = {};
+            try {
+                const particularResponse = await axios.get(`${API_BASE}/particulars/${particularId}`);
+                const particularData = particularResponse.data;
+                if (particularData.students) {
+                    particularData.students.forEach(student => {
+                        existingAssignments[student.id] = {
+                            sales: student.pivot.sales || 0,
+                            deadline: student.pivot.deadline || '',
+                            isAssigned: true
+                        };
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading existing assignments:', error);
+            }
+
+            const classStudents = allStudents.filter(s => s.class === selectedClass);
+
+            if (classStudents.length === 0) {
+                document.getElementById('studentsListContainer').innerHTML = '<p class="text-center text-gray-500 p-4">No students found in this class.</p>';
+                return;
+            }
+
+            let html = `
+                <div class="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-lg">Students in ${selectedClass}</h4>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"
+                                class="w-5 h-5 rounded border-gray-300">
+                            <span class="font-bold text-sm">Select All</span>
+                        </label>
+                    </div>
+                    <div class="space-y-2 max-h-96 overflow-y-auto" id="studentsList">
+            `;
+
+            classStudents.forEach(student => {
+                const isAssigned = existingAssignments[student.id]?.isAssigned || false;
+                const salesAmount = existingAssignments[student.id]?.sales || 0;
+                const checkedAttr = isAssigned ? 'checked' : '';
+                const bgClass = isAssigned ? 'bg-green-50 border-green-400' : 'bg-white';
+                const deadlineValue = existingAssignments[student.id]?.deadline || '';
+                const checkmark = isAssigned ? '✅ ' : '';
+
+                html += `
+                    <div class="flex items-center gap-2 p-3 ${bgClass} rounded border hover:border-green-500">
+                        <input type="checkbox" class="student-checkbox w-5 h-5 rounded border-gray-300"
+                            data-student-id="${student.id}" ${checkedAttr}>
+                        <div class="flex-1">
+                            <p class="font-bold">${checkmark}${student.name}</p>
+                            <p class="text-xs text-gray-500">${student.student_reg_no}</p>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <span class="text-xs font-bold">Sales:</span>
+                            <input type="number" step="0.01" value="${salesAmount}"
+                                class="sales-amount w-28 border-2 border-gray-300 rounded px-2 py-1 text-sm"
+                                data-student-id="${student.id}" placeholder="TSh">
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <span class="text-xs font-bold">Deadline:</span>
+                            <input type="date" value="${deadlineValue}"
+                                class="deadline-date w-36 border-2 border-gray-300 rounded px-2 py-1 text-sm"
+                                data-student-id="${student.id}">
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('studentsListContainer').innerHTML = html;
+
+            // Show action buttons
+            const actionsHtml = `
+                <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-300 space-y-3">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex items-center gap-2">
+                            <label class="font-bold text-sm">Bulk Sales Amount:</label>
+                            <input type="number" step="0.01" id="bulkSalesAmount"
+                                class="border-2 border-gray-300 rounded px-3 py-2 w-32"
+                                placeholder="TSh 0.00">
+                            <button onclick="applyBulkSales()"
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded transition text-sm">
+                                Apply
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="font-bold text-sm">Bulk Deadline:</label>
+                            <input type="date" id="bulkDeadlineDate"
+                                class="border-2 border-gray-300 rounded px-3 py-2 w-36">
+                            <button onclick="applyBulkDeadline()"
+                                class="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded transition text-sm">
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="assignSelectedStudents(${particularId})"
+                            class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold transition">
+                            💾 Save & Exit
+                        </button>
+                        <button onclick="assignAndSelectAnother(${particularId})"
+                            class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-bold transition">
+                            💾 Save & Select Another Class
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('assignActionsContainer').innerHTML = actionsHtml;
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.student-checkbox').forEach(cb => {
+                cb.checked = selectAll;
+            });
+        }
+
+        function applyBulkSales() {
+            const bulkAmount = document.getElementById('bulkSalesAmount').value;
+            if (!bulkAmount) {
+                alert('⚠️ Please enter a sales amount');
+                return;
+            }
+
+            document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
+                const studentId = cb.getAttribute('data-student-id');
+                const input = document.querySelector(`.sales-amount[data-student-id="${studentId}"]`);
+                if (input) {
+                    input.value = bulkAmount;
+                }
+            });
+            alert('✅ Sales amount applied to selected students');
+        }
+
+        function applyBulkDeadline() {
+            const bulkDeadline = document.getElementById('bulkDeadlineDate').value;
+            if (!bulkDeadline) {
+                alert('⚠️ Please select a deadline date');
+                return;
+            }
+
+            document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
+                const studentId = cb.getAttribute('data-student-id');
+                const input = document.querySelector(`.deadline-date[data-student-id="${studentId}"]`);
+                if (input) {
+                    input.value = bulkDeadline;
+                }
+            });
+            alert('✅ Deadline applied to selected students');
+        }
+
+        async function assignSelectedStudents(particularId, selectAnother = false) {
+            const selectedStudents = [];
+            document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
+                const studentId = cb.getAttribute('data-student-id');
+                const salesAmount = document.querySelector(`.sales-amount[data-student-id="${studentId}"]`).value || 0;
+                const deadline = document.querySelector(`.deadline-date[data-student-id="${studentId}"]`).value || null;
+
+                selectedStudents.push({
+                    student_id: parseInt(studentId),
+                    sales: parseFloat(salesAmount),
+                    debit: 0,
+                    credit: 0,
+                    deadline: deadline
+                });
+            });
+
+            if (selectedStudents.length === 0) {
+                alert('⚠️ Please select at least one student');
+                return;
+            }
+
+            try {
+                await axios.post(`${API_BASE}/particulars/${particularId}/assign-students`, {
+                    students: selectedStudents
+                });
+                alert(`✅ ${selectedStudents.length} student(s) assigned successfully!`);
+
+                if (selectAnother) {
+                    // Clear selections and reset form
+                    document.getElementById('classSelect').value = '';
+                    document.getElementById('studentsListContainer').innerHTML = '';
+                    document.getElementById('assignActionsContainer').innerHTML = '';
+                } else {
+                    closeAssignForm();
+                    loadParticulars();
+                }
+            } catch (error) {
+                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+            }
+        }
+
+        function assignAndSelectAnother(particularId) {
+            assignSelectedStudents(particularId, true);
+        }
+
+        function closeAssignForm() {
+            document.getElementById('particularFormContainer').innerHTML = '';
+            loadParticulars();
+        }
+
+        // ===== VOUCHERS (FEE ENTRY) MODULE =====
+        async function showVouchersModule() {
+            const content = `
+                <div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-purple-600">💰 Fee Entry</h2>
+                        <button onclick="showCreateVoucherForm()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg shadow transition">
+                            ➕ Record New Entry
+                        </button>
+                    </div>
+                    <div id="vouchersList" class="mt-4"></div>
+                    <div id="voucherFormContainer"></div>
+                </div>
+            `;
+            document.getElementById('moduleContent').innerHTML = content;
+            await loadVouchers();
+        }
+
+        let currentVoucherPage = 1;
+        let voucherDateFilters = { from: '', to: '' };
+
+        async function loadVouchers(page = 1) {
+            try {
+                currentVoucherPage = page;
+                let url = `${API_BASE}/vouchers?page=${page}`;
+
+                // Add date filters if set
+                if (voucherDateFilters.from && voucherDateFilters.to) {
+                    url += `&from_date=${voucherDateFilters.from}&to_date=${voucherDateFilters.to}`;
+                }
+
+                const response = await axios.get(url);
+                const paginationData = response.data;
+                const vouchers = paginationData.data || response.data;
+
+                let html = `
+                    <!-- Date Range Filter -->
+                    <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                        <h4 class="text-md font-bold text-blue-800 mb-3">📅 Filter by Date Range</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <div>
+                                <label class="text-sm font-bold text-gray-700 block mb-1">From:</label>
+                                <input type="date" id="voucherFromDate" value="${voucherDateFilters.from}"
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="text-sm font-bold text-gray-700 block mb-1">To:</label>
+                                <input type="date" id="voucherToDate" value="${voucherDateFilters.to}"
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-2">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="applyVoucherDateFilter()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded w-full transition">
+                                    Apply Filter
+                                </button>
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="clearVoucherDateFilter()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded w-full transition">
+                                    Clear Filter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-2 border-gray-300 rounded-lg">
+                            <thead class="bg-purple-100">
+                                <tr>
+                                    <th class="p-3 text-left">Date</th>
+                                    <th class="p-3 text-left">Student</th>
+                                    <th class="p-3 text-left">Particular</th>
+                                    <th class="p-3 text-left">Type</th>
+                                    <th class="p-3 text-left">Voucher #</th>
+                                    <th class="p-3 text-right">Debit</th>
+                                    <th class="p-3 text-right">Credit</th>
+                                    <th class="p-3 text-left">Notes</th>
+                                    <th class="p-3 text-left">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                vouchers.forEach(voucher => {
+                    html += `
+                        <tr class="border-t hover:bg-purple-50">
+                            <td class="p-3">${voucher.date}</td>
+                            <td class="p-3 font-semibold">${voucher.student ? voucher.student.name : '-'}</td>
+                            <td class="p-3">${voucher.particular ? voucher.particular.name : '-'}</td>
+                            <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${
+                                voucher.voucher_type === 'Sales' ? 'bg-red-200 text-red-800' :
+                                voucher.voucher_type === 'Receipt' ? 'bg-green-200 text-green-800' :
+                                'bg-blue-200 text-blue-800'
+                            }">${voucher.voucher_type}</span></td>
+                            <td class="p-3 font-mono text-sm">${voucher.voucher_number}</td>
+                            <td class="p-3 text-right font-bold text-red-600">${formatTSh(voucher.debit)}</td>
+                            <td class="p-3 text-right font-bold text-green-600">${formatTSh(voucher.credit)}</td>
+                            <td class="p-3 text-xs text-gray-600">${voucher.notes || '-'}</td>
+                            <td class="p-3">
+                                <div class="flex gap-2">
+                                    <button onclick="editVoucher(${voucher.id})" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs">
+                                        ✏️ Edit
+                                    </button>
+                                    <button onclick="deleteVoucher(${voucher.id})" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table></div>';
+
+                // Add pagination controls
+                if (paginationData.last_page && paginationData.last_page > 1) {
+                    html += `
+                        <div class="mt-6 flex justify-center items-center gap-2">
+                            <button onclick="loadVouchers(${paginationData.current_page - 1})"
+                                ${paginationData.current_page <= 1 ? 'disabled' : ''}
+                                class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
+                                Previous
+                            </button>
+
+                            <div class="flex gap-1">
+                    `;
+
+                    // Show page numbers
+                    const startPage = Math.max(1, paginationData.current_page - 2);
+                    const endPage = Math.min(paginationData.last_page, paginationData.current_page + 2);
+
+                    if (startPage > 1) {
+                        html += `
+                            <button onclick="loadVouchers(1)" class="px-3 py-2 border rounded hover:bg-purple-100 transition">1</button>
+                            ${startPage > 2 ? '<span class="px-2 py-2">...</span>' : ''}
+                        `;
+                    }
+
+                    for (let i = startPage; i <= endPage; i++) {
+                        html += `
+                            <button onclick="loadVouchers(${i})"
+                                class="px-3 py-2 border rounded ${i === paginationData.current_page ? 'bg-purple-500 text-white font-bold' : 'hover:bg-purple-100'} transition">
+                                ${i}
+                            </button>
+                        `;
+                    }
+
+                    if (endPage < paginationData.last_page) {
+                        html += `
+                            ${endPage < paginationData.last_page - 1 ? '<span class="px-2 py-2">...</span>' : ''}
+                            <button onclick="loadVouchers(${paginationData.last_page})" class="px-3 py-2 border rounded hover:bg-purple-100 transition">${paginationData.last_page}</button>
+                        `;
+                    }
+
+                    html += `
+                            </div>
+
+                            <button onclick="loadVouchers(${paginationData.current_page + 1})"
+                                ${paginationData.current_page >= paginationData.last_page ? 'disabled' : ''}
+                                class="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
+                                Next
+                            </button>
+                        </div>
+
+                        <div class="mt-3 text-center text-sm text-gray-600">
+                            Showing ${paginationData.from || 0} to ${paginationData.to || 0} of ${paginationData.total || 0} entries
+                        </div>
+                    `;
+                }
+
+                document.getElementById('vouchersList').innerHTML = html;
+            } catch (error) {
+                alert('Error loading vouchers: ' + error.message);
+            }
+        }
+
+        function applyVoucherDateFilter() {
+            const fromDate = document.getElementById('voucherFromDate').value;
+            const toDate = document.getElementById('voucherToDate').value;
+
+            if (fromDate && toDate) {
+                voucherDateFilters.from = fromDate;
+                voucherDateFilters.to = toDate;
+                loadVouchers(1); // Reset to page 1 when filtering
+            } else {
+                alert('⚠️ Please select both From and To dates');
+            }
+        }
+
+        function clearVoucherDateFilter() {
+            voucherDateFilters.from = '';
+            voucherDateFilters.to = '';
+            document.getElementById('voucherFromDate').value = '';
+            document.getElementById('voucherToDate').value = '';
+            loadVouchers(1);
+        }
+
+        async function showCreateVoucherForm() {
+            // Load particulars first
+            if (allParticulars.length === 0) {
+                const response = await axios.get(`${API_BASE}/particulars`);
+                allParticulars = response.data;
+            }
+
+            const particularsOptions = allParticulars.map(p =>
+                `<option value="${p.id}">${p.name}</option>`
+            ).join('');
+
+            const classOptions = allClasses.map(cls =>
+                `<option value="${cls}">${cls}</option>`
+            ).join('');
+
+            const formHtml = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-2">
+                    <div class="bg-white rounded-lg p-4 max-w-4xl w-full shadow-2xl my-2 max-h-[95vh] overflow-y-auto">
+                        <h3 class="text-xl font-bold mb-3 text-purple-600">Record New Fee Entry</h3>
+                        <form onsubmit="createVoucher(event)" class="space-y-3">
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Date *</label>
+                                    <input type="text" id="voucherDate" required
+                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                        placeholder="Select date">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Particular *</label>
+                                    <select id="voucherParticular" required onchange="loadParticularStudents()"
+                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
+                                        <option value="">-- Select Particular --</option>
+                                        ${particularsOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Voucher Type *</label>
+                                    <select id="voucherType" required onchange="updateVoucherTypeFields()"
+                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
+                                        <option value="">-- Select Type --</option>
+                                        <option value="Sales">Sales (Charge Fee)</option>
+                                        <option value="Receipt">Receipt (Payment)</option>
+                                        <option value="Payment">Payment (Refund)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="border-2 border-blue-200 rounded p-3 bg-blue-50">
+                                <h4 class="text-sm font-bold mb-2">Select Student</h4>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold mb-1">Search by Name</label>
+                                        <input type="text" id="studentSearch" onkeyup="searchStudentsByName()"
+                                            class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                            placeholder="Type student name...">
+                                        <div id="studentSearchResults" class="mt-1"></div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold mb-1">Select by Class</label>
+                                        <select id="voucherClass" onchange="loadStudentsByClassForVoucher()"
+                                            class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
+                                            <option value="">-- Select Class --</option>
+                                            ${classOptions}
+                                        </select>
+                                        <div id="classStudentsResults" class="mt-1"></div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="selectedStudentId" required>
+                                <div id="selectedStudentDisplay" class="mt-2 p-2 bg-white rounded border-2 border-green-500 hidden">
+                                    <p class="text-xs font-bold text-green-600">Selected Student:</p>
+                                    <p id="selectedStudentName" class="font-bold text-sm"></p>
+                                </div>
+                            </div>
+
+                            <div id="amountSection" class="hidden">
+                                <!-- Payment Info Display -->
+                                <div id="paymentInfoDisplay" class="bg-green-50 border-2 border-green-300 rounded p-2 mb-2 hidden">
+                                    <h4 class="text-xs font-bold text-green-700 mb-2">💰 Payment Information</h4>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div class="bg-white p-2 rounded border">
+                                            <p class="text-xs text-gray-600">Supposed Amount:</p>
+                                            <p id="supposedAmount" class="text-sm font-bold text-blue-700">TSh 0.00</p>
+                                        </div>
+                                        <div class="bg-white p-2 rounded border">
+                                            <p class="text-xs text-gray-600">Already Paid:</p>
+                                            <p id="alreadyPaidAmount" class="text-sm font-bold text-green-700">TSh 0.00</p>
+                                        </div>
+                                        <div class="bg-yellow-50 p-2 rounded border border-yellow-300">
+                                            <p class="text-xs text-gray-600">Outstanding:</p>
+                                            <p id="outstandingBalance" class="text-sm font-bold text-red-700">TSh 0.00</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-bold mb-1">Amount (TSh) *</label>
+                                        <input type="number" step="0.01" id="voucherAmount" required
+                                            class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                            placeholder="0.00">
+                                    </div>
+                                    <div id="bookSelection" class="hidden">
+                                        <label class="block text-xs font-bold mb-1">Book/Account *</label>
+                                        <select id="voucherBook"
+                                            class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
+                                            <option value="">-- Select Book --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Notes (Optional)</label>
+                                <textarea id="voucherNotes" rows="2"
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                    placeholder="Add notes..."></textarea>
+                            </div>
+
+                            <div class="flex gap-3 pt-3 border-t-2">
+                                <button type="submit" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-bold transition text-sm">
+                                    💾 Save Entry
+                                </button>
+                                <button type="button" onclick="closeVoucherForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
+                                    ✖️ Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.getElementById('voucherFormContainer').innerHTML = formHtml;
+
+            // Initialize date picker
+            flatpickr("#voucherDate", {
+                dateFormat: "Y-m-d",
+                defaultDate: "today"
+            });
+        }
+
+        function updateVoucherTypeFields() {
+            const voucherType = document.getElementById('voucherType').value;
+            const amountSection = document.getElementById('amountSection');
+            const bookSelection = document.getElementById('bookSelection');
+
+            if (voucherType) {
+                amountSection.classList.remove('hidden');
+
+                if (voucherType === 'Receipt' || voucherType === 'Payment') {
+                    bookSelection.classList.remove('hidden');
+                    document.getElementById('voucherBook').required = true;
+
+                    // Populate books dropdown
+                    const bookSelect = document.getElementById('voucherBook');
+                    bookSelect.innerHTML = '<option value="">-- Select Book --</option>' +
+                        allBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+                } else {
+                    bookSelection.classList.add('hidden');
+                    document.getElementById('voucherBook').required = false;
+                }
+            } else {
+                amountSection.classList.add('hidden');
+            }
+        }
+
+        let filteredStudentsForVoucher = [];
+
+        async function loadParticularStudents() {
+            const particularId = document.getElementById('voucherParticular').value;
+            if (!particularId) return;
+
+            try {
+                const response = await axios.get(`${API_BASE}/particulars/${particularId}`);
+                const particular = response.data;
+                filteredStudentsForVoucher = particular.students || [];
+
+                // Reload payment info if student is already selected
+                const studentId = document.getElementById('selectedStudentId').value;
+                if (studentId) {
+                    await loadPaymentInfo();
+                }
+            } catch (error) {
+                console.error('Error loading particular students:', error);
+            }
+        }
+
+        function searchStudentsByName() {
+            const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
+            if (searchTerm.length < 2) {
+                document.getElementById('studentSearchResults').innerHTML = '';
+                return;
+            }
+
+            const matches = allStudents.filter(s =>
+                s.name.toLowerCase().includes(searchTerm)
+            ).slice(0, 5);
+
+            let html = '<div class="space-y-1 max-h-32 overflow-y-auto">';
+            matches.forEach(student => {
+                html += `
+                    <div onclick="selectStudent(${student.id}, '${student.name}')"
+                        class="p-1.5 bg-white border rounded cursor-pointer hover:bg-purple-100">
+                        <p class="font-bold text-xs">${student.name}</p>
+                        <p class="text-xs text-gray-500">${student.student_reg_no} - ${student.class}</p>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            document.getElementById('studentSearchResults').innerHTML = html;
+        }
+
+        function loadStudentsByClassForVoucher() {
+            const selectedClass = document.getElementById('voucherClass').value;
+            if (!selectedClass) {
+                document.getElementById('classStudentsResults').innerHTML = '';
+                return;
+            }
+
+            const classStudents = allStudents.filter(s => s.class === selectedClass);
+
+            let html = '<select class="w-full border-2 border-gray-300 rounded px-2 py-2 text-sm" onchange="selectStudentFromClass(this.value)">';
+            html += '<option value="">-- Select Student --</option>';
+            classStudents.forEach(student => {
+                html += `<option value="${student.id}">${student.name} (${student.student_reg_no})</option>`;
+            });
+            html += '</select>';
+            document.getElementById('classStudentsResults').innerHTML = html;
+        }
+
+        function selectStudentFromClass(studentId) {
+            if (!studentId) return;
+            const student = allStudents.find(s => s.id == studentId);
+            if (student) {
+                selectStudent(student.id, student.name);
+            }
+        }
+
+        async function selectStudent(studentId, studentName) {
+            document.getElementById('selectedStudentId').value = studentId;
+            document.getElementById('selectedStudentName').textContent = studentName;
+            document.getElementById('selectedStudentDisplay').classList.remove('hidden');
+            document.getElementById('studentSearch').value = '';
+            document.getElementById('studentSearchResults').innerHTML = '';
+
+            // Load payment information for this student and particular
+            await loadPaymentInfo();
+        }
+
+        async function loadPaymentInfo() {
+            const studentId = document.getElementById('selectedStudentId').value;
+            const particularId = document.getElementById('voucherParticular').value;
+
+            if (!studentId || !particularId) {
+                document.getElementById('paymentInfoDisplay').classList.add('hidden');
+                return;
+            }
+
+            try {
+                // Get particular details to find sales amount
+                const particularResponse = await axios.get(`${API_BASE}/particulars/${particularId}`);
+                const particular = particularResponse.data;
+
+                // Find this student in the particular's students
+                const studentInParticular = particular.students?.find(s => s.id == studentId);
+
+                let supposedAmount = 0;
+                let alreadyPaid = 0;
+
+                if (studentInParticular) {
+                    supposedAmount = studentInParticular.pivot.sales || 0;
+                    alreadyPaid = studentInParticular.pivot.credit || 0;
+                }
+
+                const outstandingBalance = supposedAmount - alreadyPaid;
+
+                // Display the information
+                document.getElementById('supposedAmount').textContent = formatTSh(supposedAmount);
+                document.getElementById('alreadyPaidAmount').textContent = formatTSh(alreadyPaid);
+                document.getElementById('outstandingBalance').textContent = formatTSh(outstandingBalance);
+                document.getElementById('paymentInfoDisplay').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading payment info:', error);
+                document.getElementById('paymentInfoDisplay').classList.add('hidden');
+            }
+        }
+
+        async function createVoucher(event) {
+            event.preventDefault();
+
+            const date = document.getElementById('voucherDate').value;
+            const studentId = document.getElementById('selectedStudentId').value;
+            const particularId = document.getElementById('voucherParticular').value;
+            const voucherType = document.getElementById('voucherType').value;
+            const amount = parseFloat(document.getElementById('voucherAmount').value);
+            const notes = document.getElementById('voucherNotes').value;
+            const bookId = document.getElementById('voucherBook').value || null;
+
+            let debit = 0, credit = 0;
+            if (voucherType === 'Sales') {
+                debit = amount;
+            } else {
+                credit = amount;
+            }
+
+            try {
+                await axios.post(`${API_BASE}/vouchers`, {
+                    date,
+                    student_id: parseInt(studentId),
+                    particular_id: parseInt(particularId),
+                    book_id: bookId ? parseInt(bookId) : null,
+                    voucher_type: voucherType,
+                    debit,
+                    credit,
+                    notes
+                });
+                alert('✅ Voucher created successfully!');
+                closeVoucherForm();
+                loadVouchers();
+            } catch (error) {
+                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+            }
+        }
+
+        function closeVoucherForm() {
+            document.getElementById('voucherFormContainer').innerHTML = '';
+        }
+
+        // ===== LEDGERS MODULE =====
+        async function showLedgersModule() {
+            const classOptions = allClasses.map(cls =>
+                `<option value="${cls}">${cls}</option>`
+            ).join('');
+
+            const content = `
+                <div>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-orange-600">📊 Ledgers</h2>
+                        <div class="flex gap-3">
+                            <a href="${API_BASE}/ledgers/all-students/pdf" target="_blank"
+                                class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded inline-flex items-center transition">
+                                📑 Download All Students Ledgers (PDF)
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Date Range Filter Section -->
+                    <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-6">
+                        <h4 class="text-lg font-bold text-blue-800 mb-3">📅 Date Range Filter (Optional)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="text-sm font-bold text-gray-700 block mb-1">From Date:</label>
+                                <input type="date" id="ledgerFromDate" class="w-full border-2 border-gray-300 rounded px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="text-sm font-bold text-gray-700 block mb-1">To Date:</label>
+                                <input type="date" id="ledgerToDate" class="w-full border-2 border-gray-300 rounded px-3 py-2">
+                            </div>
+                            <div class="flex items-end">
+                                <button onclick="clearDateFilter()" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded w-full transition">
+                                    Clear Dates
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-600 mt-2">💡 Leave empty to view all records, or select dates to filter transactions within a specific period.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-orange-50 border-2 border-orange-300 rounded-lg p-6">
+                            <h3 class="text-xl font-bold mb-4">👤 Student Ledger</h3>
+                            <input type="text" id="studentLedgerSearch" onkeyup="searchStudentsForLedger()"
+                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 mb-2"
+                                placeholder="Type student name...">
+                            <div id="studentLedgerSearchResults" class="mb-3"></div>
+                            <p class="text-xs text-gray-500 mb-2">OR</p>
+                            <select id="studentLedgerClass" onchange="loadStudentsForLedger()"
+                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 mb-2">
+                                <option value="">-- Select Class --</option>
+                                ${classOptions}
+                            </select>
+                            <div id="studentLedgerClassResults"></div>
+                        </div>
+
+                        <div class="bg-orange-100 border-2 border-orange-400 rounded-lg p-6">
+                            <h3 class="text-xl font-bold mb-4">👥 Class Ledger</h3>
+                            <select id="classLedgerSelect"
+                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 mb-4">
+                                <option value="">-- Select Class --</option>
+                                ${classOptions}
+                            </select>
+                            <button onclick="viewClassLedger()"
+                                class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg w-full transition">
+                                View Class Ledger
+                            </button>
+                        </div>
+
+                        <div class="bg-orange-200 border-2 border-orange-500 rounded-lg p-6">
+                            <h3 class="text-xl font-bold mb-4">🏦 Book Ledger</h3>
+                            <select id="bookLedgerSelect"
+                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 mb-4">
+                                <option value="">-- Select Book --</option>
+                                ${allBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('')}
+                            </select>
+                            <button onclick="viewBookLedger()"
+                                class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg w-full transition">
+                                View Book Ledger
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="ledgerContent" class="bg-white border-2 border-gray-300 rounded-lg p-6">
+                        <p class="text-center text-gray-500">Select a ledger type above to view reports</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('moduleContent').innerHTML = content;
+        }
+
+        function searchStudentsForLedger() {
+            const searchTerm = document.getElementById('studentLedgerSearch').value.toLowerCase();
+            if (searchTerm.length < 2) {
+                document.getElementById('studentLedgerSearchResults').innerHTML = '';
+                return;
+            }
+
+            const matches = allStudents.filter(s =>
+                s.name.toLowerCase().includes(searchTerm)
+            ).slice(0, 5);
+
+            let html = '<div class="space-y-1 max-h-48 overflow-y-auto">';
+            matches.forEach(student => {
+                html += `
+                    <div onclick="viewStudentLedger(${student.id})"
+                        class="p-2 bg-white border rounded cursor-pointer hover:bg-orange-100">
+                        <p class="font-bold text-sm">${student.name}</p>
+                        <p class="text-xs text-gray-500">${student.student_reg_no} - ${student.class}</p>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            document.getElementById('studentLedgerSearchResults').innerHTML = html;
+        }
+
+        function loadStudentsForLedger() {
+            const selectedClass = document.getElementById('studentLedgerClass').value;
+            if (!selectedClass) {
+                document.getElementById('studentLedgerClassResults').innerHTML = '';
+                return;
+            }
+
+            const classStudents = allStudents.filter(s => s.class === selectedClass);
+
+            let html = '<select class="w-full border-2 border-gray-300 rounded px-2 py-2 text-sm mt-2" onchange="if(this.value) viewStudentLedger(this.value)">';
+            html += '<option value="">-- Select Student --</option>';
+            classStudents.forEach(student => {
+                html += `<option value="${student.id}">${student.name} (${student.student_reg_no})</option>`;
+            });
+            html += '</select>';
+            document.getElementById('studentLedgerClassResults').innerHTML = html;
+        }
+
+        function clearDateFilter() {
+            document.getElementById('ledgerFromDate').value = '';
+            document.getElementById('ledgerToDate').value = '';
+        }
+
+        function getDateFilterParams() {
+            const fromDate = document.getElementById('ledgerFromDate').value;
+            const toDate = document.getElementById('ledgerToDate').value;
+            let params = '';
+            if (fromDate && toDate) {
+                params = `?from_date=${fromDate}&to_date=${toDate}`;
+            }
+            return params;
+        }
+
+        async function viewStudentLedger(studentId) {
+            try {
+                const dateParams = getDateFilterParams();
+                const response = await axios.get(`${API_BASE}/ledgers/student/${studentId}${dateParams}`);
+                const data = response.data;
+
+                const dateRangeText = data.date_range.from && data.date_range.to
+                    ? `From: ${data.date_range.from} To: ${data.date_range.to}`
+                    : 'All Transactions';
+
+                let html = `
+                    <div class="border-2 border-orange-300 rounded-lg p-6 bg-orange-50">
+                        <div class="mb-6 text-center border-b-2 border-orange-300 pb-4">
+                            <h3 class="text-2xl font-bold text-orange-700">STUDENT LEDGER</h3>
+                            <p class="text-lg font-bold mt-2">${data.student.name}</p>
+                            <p class="text-sm text-gray-600">${data.student.student_reg_no} - ${data.student.class}</p>
+                            <p class="text-sm font-bold text-blue-600 mt-1">${dateRangeText}</p>
+                            <div class="mt-4 flex justify-center gap-3">
+                                <a href="${API_BASE}/ledgers/student/${studentId}/pdf${dateParams}" target="_blank" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded inline-flex items-center transition">
+                                    📄 Download PDF
+                                </a>
+                                <a href="${API_BASE}/ledgers/student/${studentId}/csv${dateParams}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-flex items-center transition">
+                                    📊 Download CSV
+                                </a>
+                            </div>
+                            <div class="mt-4 p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
+                                <h4 class="font-bold text-purple-700 mb-2">📄 Download Student Invoices</h4>
+                                <p class="text-xs text-gray-600 mb-3">Generate parent-friendly fee statements (one student per page)</p>
+                                <a href="/accountant/invoices" class="block w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded transition text-center">
+                                    Go to Invoices Page
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-2 border-gray-300 bg-white">
+                                <thead class="bg-red-100">
+                                    <tr>
+                                        <th colspan="8" class="p-3 text-left text-lg font-bold text-red-700">SALES ASSIGNED</th>
+                                    </tr>
+                                    <tr class="bg-orange-200">
+                                        <th class="p-3 text-left">Date</th>
+                                        <th class="p-3 text-left">Particular</th>
+                                        <th class="p-3 text-left">Type</th>
+                                        <th class="p-3 text-left">Voucher #</th>
+                                        <th class="p-3 text-right">Debit (DR)</th>
+                                        <th class="p-3 text-right">Credit (CR)</th>
+                                        <th class="p-3 text-right">Balance</th>
+                                        <th class="p-3 text-left">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+
+                // Add Opening Balance row if date filter is applied
+                if (data.summary.opening_balance !== undefined && data.summary.opening_balance !== 0) {
+                    html += `
+                        <tr class="bg-gray-200 font-bold border-2 border-gray-400">
+                            <td colspan="4" class="p-3 text-left text-lg">OPENING BALANCE</td>
+                            <td class="p-3 text-right">-</td>
+                            <td class="p-3 text-right">-</td>
+                            <td class="p-3 text-right text-blue-900 text-lg">${formatTSh(data.summary.opening_balance)}</td>
+                            <td></td>
+                        </tr>
+                    `;
+                }
+
+                // Sales entries grouped on top
+                data.sales.forEach(sale => {
+                    html += `
+                        <tr class="border-t bg-red-50">
+                            <td class="p-3">${sale.date}</td>
+                            <td class="p-3 font-bold">${sale.particular}</td>
+                            <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold bg-red-200 text-red-800">${sale.voucher_type}</span></td>
+                            <td class="p-3 font-mono text-sm">${sale.voucher_number}</td>
+                            <td class="p-3 text-right font-bold text-red-600">${formatTSh(sale.debit)}</td>
+                            <td class="p-3 text-right font-bold text-green-600">${formatTSh(sale.credit)}</td>
+                            <td class="p-3 text-right font-bold text-blue-700">${formatTSh(sale.balance)}</td>
+                            <td class="p-3 text-sm">${sale.notes || '-'}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                                <thead class="bg-green-100">
+                                    <tr>
+                                        <th colspan="8" class="p-3 text-left text-lg font-bold text-green-700">PAYMENT ENTRIES</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+
+                // Other entries (receipts, payments)
+                data.entries.forEach(entry => {
+                    html += `
+                        <tr class="border-t">
+                            <td class="p-3">${entry.date}</td>
+                            <td class="p-3">${entry.particular}</td>
+                            <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${
+                                entry.voucher_type === 'Receipt' ? 'bg-green-200 text-green-800' :
+                                'bg-blue-200 text-blue-800'
+                            }">${entry.voucher_type}</span></td>
+                            <td class="p-3 font-mono text-sm">${entry.voucher_number}</td>
+                            <td class="p-3 text-right font-bold text-red-600">${formatTSh(entry.debit)}</td>
+                            <td class="p-3 text-right font-bold text-green-600">${formatTSh(entry.credit)}</td>
+                            <td class="p-3 text-right font-bold text-blue-700">${formatTSh(entry.balance)}</td>
+                            <td class="p-3 text-sm">${entry.notes || '-'}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                                <tfoot class="bg-orange-100 font-bold">
+                                    <tr>
+                                        <td colspan="4" class="p-3 text-right">TOTAL:</td>
+                                        <td class="p-3 text-right text-red-600">${formatTSh(data.summary.total_debit)}</td>
+                                        <td class="p-3 text-right text-green-600">${formatTSh(data.summary.total_credit)}</td>
+                                        <td class="p-3 text-right text-blue-700 text-lg">${formatTSh(data.summary.closing_balance)}</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="bg-blue-100 border-2 border-blue-300 rounded p-4 mt-4">
+                `;
+
+                // Show opening balance if it exists
+                if (data.summary.opening_balance !== undefined && data.summary.opening_balance !== 0) {
+                    html += `
+                            <div class="text-center mb-3 pb-3 border-b-2 border-blue-300">
+                                <p class="text-sm font-semibold text-gray-600">Opening Balance</p>
+                                <p class="text-lg font-bold text-blue-700">${formatTSh(data.summary.opening_balance)}</p>
+                            </div>
+                    `;
+                }
+
+                html += `
+                            <div class="text-center">
+                                <p class="text-sm font-semibold text-gray-600">Closing Balance (Outstanding)</p>
+                                <p class="text-2xl font-bold text-blue-800">${formatTSh(data.summary.closing_balance)}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('ledgerContent').innerHTML = html;
+            } catch (error) {
+                alert('Error loading ledger: ' + error.message);
+            }
+        }
+
+        async function viewClassLedger() {
+            const className = document.getElementById('classLedgerSelect').value;
+            if (!className) {
+                alert('⚠️ Please select a class');
+                return;
+            }
+
+            try {
+                const dateParams = getDateFilterParams();
+                const response = await axios.get(`${API_BASE}/ledgers/class/${encodeURIComponent(className)}${dateParams}`);
+                const data = response.data;
+
+                const dateRangeText = data.date_range.from && data.date_range.to
+                    ? `From: ${data.date_range.from} To: ${data.date_range.to}`
+                    : 'All Transactions';
+
+                let html = `
+                    <div class="border-2 border-orange-400 rounded-lg p-6 bg-orange-100">
+                        <div class="mb-6 text-center border-b-2 border-orange-400 pb-4">
+                            <h3 class="text-2xl font-bold text-orange-700">CLASS LEDGER</h3>
+                            <p class="text-xl font-bold mt-2">${data.class}</p>
+                            <p class="text-sm font-bold text-blue-600 mt-1">${dateRangeText}</p>
+                            <div class="mt-4 flex justify-center gap-3">
+                                <a href="${API_BASE}/ledgers/class/${encodeURIComponent(className)}/pdf${dateParams}" target="_blank" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded inline-flex items-center transition">
+                                    📄 Download PDF
+                                </a>
+                                <a href="${API_BASE}/ledgers/class/${encodeURIComponent(className)}/csv${dateParams}" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-flex items-center transition">
+                                    📊 Download CSV
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- CLASS SUMMARY -->
+                        <div class="bg-blue-50 border-2 border-blue-300 rounded p-4 mb-4">
+                            <h4 class="text-lg font-bold text-blue-800 mb-3">CLASS SUMMARY</h4>
+                `;
+
+                // Show opening balance if it exists
+                if (data.summary.opening_balance !== undefined && data.summary.opening_balance !== 0) {
+                    html += `
+                            <div class="grid grid-cols-4 gap-4 text-center">
+                                <div>
+                                    <p class="text-sm text-gray-600">Opening Balance</p>
+                                    <p class="text-xl font-bold text-purple-600">${formatTSh(data.summary.opening_balance)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Total Sales (DR)</p>
+                                    <p class="text-xl font-bold text-red-600">${formatTSh(data.summary.total_sales)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Total Receipts (CR)</p>
+                                    <p class="text-xl font-bold text-green-600">${formatTSh(data.summary.total_receipts)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Closing Balance</p>
+                                    <p class="text-xl font-bold text-blue-700">${formatTSh(data.summary.total_balance)}</p>
+                                </div>
+                            </div>
+                    `;
+                } else {
+                    html += `
+                            <div class="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <p class="text-sm text-gray-600">Total Sales (DR)</p>
+                                    <p class="text-xl font-bold text-red-600">${formatTSh(data.summary.total_sales)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Total Receipts (CR)</p>
+                                    <p class="text-xl font-bold text-green-600">${formatTSh(data.summary.total_receipts)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Total Balance</p>
+                                    <p class="text-xl font-bold text-blue-700">${formatTSh(data.summary.total_balance)}</p>
+                                </div>
+                            </div>
+                    `;
+                }
+
+                html += `
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-2 border-gray-300 bg-white">
+                                <thead class="bg-orange-200">
+                                    <tr>
+                                        <th class="p-3 text-left">Student Name</th>
+                                        <th class="p-3 text-left">Reg No</th>
+                `;
+
+                // Add opening balance column if it exists
+                if (data.summary.opening_balance !== undefined && data.summary.opening_balance !== 0) {
+                    html += `<th class="p-3 text-right">Opening Balance</th>`;
+                }
+
+                html += `
+                                        <th class="p-3 text-right">Sales (DR)</th>
+                                        <th class="p-3 text-right">Receipts (CR)</th>
+                                        <th class="p-3 text-right">Closing Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+
+                data.students.forEach(entry => {
+                    html += `
+                        <tr class="border-t hover:bg-orange-50">
+                            <td class="p-3 font-bold">${entry.student.name}</td>
+                            <td class="p-3">${entry.student.student_reg_no}</td>
+                    `;
+
+                    // Add opening balance if it exists
+                    if (data.summary.opening_balance !== undefined && data.summary.opening_balance !== 0) {
+                        html += `<td class="p-3 text-right font-bold text-purple-600">${formatTSh(entry.opening_balance || 0)}</td>`;
+                    }
+
+                    html += `
+                            <td class="p-3 text-right font-bold text-red-600">${formatTSh(entry.total_debit)}</td>
+                            <td class="p-3 text-right font-bold text-green-600">${formatTSh(entry.total_credit)}</td>
+                            <td class="p-3 text-right font-bold text-blue-700">${formatTSh(entry.balance)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                                <tfoot class="bg-orange-100 font-bold">
+                                    <tr>
+                                        <td colspan="2" class="p-3 text-right">GRAND TOTAL:</td>
+                `;
+
+                // Add opening balance total if it exists
+                if (data.summary.opening_balance !== undefined && data.summary.opening_balance !== 0) {
+                    html += `<td class="p-3 text-right text-purple-600 text-lg">${formatTSh(data.summary.opening_balance)}</td>`;
+                }
+
+                html += `
+                                        <td class="p-3 text-right text-red-600">${formatTSh(data.summary.total_sales)}</td>
+                                        <td class="p-3 text-right text-green-600">${formatTSh(data.summary.total_receipts)}</td>
+                                        <td class="p-3 text-right text-blue-700 text-lg">${formatTSh(data.summary.total_balance)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('ledgerContent').innerHTML = html;
+            } catch (error) {
+                alert('Error loading ledger: ' + error.message);
+            }
+        }
+
+        async function viewBookLedger() {
+            const bookId = document.getElementById('bookLedgerSelect').value;
+            if (!bookId) {
+                alert('⚠️ Please select a book');
+                return;
+            }
+
+            try {
+                const dateParams = getDateFilterParams();
+                const response = await axios.get(`${API_BASE}/ledgers/book/${bookId}${dateParams}`);
+                const data = response.data;
+
+                const dateRangeText = data.date_range.from && data.date_range.to
+                    ? `From: ${data.date_range.from} To: ${data.date_range.to}`
+                    : 'All Transactions';
+
+                let html = `
+                    <div class="border-2 border-orange-500 rounded-lg p-6 bg-orange-200">
+                        <div class="mb-6 text-center border-b-2 border-orange-500 pb-4">
+                            <h3 class="text-2xl font-bold text-orange-800">BOOK LEDGER</h3>
+                            <p class="text-xl font-bold mt-2">${data.book.name}</p>
+                            ${data.book.bank_account_number ? `<p class="text-sm text-gray-600">Account: ${data.book.bank_account_number}</p>` : ''}
+                            <p class="text-sm font-bold text-blue-600 mt-1">${dateRangeText}</p>
+                            <div class="mt-4 flex justify-center gap-3">
+                                <a href="${API_BASE}/ledgers/book/${bookId}/pdf" target="_blank" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded inline-flex items-center transition">
+                                    📄 Download PDF
+                                </a>
+                                <a href="${API_BASE}/ledgers/book/${bookId}/csv" target="_blank" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-flex items-center transition">
+                                    📊 Download CSV
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- OPENING BALANCE -->
+                        <div class="bg-blue-100 border-2 border-blue-300 rounded p-3 mb-4 text-center">
+                            <p class="text-lg font-bold text-blue-800">OPENING BALANCE: ${formatTSh(data.summary.opening_balance)}</p>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-2 border-gray-300 bg-white">
+                                <thead class="bg-orange-200">
+                                    <tr>
+                                        <th class="p-3 text-left">Date</th>
+                                        <th class="p-3 text-left">Student</th>
+                                        <th class="p-3 text-left">Particular</th>
+                                        <th class="p-3 text-left">Type</th>
+                                        <th class="p-3 text-left">Voucher #</th>
+                                        <th class="p-3 text-right">DR (In)</th>
+                                        <th class="p-3 text-right">CR (Out)</th>
+                                        <th class="p-3 text-right">Balance</th>
+                                        <th class="p-3 text-left">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+
+                data.ledger.forEach(entry => {
+                    html += `
+                        <tr class="border-t hover:bg-orange-50">
+                            <td class="p-3">${entry.date}</td>
+                            <td class="p-3 font-bold">${entry.student}</td>
+                            <td class="p-3">${entry.particular}</td>
+                            <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${
+                                entry.voucher_type === 'Receipt' ? 'bg-green-200 text-green-800' :
+                                'bg-blue-200 text-blue-800'
+                            }">${entry.voucher_type}</span></td>
+                            <td class="p-3 font-mono text-sm">${entry.voucher_number}</td>
+                            <td class="p-3 text-right font-bold text-green-600">${formatTSh(entry.debit)}</td>
+                            <td class="p-3 text-right font-bold text-red-600">${formatTSh(entry.credit)}</td>
+                            <td class="p-3 text-right font-bold text-blue-700">${formatTSh(entry.balance)}</td>
+                            <td class="p-3 text-sm">${entry.notes || '-'}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                                <tfoot class="bg-orange-100 font-bold">
+                                    <tr>
+                                        <td colspan="5" class="p-3 text-right">TOTALS:</td>
+                                        <td class="p-3 text-right text-green-600">${formatTSh(data.summary.total_receipts)}</td>
+                                        <td class="p-3 text-right text-red-600">${formatTSh(data.summary.total_payments)}</td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- CLOSING BALANCE -->
+                        <div class="bg-blue-100 border-2 border-blue-300 rounded p-3 mt-4 text-center">
+                            <p class="text-lg font-bold text-blue-800">CLOSING BALANCE: ${formatTSh(data.summary.closing_balance)}</p>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('ledgerContent').innerHTML = html;
+            } catch (error) {
+                alert('Error loading ledger: ' + error.message);
+            }
+        }
+
+        // ===== BULK DOWNLOAD STUDENT LEDGERS =====
+        async function showBulkDownloadOptions() {
+            const classes = [...new Set(allStudents.map(s => s.class))].sort();
+
+            let html = `
+                <div>
+                    <h2 class="text-3xl font-bold text-purple-600 mb-6">📦 Bulk Download Student Ledgers</h2>
+                    <p class="text-gray-600 mb-6">Select which classes to include. Each student will have their ledger on a separate page.</p>
+
+                    <!-- Quick Options -->
+                    <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-6">
+                        <h4 class="font-bold text-blue-700 mb-3">Quick Options</h4>
+                        <div class="grid grid-cols-3 gap-3">
+                            <button onclick="selectAllClasses()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition">
+                                ✅ Select All Classes
+                            </button>
+                            <button onclick="deselectAllClasses()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition">
+                                ❌ Deselect All
+                            </button>
+                            <button onclick="downloadSelectedClasses()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition">
+                                📥 Download Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Class Selection -->
+                    <div class="bg-white border-2 border-gray-300 rounded-lg p-4">
+                        <h4 class="font-bold text-gray-700 mb-3">Select Classes:</h4>
+                        <div id="classSelectionList" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            `;
+
+            classes.forEach(className => {
+                const studentCount = allStudents.filter(s => s.class === className).length;
+                html += `
+                    <div class="bg-gray-50 border-2 border-gray-300 rounded-lg p-3 hover:bg-purple-50 hover:border-purple-400 transition">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" class="bulk-class-checkbox w-5 h-5 mr-2" value="${className}">
+                            <div>
+                                <p class="font-bold">${className}</p>
+                                <p class="text-xs text-gray-500">${studentCount} students</p>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('moduleContent').innerHTML = html;
+        }
+
+        function selectAllClasses() {
+            document.querySelectorAll('.bulk-class-checkbox').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllClasses() {
+            document.querySelectorAll('.bulk-class-checkbox').forEach(cb => cb.checked = false);
+        }
+
+        function downloadSelectedClasses() {
+            const selectedClasses = [];
+            document.querySelectorAll('.bulk-class-checkbox:checked').forEach(cb => {
+                selectedClasses.push(cb.value);
+            });
+
+            if (selectedClasses.length === 0) {
+                alert('⚠️ Please select at least one class');
+                return;
+            }
+
+            // Check if all classes are selected
+            const allClasses = [...new Set(allStudents.map(s => s.class))];
+            const downloadAllClasses = selectedClasses.length === allClasses.length;
+
+            if (downloadAllClasses) {
+                // Download all classes
+                window.open(`${API_BASE}/ledgers/all-students/pdf`, '_blank');
+            } else if (selectedClasses.length === 1) {
+                // Download single class
+                window.open(`${API_BASE}/ledgers/all-students/pdf?class=${encodeURIComponent(selectedClasses[0])}`, '_blank');
+            } else {
+                // Download multiple specific classes
+                const classesParam = selectedClasses.map(c => `classes[]=${encodeURIComponent(c)}`).join('&');
+                window.open(`${API_BASE}/ledgers/all-students/pdf?${classesParam}`, '_blank');
+            }
+        }
+
+        // ===== OVERDUE MODULE =====
+        async function showOverdueModule() {
+            try {
+                const response = await axios.get(`${API_BASE}/overdue-amounts`);
+                const data = response.data;
+
+                let html = `
+                    <div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-3xl font-bold text-red-600">⚠️ Overdue Payments</h2>
+                            <button onclick="loadInitialData(); showOverdueModule();" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition">
+                                🔄 Refresh
+                            </button>
+                        </div>
+
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                                <h4 class="text-sm font-bold text-red-700 mb-2">Total Overdue Amount</h4>
+                                <p class="text-3xl font-bold text-red-600">${formatTSh(data.summary.total_overdue_amount)}</p>
+                            </div>
+                            <div class="bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
+                                <h4 class="text-sm font-bold text-orange-700 mb-2">Students with Overdue</h4>
+                                <p class="text-3xl font-bold text-orange-600">${Math.round(data.summary.total_students_with_overdue)}</p>
+                            </div>
+                            <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                                <h4 class="text-sm font-bold text-yellow-700 mb-2">Overdue Particulars</h4>
+                                <p class="text-3xl font-bold text-yellow-600">${Math.round(data.summary.total_overdue_particulars)}</p>
+                            </div>
+                        </div>
+
+                        <!-- By Particular Summary -->
+                        <div class="mb-6">
+                            <h3 class="text-xl font-bold text-gray-700 mb-3">📋 Overdue by Particular</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                `;
+
+                data.overdue_by_particular.forEach(item => {
+                    html += `
+                        <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                            <h4 class="font-bold text-lg text-yellow-800">${item.particular.name}</h4>
+                            <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <p class="text-gray-600">Students Overdue:</p>
+                                    <p class="font-bold text-lg">${item.total_students_overdue}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Amount Overdue:</p>
+                                    <p class="font-bold text-lg text-red-600">${formatTSh(item.total_amount_overdue)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                            </div>
+                        </div>
+
+                        <!-- Detailed Student List -->
+                        <div class="mb-6">
+                            <h3 class="text-xl font-bold text-gray-700 mb-3">👥 Students with Overdue Payments</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full border-2 border-gray-300 rounded-lg">
+                                    <thead class="bg-red-100">
+                                        <tr>
+                                            <th class="p-3 text-left">Student</th>
+                                            <th class="p-3 text-left">Class</th>
+                                            <th class="p-3 text-left">Overdue Particulars</th>
+                                            <th class="p-3 text-right">Total Overdue</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                `;
+
+                data.overdue_by_student.forEach(student => {
+                    const particularsDetails = student.overdue_particulars.map(p =>
+                        `${p.particular_name}: ${formatTSh(p.amount_due)} (${p.days_overdue} days overdue)`
+                    ).join('<br>');
+
+                    html += `
+                        <tr class="border-t hover:bg-red-50">
+                            <td class="p-3">
+                                <p class="font-bold">${student.student.name}</p>
+                                <p class="text-xs text-gray-500">${student.student.reg_no}</p>
+                            </td>
+                            <td class="p-3">${student.student.class}</td>
+                            <td class="p-3 text-sm">${particularsDetails}</td>
+                            <td class="p-3 text-right font-bold text-red-600 text-lg">${formatTSh(student.total_overdue)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('moduleContent').innerHTML = html;
+            } catch (error) {
+                alert('Error loading overdue data: ' + error.message);
+            }
+        }
+
+        // ===== PARTICULAR LEDGER MODULE =====
+        async function showParticularLedgerModule() {
+            try {
+                const response = await axios.get(`${API_BASE}/particulars`);
+                const particulars = response.data;
+
+                let html = `
+                    <div>
+                        <h2 class="text-3xl font-bold text-teal-600 mb-6">📋 Particular Ledger</h2>
+                        <p class="text-gray-600 mb-6">Select a particular/fee type to view all related transactions across all students.</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                `;
+
+                particulars.forEach(particular => {
+                    html += `
+                        <div onclick="loadParticularDetails(${particular.id})" class="bg-teal-50 border-2 border-teal-300 rounded-lg p-4 hover:bg-teal-100 hover:border-teal-500 transition cursor-pointer">
+                            <h4 class="font-bold text-lg text-teal-800">${particular.name}</h4>
+                            <p class="text-xs text-gray-600 mt-2">Click to view transactions</p>
+                        </div>
+                    `;
+                });
+
+                html += `
+                        </div>
+                        <div id="particularDetailsSection"></div>
+                    </div>
+                `;
+
+                document.getElementById('moduleContent').innerHTML = html;
+            } catch (error) {
+                alert('Error loading particulars: ' + error.message);
+            }
+        }
+
+        async function loadParticularDetails(particularId, fromDate = '', toDate = '') {
+            try {
+                let url = `${API_BASE}/ledgers/particular/${particularId}`;
+                if (fromDate && toDate) {
+                    url += `?from_date=${fromDate}&to_date=${toDate}`;
+                }
+
+                const response = await axios.get(url);
+                const data = response.data;
+
+                let html = `
+                    <div class="bg-white border-2 border-teal-300 rounded-lg p-6">
+                        <div class="mb-6 border-b-2 border-teal-300 pb-4">
+                            <h3 class="text-2xl font-bold text-teal-700">${data.particular.name}</h3>
+                            <p class="text-sm text-gray-600 mt-2">${data.date_range}</p>
+
+                            <!-- Date Range Filter -->
+                            <div class="mt-4 bg-blue-50 border-2 border-blue-300 rounded-lg p-3">
+                                <h4 class="text-sm font-bold text-blue-700 mb-2">Filter by Date Range</h4>
+                                <div class="grid grid-cols-4 gap-3">
+                                    <div>
+                                        <label class="text-xs font-bold text-gray-700">From:</label>
+                                        <input type="date" id="particularFromDate" value="${fromDate}" class="w-full border rounded px-2 py-1">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-gray-700">To:</label>
+                                        <input type="date" id="particularToDate" value="${toDate}" class="w-full border rounded px-2 py-1">
+                                    </div>
+                                    <div class="flex items-end">
+                                        <button onclick="applyParticularDateFilter(${particularId})" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-1 rounded w-full text-sm">
+                                            Apply
+                                        </button>
+                                    </div>
+                                    <div class="flex items-end">
+                                        <button onclick="loadParticularDetails(${particularId})" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-1 rounded w-full text-sm">
+                                            Clear
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Summary Cards -->
+                `;
+
+                // Show opening balance if it exists
+                if (data.summary.opening_balance !== undefined && data.summary.opening_balance !== 0) {
+                    html += `
+                        <div class="grid grid-cols-4 gap-4 mb-6">
+                            <div class="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 text-center">
+                                <p class="text-xs text-gray-600">Opening Balance</p>
+                                <p class="text-2xl font-bold text-purple-700">${formatTSh(data.summary.opening_balance)}</p>
+                            </div>
+                            <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 text-center">
+                                <p class="text-xs text-gray-600">Total Debit</p>
+                                <p class="text-2xl font-bold text-blue-700">${formatTSh(data.summary.total_debit)}</p>
+                            </div>
+                            <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4 text-center">
+                                <p class="text-xs text-gray-600">Total Credit</p>
+                                <p class="text-2xl font-bold text-green-700">${formatTSh(data.summary.total_credit)}</p>
+                            </div>
+                            <div class="bg-red-50 border-2 border-red-300 rounded-lg p-4 text-center">
+                                <p class="text-xs text-gray-600">Closing Balance</p>
+                                <p class="text-2xl font-bold text-red-700">${formatTSh(data.summary.balance)}</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 text-center">
+                                <p class="text-xs text-gray-600">Total Debit</p>
+                                <p class="text-2xl font-bold text-blue-700">${formatTSh(data.summary.total_debit)}</p>
+                            </div>
+                            <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4 text-center">
+                                <p class="text-xs text-gray-600">Total Credit</p>
+                                <p class="text-2xl font-bold text-green-700">${formatTSh(data.summary.total_credit)}</p>
+                            </div>
+                            <div class="bg-red-50 border-2 border-red-300 rounded-lg p-4 text-center">
+                                <p class="text-xs text-gray-600">Balance</p>
+                                <p class="text-2xl font-bold text-red-700">${formatTSh(data.summary.balance)}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `
+
+                        <!-- Transactions Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-2 border-gray-300 bg-white">
+                                <thead class="bg-teal-100">
+                                    <tr>
+                                        <th class="p-3 text-left">Date</th>
+                                        <th class="p-3 text-left">Student</th>
+                                        <th class="p-3 text-left">Class</th>
+                                        <th class="p-3 text-left">Book</th>
+                                        <th class="p-3 text-left">Type</th>
+                                        <th class="p-3 text-right">Debit</th>
+                                        <th class="p-3 text-right">Credit</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+
+                data.entries.forEach(entry => {
+                    html += `
+                        <tr class="border-t hover:bg-teal-50">
+                            <td class="p-3">${entry.date}</td>
+                            <td class="p-3 font-semibold">${entry.student}</td>
+                            <td class="p-3">${entry.class}</td>
+                            <td class="p-3">${entry.book}</td>
+                            <td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${
+                                entry.voucher_type === 'Sales' ? 'bg-red-200 text-red-800' :
+                                entry.voucher_type === 'Receipt' ? 'bg-green-200 text-green-800' :
+                                'bg-blue-200 text-blue-800'
+                            }">${entry.voucher_type}</span></td>
+                            <td class="p-3 text-right font-bold text-red-600">${formatTSh(entry.debit)}</td>
+                            <td class="p-3 text-right font-bold text-green-600">${formatTSh(entry.credit)}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4 text-center">
+                `;
+
+                // Add date params to PDF URL if filter is applied
+                let pdfUrl = `${API_BASE}/ledgers/particular/${particularId}/pdf`;
+                if (fromDate && toDate) {
+                    pdfUrl += `?from_date=${fromDate}&to_date=${toDate}`;
+                }
+
+                html += `
+                            <a href="${pdfUrl}" target="_blank" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded inline-flex items-center transition">
+                                📄 Download PDF
+                            </a>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('particularDetailsSection').innerHTML = html;
+            } catch (error) {
+                alert('Error loading particular details: ' + error.message);
+            }
+        }
+
+        function applyParticularDateFilter(particularId) {
+            const fromDate = document.getElementById('particularFromDate').value;
+            const toDate = document.getElementById('particularToDate').value;
+
+            if (fromDate && toDate) {
+                loadParticularDetails(particularId, fromDate, toDate);
+            } else {
+                alert('Please select both From and To dates');
+            }
+        }
+
+        // ===== SUSPENSE ACCOUNTS MODULE =====
+        async function showSuspenseAccountsModule() {
+            try {
+                const response = await axios.get(`${API_BASE}/suspense-accounts`);
+                const data = response.data;
+                const accounts = data.suspense_accounts.data || data.suspense_accounts || [];
+
+                let html = `
+                    <div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-3xl font-bold text-amber-600">⏳ Suspense Accounts</h2>
+                            <button onclick="showCreateSuspenseForm()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded transition">
+                                ➕ Add Suspense Entry
+                            </button>
+                        </div>
+
+                        <p class="text-gray-600 mb-6">Suspense accounts temporarily hold unallocated payments until they can be properly assigned.</p>
+
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
+                                <h4 class="text-sm font-bold text-amber-700 mb-2">Total Unresolved Amount</h4>
+                                <p class="text-3xl font-bold text-amber-600">${formatTSh(data.summary?.total_unresolved || 0)}</p>
+                            </div>
+                            <div class="bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
+                                <h4 class="text-sm font-bold text-orange-700 mb-2">Total Resolved</h4>
+                                <p class="text-3xl font-bold text-green-600">${formatTSh(data.summary?.total_resolved || 0)}</p>
+                            </div>
+                        </div>
+
+                        <!-- Suspense Entries Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-2 border-gray-300 rounded-lg">
+                                <thead class="bg-amber-100">
+                                    <tr>
+                                        <th class="p-3 text-left">Date</th>
+                                        <th class="p-3 text-left">Reference</th>
+                                        <th class="p-3 text-left">Description</th>
+                                        <th class="p-3 text-right">Amount</th>
+                                        <th class="p-3 text-left">Status</th>
+                                        <th class="p-3 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+
+                if (accounts.length === 0) {
+                    html += `
+                        <tr>
+                            <td colspan="6" class="p-6 text-center text-gray-500">No suspense accounts found. Click "Add Suspense Entry" to create one.</td>
+                        </tr>
+                    `;
+                } else {
+                    accounts.forEach(account => {
+                        const statusBadge = account.is_resolved
+                            ? '<span class="px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-bold">Resolved</span>'
+                            : '<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">Unresolved</span>';
+
+                        html += `
+                            <tr class="border-t hover:bg-amber-50">
+                                <td class="p-3">${new Date(account.date).toLocaleDateString()}</td>
+                                <td class="p-3 font-mono text-sm">${account.reference_number || 'N/A'}</td>
+                                <td class="p-3">${account.description || 'N/A'}</td>
+                                <td class="p-3 text-right font-bold text-amber-700">${formatTSh(account.amount)}</td>
+                                <td class="p-3">${statusBadge}</td>
+                                <td class="p-3">
+                                    ${!account.is_resolved ? `
+                                        <button onclick="resolveSuspenseAccount(${account.id})" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-xs transition">
+                                            Resolve
+                                        </button>
+                                    ` : ''}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('moduleContent').innerHTML = html;
+            } catch (error) {
+                alert('Error loading suspense accounts: ' + error.message);
+            }
+        }
+
+        function showCreateSuspenseForm() {
+            alert('Suspense account creation form - To be implemented with full form fields');
+        }
+
+        function resolveSuspenseAccount(accountId) {
+            if (confirm('Are you sure you want to resolve this suspense account?')) {
+                axios.post(`${API_BASE}/suspense-accounts/${accountId}/resolve`)
+                    .then(response => {
+                        alert('✅ Suspense account resolved successfully');
+                        showSuspenseAccountsModule(); // Reload the list
+                    })
+                    .catch(error => {
+                        alert('Error resolving suspense account: ' + error.message);
+                    });
+            }
+        }
+
+        // ===== PAYROLL MODULE =====
+        async function showPayrollModule() {
+            try {
+                const [staffResponse, payrollResponse] = await Promise.all([
+                    axios.get(`${API_BASE}/staff`),
+                    axios.get(`${API_BASE}/payroll`)
+                ]);
+
+                const staffData = staffResponse.data;
+                const payrollData = payrollResponse.data;
+                const staff = staffData.staff?.data || staffData.staff || [];
+                const payroll = payrollData.payroll_entries?.data || payrollData.payroll_entries || [];
+
+                let html = `
+                    <div>
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-3xl font-bold text-violet-600">👥 Payroll Management</h2>
+                            <div class="flex gap-3">
+                                <button onclick="showAddStaffForm()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition">
+                                    ➕ Add Staff
+                                </button>
+                                <button onclick="showProcessPayrollForm()" class="bg-violet-500 hover:bg-violet-600 text-white px-4 py-2 rounded transition">
+                                    💰 Process Payroll
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Staff List -->
+                        <div class="mb-6">
+                            <h3 class="text-xl font-bold text-gray-700 mb-3">Staff Members</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                `;
+
+                if (staff.length === 0) {
+                    html += `<p class="text-center text-gray-500 col-span-3">No staff members found. Click "Add Staff" to add one.</p>`;
+                } else {
+                    staff.forEach(member => {
+                        html += `
+                            <div class="bg-violet-50 border-2 border-violet-300 rounded-lg p-4">
+                                <h4 class="font-bold text-lg text-violet-800">${member.name}</h4>
+                                <p class="text-sm text-gray-600">${member.position}</p>
+                                <p class="text-xs text-gray-500 mt-1">ID: ${member.staff_id}</p>
+                                <p class="text-lg font-bold text-violet-700 mt-2">Salary: ${formatTSh(member.monthly_salary || 0)}</p>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `
+                            </div>
+                        </div>
+
+                        <!-- Recent Payroll Entries -->
+                        <div class="mb-6">
+                            <h3 class="text-xl font-bold text-gray-700 mb-3">Recent Payroll</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full border-2 border-gray-300 rounded-lg">
+                                    <thead class="bg-violet-100">
+                                        <tr>
+                                            <th class="p-3 text-left">Period</th>
+                                            <th class="p-3 text-left">Staff</th>
+                                            <th class="p-3 text-right">Gross Salary</th>
+                                            <th class="p-3 text-right">Deductions</th>
+                                            <th class="p-3 text-right">Net Pay</th>
+                                            <th class="p-3 text-left">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                `;
+
+                if (payroll.length === 0) {
+                    html += `
+                        <tr>
+                            <td colspan="6" class="p-6 text-center text-gray-500">No payroll entries found. Click "Process Payroll" to create one.</td>
+                        </tr>
+                    `;
+                } else {
+                    payroll.forEach(entry => {
+                        const statusBadge = entry.payment_status === 'paid'
+                            ? '<span class="px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-bold">Paid</span>'
+                            : '<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">Pending</span>';
+
+                        const staffName = entry.staff?.name || 'N/A';
+                        const amount = entry.amount || 0;
+
+                        html += `
+                            <tr class="border-t hover:bg-violet-50">
+                                <td class="p-3">${entry.month}</td>
+                                <td class="p-3 font-semibold">${staffName}</td>
+                                <td class="p-3 text-right font-bold">${formatTSh(amount)}</td>
+                                <td class="p-3 text-right text-red-600">TSh 0.00</td>
+                                <td class="p-3 text-right font-bold text-green-700">${formatTSh(amount)}</td>
+                                <td class="p-3">${statusBadge}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('moduleContent').innerHTML = html;
+            } catch (error) {
+                alert('Error loading payroll data: ' + error.message);
+            }
+        }
+
+        function showAddStaffForm() {
+            alert('Add staff form - To be fully implemented with all required fields');
+        }
+
+        function showProcessPayrollForm() {
+            alert('Process payroll form - To be fully implemented');
+        }
+
+        // ===== EDIT/DELETE VOUCHER FUNCTIONS =====
+        async function editVoucher(voucherId) {
+            try {
+                const response = await axios.get(`${API_BASE}/vouchers/${voucherId}`);
+                const voucher = response.data;
+
+                const studentOptions = allStudents.map(s =>
+                    `<option value="${s.id}" ${voucher.student_id == s.id ? 'selected' : ''}>${s.name} (${s.student_reg_no})</option>`
+                ).join('');
+
+                const particularOptions = allParticulars.map(p =>
+                    `<option value="${p.id}" ${voucher.particular_id == p.id ? 'selected' : ''}>${p.name}</option>`
+                ).join('');
+
+                const bookOptions = allBooks.map(b =>
+                    `<option value="${b.id}" ${voucher.book_id == b.id ? 'selected' : ''}>${b.name}</option>`
+                ).join('');
+
+                const formHtml = `
+                    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-screen overflow-y-auto m-4">
+                            <h3 class="text-2xl font-bold mb-4 text-blue-600">✏️ Edit Entry</h3>
+                            <form onsubmit="updateVoucher(event, ${voucherId})" class="space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-sm font-bold mb-1">Date *</label>
+                                        <input type="date" id="editDate" value="${voucher.date}" required
+                                            class="w-full border-2 rounded px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold mb-1">Type *</label>
+                                        <select id="editType" required disabled class="w-full border-2 rounded px-3 py-2 bg-gray-100">
+                                            <option value="${voucher.voucher_type}">${voucher.voucher_type}</option>
+                                        </select>
+                                        <p class="text-xs text-gray-500 mt-1">Type cannot be changed</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-1">Student</label>
+                                    <select id="editStudent" class="w-full border-2 rounded px-3 py-2">
+                                        <option value="">-- Select Student --</option>
+                                        ${studentOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-1">Particular</label>
+                                    <select id="editParticular" class="w-full border-2 rounded px-3 py-2">
+                                        <option value="">-- Select Particular --</option>
+                                        ${particularOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-1">Book</label>
+                                    <select id="editBook" class="w-full border-2 rounded px-3 py-2">
+                                        <option value="">-- Select Book --</option>
+                                        ${bookOptions}
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-sm font-bold mb-1">Debit (TSh)</label>
+                                        <input type="number" step="0.01" id="editDebit" value="${voucher.debit}"
+                                            class="w-full border-2 rounded px-3 py-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold mb-1">Credit (TSh)</label>
+                                        <input type="number" step="0.01" id="editCredit" value="${voucher.credit}"
+                                            class="w-full border-2 rounded px-3 py-2">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-1">Notes</label>
+                                    <textarea id="editNotes" rows="2" class="w-full border-2 rounded px-3 py-2">${voucher.notes || ''}</textarea>
+                                </div>
+                                <div class="flex gap-3 pt-3">
+                                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-bold">
+                                        💾 Save Changes
+                                    </button>
+                                    <button type="button" onclick="closeEditForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold">
+                                        ✖️ Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                document.body.insertAdjacentHTML('beforeend', formHtml);
+            } catch (error) {
+                alert('Error loading voucher: ' + error.message);
+            }
+        }
+
+        async function updateVoucher(event, voucherId) {
+            event.preventDefault();
+            try {
+                const data = {
+                    date: document.getElementById('editDate').value,
+                    student_id: document.getElementById('editStudent').value || null,
+                    particular_id: document.getElementById('editParticular').value || null,
+                    book_id: document.getElementById('editBook').value || null,
+                    debit: parseFloat(document.getElementById('editDebit').value) || 0,
+                    credit: parseFloat(document.getElementById('editCredit').value) || 0,
+                    notes: document.getElementById('editNotes').value,
+                };
+
+                await axios.put(`${API_BASE}/vouchers/${voucherId}`, data);
+                alert('✅ Entry updated successfully!');
+                closeEditForm();
+                loadVouchers(currentVoucherPage);
+            } catch (error) {
+                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+            }
+        }
+
+        function closeEditForm() {
+            const forms = document.querySelectorAll('.fixed.inset-0');
+            forms.forEach(form => form.remove());
+        }
+
+        async function deleteVoucher(voucherId) {
+            if (confirm('⚠️ Are you sure you want to delete this entry? This action cannot be undone!')) {
+                try {
+                    await axios.delete(`${API_BASE}/vouchers/${voucherId}`);
+                    alert('✅ Entry deleted successfully!');
+                    loadVouchers(currentVoucherPage);
+                } catch (error) {
+                    alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                }
+            }
+        }
+
+        // Dashboard Overview function
+        async function showDashboard() {
+            try {
+                // Load overdue summary for dashboard
+                const overdueResponse = await axios.get(`${API_BASE}/overdue-amounts`);
+                const overdueData = overdueResponse.data;
+
+                const dashboardHtml = `
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">📊 Dashboard Overview</h2>
+
+                        <!-- Quick Stats Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg shadow-lg p-6 transform hover:scale-105 transition">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm opacity-80">Total Overdue</p>
+                                        <p class="text-3xl font-bold mt-2">${formatTSh(overdueData.summary.total_overdue_amount)}</p>
+                                    </div>
+                                    <div class="text-5xl opacity-80">💸</div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-red-500 to-pink-600 text-white rounded-lg shadow-lg p-6 transform hover:scale-105 transition">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm opacity-80">Overdue Students</p>
+                                        <p class="text-3xl font-bold mt-2">${Math.round(overdueData.summary.total_students_with_overdue)}</p>
+                                    </div>
+                                    <div class="text-5xl opacity-80">👥</div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-orange-500 to-yellow-600 text-white rounded-lg shadow-lg p-6 transform hover:scale-105 transition">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm opacity-80">Overdue Particulars</p>
+                                        <p class="text-3xl font-bold mt-2">${Math.round(overdueData.summary.total_overdue_particulars)}</p>
+                                    </div>
+                                    <div class="text-5xl opacity-80">📋</div>
+                                </div>
+                            </div>
+
+                            <div class="bg-gradient-to-br from-green-500 to-teal-600 text-white rounded-lg shadow-lg p-6 transform hover:scale-105 transition cursor-pointer" onclick="showVouchersModule()">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm opacity-80">Record Entry</p>
+                                        <p class="text-lg font-bold mt-2">Quick Action</p>
+                                    </div>
+                                    <div class="text-5xl opacity-80">➕</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions Section -->
+                        <div class="mb-8">
+                            <h3 class="text-2xl font-bold text-gray-700 mb-4">⚡ Quick Actions</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <button onclick="showVouchersModule()" class="bg-white hover:bg-purple-50 border-2 border-purple-200 rounded-lg p-4 text-left transition transform hover:scale-105">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-3xl">💰</span>
+                                        <div>
+                                            <p class="font-bold text-purple-600">Record Fee Entry</p>
+                                            <p class="text-xs text-gray-600">Sales, Receipts, Payments</p>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <button onclick="showLedgersModule()" class="bg-white hover:bg-orange-50 border-2 border-orange-200 rounded-lg p-4 text-left transition transform hover:scale-105">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-3xl">📊</span>
+                                        <div>
+                                            <p class="font-bold text-orange-600">View Ledgers</p>
+                                            <p class="text-xs text-gray-600">Student, Class, Book Ledgers</p>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <button onclick="showSmsModule()" class="bg-white hover:bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4 text-left transition transform hover:scale-105">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-3xl">📱</span>
+                                        <div>
+                                            <p class="font-bold text-indigo-600">Send SMS</p>
+                                            <p class="text-xs text-gray-600">Notify parents about fees</p>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity Section -->
+                        <div class="bg-white rounded-lg shadow-lg p-6">
+                            <h3 class="text-xl font-bold text-gray-700 mb-4">🔔 System Modules</h3>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <button onclick="showBooksModule()" class="p-4 hover:bg-blue-50 border rounded-lg transition text-center">
+                                    <div class="text-3xl mb-2">📚</div>
+                                    <p class="font-semibold text-sm">Books</p>
+                                </button>
+                                <button onclick="showParticularsModule()" class="p-4 hover:bg-green-50 border rounded-lg transition text-center">
+                                    <div class="text-3xl mb-2">📋</div>
+                                    <p class="font-semibold text-sm">Particulars</p>
+                                </button>
+                                <button onclick="showParticularLedgerModule()" class="p-4 hover:bg-teal-50 border rounded-lg transition text-center">
+                                    <div class="text-3xl mb-2">📋</div>
+                                    <p class="font-semibold text-sm">Particular Ledger</p>
+                                </button>
+                                <button onclick="showOverdueModule()" class="p-4 hover:bg-red-50 border rounded-lg transition text-center">
+                                    <div class="text-3xl mb-2">💸</div>
+                                    <p class="font-semibold text-sm">Overdue</p>
+                                </button>
+                                <button onclick="showSuspenseAccountsModule()" class="p-4 hover:bg-amber-50 border rounded-lg transition text-center">
+                                    <div class="text-3xl mb-2">⏳</div>
+                                    <p class="font-semibold text-sm">Suspense</p>
+                                </button>
+                                <button onclick="showPayrollModule()" class="p-4 hover:bg-yellow-50 border rounded-lg transition text-center">
+                                    <div class="text-3xl mb-2">💵</div>
+                                    <p class="font-semibold text-sm">Payroll</p>
+                                </button>
+                                <a href="/accountant/invoices" class="p-4 hover:bg-purple-50 border rounded-lg transition text-center block">
+                                    <div class="text-3xl mb-2">📄</div>
+                                    <p class="font-semibold text-sm">Invoices</p>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('moduleContent').innerHTML = dashboardHtml;
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('moduleContent').innerHTML = `
+                    <div class="text-center py-20">
+                        <p class="text-gray-600">Welcome to Darasa Finance ERP</p>
+                        <p class="text-sm text-gray-500 mt-2">Select a module from the sidebar to begin</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Sidebar toggle functionality
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                mainContent.classList.remove('ml-0');
+                mainContent.classList.add('ml-64');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                mainContent.classList.add('ml-0');
+                mainContent.classList.remove('ml-64');
+            }
+        }
+
+        // Make sidebar responsive on mobile
+        function handleResize() {
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('mainContent').classList.add('ml-0');
+                document.getElementById('mainContent').classList.remove('ml-64');
+            } else {
+                document.getElementById('sidebar').classList.remove('-translate-x-full');
+                document.getElementById('mainContent').classList.remove('ml-0');
+                document.getElementById('mainContent').classList.add('ml-64');
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('load', handleResize);
+    </script>
+</body>
+</html>

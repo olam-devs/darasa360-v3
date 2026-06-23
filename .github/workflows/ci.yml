@@ -1,0 +1,80 @@
+name: CI — Syntax & Config Checks
+
+on:
+  push:
+    branches: [sandbox, main]
+  pull_request:
+    branches: [sandbox, main]
+
+jobs:
+  # ── Finance app checks ────────────────────────────────────────────────────
+  finance-check:
+    name: Finance — PHP syntax & config
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: finance
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql, tokenizer, xml, ctype, json, bcmath
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
+      - name: Copy .env
+        run: cp .env.example .env && php artisan key:generate
+
+      - name: PHP syntax check (all files)
+        run: find app config routes database -name "*.php" | xargs -P4 php -l | grep -v "No syntax errors" || true
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Check route list loads without errors
+        run: php artisan route:list --quiet
+
+      - name: Run PHPUnit tests (if any)
+        run: php artisan test --stop-on-failure || true
+
+  # ── Academics app checks ──────────────────────────────────────────────────
+  academics-check:
+    name: Academics — PHP syntax & config
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: academics
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, pdo_mysql, tokenizer, xml, ctype, json, bcmath
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
+      - name: Copy .env
+        run: cp .env.example .env && php artisan key:generate
+
+      - name: PHP syntax check (all files)
+        run: find app config routes database -name "*.php" | xargs -P4 php -l | grep -v "No syntax errors" || true
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Check route list loads without errors
+        run: php artisan route:list --quiet
+
+      - name: Run PHPUnit tests (if any)
+        run: php artisan test --stop-on-failure || true

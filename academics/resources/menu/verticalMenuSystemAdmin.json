@@ -1,0 +1,51 @@
+{
+  "menu": [
+    {
+      "url": "/system-admin/dashboard",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "system-admin-dashboard"
+    },
+    {
+      "url": "/system-admin/my-schools",
+      "name": "My Schools",
+      "icon": "menu-icon tf-icons bx bx-building",
+      "slug": "my-schools"
+    },
+    {
+      "url": "/system-admin/support",
+      "name": "Support Tickets",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support-tickets"
+    },
+    {
+      "url": "/system-admin/school-admins",
+      "name": "School Admins",
+      "icon": "menu-icon tf-icons bx bx-user",
+      "slug": "school-admins"
+    },
+    {
+      "url": "/system-admin/reports",
+      "name": "Reports",
+      "icon": "menu-icon tf-icons bx bx-bar-chart",
+      "slug": "reports"
+    },
+    {
+      "url": "/system-admin/passwords",
+      "name": "Password Management",
+      "icon": "menu-icon tf-icons bx bx-lock-alt",
+      "slug": "password-management",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/system-admin/help-resources",
+      "name": "Help Resources",
+      "icon": "menu-icon tf-icons bx bx-book-open",
+      "slug": "help-resources"
+    }
+  ]
+}

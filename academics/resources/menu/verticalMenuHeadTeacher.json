@@ -1,0 +1,211 @@
+{
+  "menu": [
+    {
+      "url": "/headmaster",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "app-dashboard",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/calendar",
+      "name": "School Calendar",
+      "icon": "menu-icon tf-icons bx bx-calendar",
+      "slug": "app-calendar",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "People Management",
+      "icon": "menu-icon tf-icons bx bx-group",
+      "slug": "people-management",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/headmaster/manage-staff",
+          "name": "Manage Staff",
+          "slug": "manage-staff"
+        },
+        {
+          "url": "/teachers/assign",
+          "name": "Assign Teachers",
+          "slug": "assign-teachers"
+        },
+        {
+          "url": "/headmaster/students",
+          "name": "Manage Students",
+          "slug": "manage-students"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Academic Setup",
+      "icon": "menu-icon tf-icons bx bx-book-open",
+      "slug": "academic-setup",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/owner/subjects/",
+          "name": "Manage Subjects",
+          "slug": "manage-subjects"
+        },
+        {
+          "url": "/owner/classes",
+          "name": "Manage Classes",
+          "slug": "manage-classes"
+        },
+        {
+          "url": "/exams/",
+          "name": "Manage Exams",
+          "slug": "manage-exams"
+        },
+        {
+          "url": "/owner/grades/",
+          "name": "Set Grades",
+          "slug": "set-grades"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Operations",
+      "icon": "menu-icon tf-icons bx bx-clipboard",
+      "slug": "operations",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/teachers/notes",
+          "name": "My Docs",
+          "slug": "my-docs"
+        },
+        {
+          "url": "/academic/student-results",
+          "name": "Check Results",
+          "slug": "check-results"
+        },
+        {
+          "url": "/students/class-attendance",
+          "name": "Check Attendance",
+          "slug": "check-attendance"
+        },
+        {
+          "url": "/accountant/fees",
+          "name": "Fees Management",
+          "slug": "fees-management"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Promotions",
+      "icon": "menu-icon tf-icons bx bx-trending-up",
+      "slug": "promotions",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/owner/promotions",
+          "name": "Student Promotion",
+          "slug": "student-promotion"
+        },
+        {
+          "url": "/owner/staff-promotion",
+          "name": "Staff Promotion",
+          "slug": "staff-promotion"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Communication",
+      "icon": "menu-icon tf-icons bx bx-message-rounded-dots",
+      "slug": "communication",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/students/announcements/create",
+          "name": "Send Announcements",
+          "slug": "send-announcements"
+        },
+        {
+          "url": "/sms/send",
+          "name": "Bulk SMS",
+          "slug": "bulk-sms"
+        },
+        {
+          "url": "/suggestions",
+          "name": "Messages",
+          "slug": "messages"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Settings",
+      "icon": "menu-icon tf-icons bx bx-cog",
+      "slug": "settings",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/owner/passwords/",
+          "name": "Staff Passwords",
+          "slug": "staff-passwords"
+        }
+      ]
+    },
+    {
+      "url": "https://finance.olamtec.co.tz/headmaster/login",
+      "name": "Finance Portal",
+      "icon": "menu-icon tf-icons bx bx-dollar-circle",
+      "slug": "finance-portal",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/support",
+      "name": "Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    }
+  ]
+}

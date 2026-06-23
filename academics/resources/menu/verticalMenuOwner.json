@@ -1,0 +1,106 @@
+{
+  "menu": [
+    {
+      "url": "/owner/dashboard",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "app-dashboard",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/calendar",
+      "name": "School Calendar",
+      "icon": "menu-icon tf-icons bx bx-calendar",
+      "slug": "app-calendar",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Staff Management",
+      "icon": "menu-icon tf-icons bx bx-group",
+      "slug": "staff-management",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/owner/manage-staff",
+          "name": "Manage Staff",
+          "slug": "manage-staff"
+        },
+        {
+          "url": "/teachers/assign",
+          "name": "Assign Teachers",
+          "slug": "assign-teachers"
+        },
+        {
+          "url": "/owner/staff-promotion",
+          "name": "Staff Promotion",
+          "slug": "staff-promotion"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Communication",
+      "icon": "menu-icon tf-icons bx bx-message-rounded-dots",
+      "slug": "communication",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/students/announcements/create",
+          "name": "Send Announcements",
+          "slug": "send-announcements"
+        },
+        {
+          "url": "/suggestions",
+          "name": "Messages",
+          "slug": "messages"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Settings",
+      "icon": "menu-icon tf-icons bx bx-cog",
+      "slug": "settings",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/owner/passwords/",
+          "name": "Staff Passwords",
+          "slug": "staff-passwords"
+        }
+      ]
+    },
+    {
+      "url": "/support",
+      "name": "Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    }
+  ]
+}

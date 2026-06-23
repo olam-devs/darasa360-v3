@@ -1,0 +1,92 @@
+{
+  "menu": [
+    {
+      "url": "/accountant",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "app-dashboard",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/calendar",
+      "name": "School Calendar",
+      "icon": "menu-icon tf-icons bx bx-calendar",
+      "slug": "app-calendar",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/accountant/fees",
+      "name": "Manage Fees",
+      "icon": "menu-icon tf-icons bx bx-notepad",
+      "slug": "app-fees",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/accountant/payment-methods",
+      "name": "Payment Methods",
+      "icon": "menu-icon tf-icons bx bx-credit-card-front",
+      "slug": "app-dashboard",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/accountant/general-info",
+      "name": "General Info",
+      "icon": "menu-icon tf-icons bx bx-info-circle",
+      "slug": "app-dashboard",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/sms/send",
+      "name": "Bulk SMS",
+      "icon": "menu-icon tf-icons bx bx-message-dots",
+      "slug": "app-grades",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/suggestions",
+      "name": "Messages",
+      "icon": "menu-icon tf-icons bx bx-message-detail",
+      "slug": "app-promotion",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/support",
+      "name": "Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    }
+  ]
+}

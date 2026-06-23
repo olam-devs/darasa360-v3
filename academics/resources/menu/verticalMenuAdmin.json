@@ -1,0 +1,130 @@
+{
+  "menu": [
+    {
+      "url": "/admins/dashboard",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "app-dashboard"
+    },
+    {
+      "url": "/calendar",
+      "name": "School Calendar",
+      "icon": "menu-icon tf-icons bx bx-calendar",
+      "slug": "app-calendar"
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Academic Setup",
+      "icon": "menu-icon tf-icons bx bx-book-open",
+      "slug": "academic-setup",
+      "submenu": [
+        {
+          "url": "/owner/classes",
+          "name": "Manage Classes",
+          "slug": "manage-classes"
+        },
+        {
+          "url": "/owner/subjects/",
+          "name": "Manage Subjects",
+          "slug": "manage-subjects"
+        },
+        {
+          "url": "/owner/grades/",
+          "name": "Set Grades",
+          "slug": "set-grades"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "People Management",
+      "icon": "menu-icon tf-icons bx bx-group",
+      "slug": "people-management",
+      "submenu": [
+        {
+          "url": "/owner/manage-staff",
+          "name": "Manage Staff",
+          "slug": "manage-staff"
+        },
+        {
+          "url": "/teachers/assign",
+          "name": "Assign Teachers",
+          "slug": "assign-teachers"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Promotions",
+      "icon": "menu-icon tf-icons bx bx-trending-up",
+      "slug": "promotions",
+      "submenu": [
+        {
+          "url": "/owner/promotions",
+          "name": "Student Promotion",
+          "slug": "student-promotion"
+        },
+        {
+          "url": "/owner/staff-promotion",
+          "name": "Staff Promotion",
+          "slug": "staff-promotion"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Operations",
+      "icon": "menu-icon tf-icons bx bx-clipboard",
+      "slug": "operations",
+      "submenu": [
+        {
+          "url": "/timetables/",
+          "name": "Timetables",
+          "slug": "timetables"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Communication",
+      "icon": "menu-icon tf-icons bx bx-message-rounded-dots",
+      "slug": "communication",
+      "submenu": [
+        {
+          "url": "/students/announcements/create",
+          "name": "Send Announcements",
+          "slug": "send-announcements"
+        },
+        {
+          "url": "/sms/send",
+          "name": "Bulk SMS",
+          "slug": "bulk-sms"
+        },
+        {
+          "url": "/suggestions",
+          "name": "Messages",
+          "slug": "messages"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Settings",
+      "icon": "menu-icon tf-icons bx bx-cog",
+      "slug": "settings",
+      "submenu": [
+        {
+          "url": "/owner/passwords/",
+          "name": "Staff Passwords",
+          "slug": "staff-passwords"
+        }
+      ]
+    },
+    {
+      "url": "/support",
+      "name": "Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support"
+    }
+  ]
+}

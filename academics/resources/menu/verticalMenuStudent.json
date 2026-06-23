@@ -1,0 +1,122 @@
+{
+  "menu": [
+    {
+      "url": "/students/",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "app-dashboard",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/calendar",
+      "name": "School Calendar",
+      "icon": "menu-icon tf-icons bx bx-calendar",
+      "slug": "app-calendar",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "My Academics",
+      "icon": "menu-icon tf-icons bx bx-book-open",
+      "slug": "my-academics",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/academic/student-results",
+          "name": "My Results",
+          "slug": "my-results"
+        },
+        {
+          "url": "/students/attendance",
+          "name": "My Attendance",
+          "slug": "my-attendance"
+        },
+        {
+          "url": "/students/assignments",
+          "name": "My Assignments",
+          "slug": "my-assignments"
+        },
+        {
+          "url": "/students/notes",
+          "name": "My Notes",
+          "slug": "my-notes"
+        },
+        {
+          "url": "/timetables/",
+          "name": "My Timetable",
+          "slug": "my-timetable"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Information",
+      "icon": "menu-icon tf-icons bx bx-info-circle",
+      "slug": "information",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/students/class-announcements",
+          "name": "Announcements",
+          "slug": "announcements"
+        }
+      ]
+    },
+    {
+      "url": "https://finance.olamtec.co.tz/parent/login",
+      "name": "Finance Portal",
+      "icon": "menu-icon tf-icons bx bx-dollar-circle",
+      "slug": "finance-portal",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Communication",
+      "icon": "menu-icon tf-icons bx bx-message-rounded-dots",
+      "slug": "communication",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/suggestions",
+          "name": "Messages",
+          "slug": "messages"
+        }
+      ]
+    },
+    {
+      "url": "/support",
+      "name": "Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    }
+  ]
+}

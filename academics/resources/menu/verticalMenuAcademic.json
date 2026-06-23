@@ -1,0 +1,221 @@
+{
+  "menu": [
+    {
+      "url": "/academic",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "app-dashboard",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/calendar",
+      "name": "School Calendar",
+      "icon": "menu-icon tf-icons bx bx-calendar",
+      "slug": "app-calendar",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Academic Setup",
+      "icon": "menu-icon tf-icons bx bx-book-open",
+      "slug": "academic-setup",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/owner/subjects/",
+          "name": "Manage Subjects",
+          "slug": "manage-subjects"
+        },
+        {
+          "url": "/owner/classes",
+          "name": "Manage Classes",
+          "slug": "manage-classes"
+        },
+        {
+          "url": "/exams/",
+          "name": "Manage Exams",
+          "slug": "manage-exams"
+        },
+        {
+          "url": "/owner/grades/",
+          "name": "Set Grades",
+          "slug": "set-grades"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Student Management",
+      "icon": "menu-icon tf-icons bx bx-group",
+      "slug": "student-management",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/academic/students",
+          "name": "Manage Students",
+          "slug": "manage-students"
+        },
+        {
+          "url": "/owner/promotions",
+          "name": "Student Promotion",
+          "slug": "student-promotion"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Marks & Results",
+      "icon": "menu-icon tf-icons bx bx-bar-chart-alt-2",
+      "slug": "marks-results",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/exams/marks/enter",
+          "name": "Enter Marks",
+          "slug": "enter-marks"
+        },
+        {
+          "url": "/academic/verification",
+          "name": "Verify Marks",
+          "slug": "verify-marks"
+        },
+        {
+          "url": "/academic/generate-results",
+          "name": "Generate Results",
+          "slug": "generate-results"
+        },
+        {
+          "url": "/academic/student-results",
+          "name": "Check Results",
+          "slug": "check-results"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Report Cards",
+      "icon": "menu-icon tf-icons bx bx-file-blank",
+      "slug": "report-cards",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/academic/report-cards",
+          "name": "Manage Reports",
+          "slug": "manage-reports"
+        },
+        {
+          "url": "/academic/report-cards/create",
+          "name": "Create New Report",
+          "slug": "create-report"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Daily Operations",
+      "icon": "menu-icon tf-icons bx bx-clipboard",
+      "slug": "daily-operations",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/academic/notes",
+          "name": "My Docs",
+          "slug": "my-docs"
+        },
+        {
+          "url": "/students/class-attendance",
+          "name": "Check Attendance",
+          "slug": "check-attendance"
+        },
+        {
+          "url": "/assignments/",
+          "name": "View Assignments",
+          "slug": "view-assignments"
+        },
+        {
+          "url": "/timetables/",
+          "name": "Timetables",
+          "slug": "timetables"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Communication",
+      "icon": "menu-icon tf-icons bx bx-message-rounded-dots",
+      "slug": "communication",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/students/announcements/create",
+          "name": "Send Announcements",
+          "slug": "send-announcements"
+        },
+        {
+          "url": "/sms/send",
+          "name": "Bulk SMS",
+          "slug": "bulk-sms"
+        },
+        {
+          "url": "/suggestions",
+          "name": "Messages",
+          "slug": "messages"
+        }
+      ]
+    },
+    {
+      "url": "/owner/passwords/",
+      "name": "Password Manager",
+      "icon": "menu-icon tf-icons bx bx-lock-alt",
+      "slug": "password-manager",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/support",
+      "name": "Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    }
+  ]
+}

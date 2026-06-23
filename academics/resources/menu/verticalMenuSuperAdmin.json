@@ -1,0 +1,74 @@
+{
+  "menu": [
+    {
+      "url": "/super-admin/dashboard",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "super-admin-dashboard"
+    },
+    {
+      "url": "/super-admin/admins",
+      "name": "Manage Admins",
+      "icon": "menu-icon tf-icons bx bx-user-check",
+      "slug": "manage-admins"
+    },
+    {
+      "url": "/super-admin/schools",
+      "name": "Manage Schools",
+      "icon": "menu-icon tf-icons bx bx-building",
+      "slug": "manage-schools"
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Manage SMS",
+      "icon": "menu-icon tf-icons bx bx-message-square-dots",
+      "slug": "manage-sms",
+      "submenu": [
+        {
+          "url": "/super-admin/sms/alert-admins",
+          "name": "Alert School Admins",
+          "slug": "alert-school-admins"
+        },
+        {
+          "url": "/super-admin/sms/allocations",
+          "name": "School SMS Allocations",
+          "slug": "school-sms-allocations"
+        },
+        {
+          "url": "/super-admin/sms/send",
+          "name": "Send SMS",
+          "slug": "send-sms"
+        },
+        {
+          "url": "/super-admin/sms/history",
+          "name": "SMS History",
+          "slug": "sms-history"
+        }
+      ]
+    },
+    {
+      "url": "/super-admin/locations",
+      "name": "Location",
+      "icon": "menu-icon tf-icons bx bx-map",
+      "slug": "manage-locations"
+    },
+    {
+      "url": "/super-admin/logs",
+      "name": "Check Logs",
+      "icon": "menu-icon tf-icons bx bx-list-ul",
+      "slug": "check-logs"
+    },
+    {
+      "url": "/super-admin/passwords",
+      "name": "Password Management",
+      "icon": "menu-icon tf-icons bx bx-lock",
+      "slug": "password-management"
+    },
+    {
+      "url": "/super-admin/support",
+      "name": "Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support"
+    }
+  ]
+}

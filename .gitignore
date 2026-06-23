@@ -1,0 +1,38 @@
+# ── Laravel app ignores (apply to both finance/ and academics/) ──────────────
+finance/vendor/
+finance/node_modules/
+finance/.env
+finance/.env.sandbox
+finance/.env.production
+finance/storage/logs/*.log
+finance/storage/framework/cache/data/*
+finance/storage/framework/sessions/*
+finance/storage/framework/views/*
+finance/bootstrap/cache/*.php
+finance/public/hot
+finance/public/build/
+
+academics/vendor/
+academics/node_modules/
+academics/.env
+academics/.env.sandbox
+academics/.env.production
+academics/storage/logs/*.log
+academics/storage/framework/cache/data/*
+academics/storage/framework/sessions/*
+academics/storage/framework/views/*
+academics/bootstrap/cache/*.php
+academics/public/hot
+academics/public/build/
+
+# ── OS / editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# ── Deployment artefacts ─────────────────────────────────────────────────────
+*.tar.gz
+*.zip
+*.log

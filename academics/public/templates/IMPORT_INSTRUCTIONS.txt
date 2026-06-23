@@ -1,0 +1,85 @@
+================================================================================
+STUDENT IMPORT TEMPLATE - INSTRUCTIONS
+================================================================================
+
+REQUIRED FIELDS (Must be filled):
+---------------------------------
+1. first_name       - Student's first name (e.g., John)
+2. last_name        - Student's last name (e.g., Doe)
+3. gender           - MUST be exactly "Male" or "Female" (case-sensitive!)
+4. date_of_birth    - Format: DD/MM/YYYY (e.g., 15/03/2010)
+5. phone_number     - Format: +255XXXXXXXXX, 255XXXXXXXXX, or 0XXXXXXXXX (e.g., +255712345678, 255712345678, or 0712345678)
+6. class            - MUST match an existing class name exactly (e.g., Baby)
+
+OPTIONAL FIELDS:
+----------------
+1. middle_name      - Student's middle name (can be left empty)
+2. email            - Student's email address (can be left empty)
+3. stream           - Stream name (e.g., A, B, C) - must exist for the class
+4. address          - Student's address (can be left empty)
+
+IMPORTANT RULES:
+----------------
+1. Gender MUST be exactly "Male" or "Female" - case matters!
+   ✓ Correct: Male, Female
+   ✗ Wrong: male, MALE, M, F, Boy, Girl
+
+2. Phone numbers can be in THREE formats:
+   - Format 1: +255XXXXXXXXX (e.g., +255712345678)
+   - Format 2: 255XXXXXXXXX (e.g., 255712345678)
+   - Format 3: 0XXXXXXXXX (e.g., 0712345678)
+   - All formats will be automatically converted to +255XXXXXXXXX in the database
+   - No spaces, dashes, or other characters allowed
+   - The column is formatted as TEXT to preserve the + sign
+   ✓ Correct: +255712345678, 255712345678, 0712345678, +255723456789, 255723456789, 0723456789
+   ✗ Wrong: 712345678, 254712345678, +255-712-345-678, 0712-345-678
+
+3. Date of birth format: DD/MM/YYYY
+   ✓ Correct: 15/03/2010, 01/12/2009
+   ✗ Wrong: 2010-03-15, 15-03-2010, 03/15/2010
+
+4. Class name MUST match exactly (including capital letters)
+   - Check your existing classes in the system first
+   ✓ Correct: Baby (if that's how it's spelled in your system)
+   ✗ Wrong: baby, BABY, Baby Class
+
+5. Stream name (if provided) MUST exist for that specific class
+   - Leave empty if the class doesn't have streams
+   - Make sure the stream belongs to the class you selected
+
+6. No duplicate students allowed:
+   - Same first name + last name + class + date of birth
+   - The system will reject duplicates
+
+COMMON ERRORS TO AVOID:
+-----------------------
+❌ Missing required fields (first_name, last_name, gender, date_of_birth, phone_number, class)
+❌ Wrong gender format (must be "Male" or "Female")
+❌ Wrong phone number format (must be +255XXXXXXXXX, 255XXXXXXXXX, or 0XXXXXXXXX)
+❌ Class name doesn't match your system
+❌ Stream doesn't exist for the selected class
+❌ Duplicate students in the same file
+❌ Student already exists in the database
+
+HOW TO USE:
+-----------
+1. Download and open the student_import_template.xlsx (or .csv) file
+2. The template includes 10 example rows - you can delete them and add your own
+3. Fill in your student data following the rules above
+4. Phone numbers can start with +255, 255, or 0 (the column is pre-formatted as TEXT)
+5. You can add as many rows as needed (don't feel limited to 10 rows!)
+6. Save the file as .xlsx or .csv
+7. Upload and import the file in the system
+
+TIPS:
+-----
+- The template comes with 10 example rows - feel free to use them as reference
+- You can import as many students as you need (not limited to 10!)
+- Start with a small batch (5-10 students) to test if you're new to importing
+- Make sure your class names and streams are already set up in the system
+- Double-check phone numbers (common mistake!)
+- Phone numbers starting with 0 or 255 will be automatically converted to +255
+- Verify gender is spelled exactly as "Male" or "Female"
+- Check date format is DD/MM/YYYY
+
+================================================================================

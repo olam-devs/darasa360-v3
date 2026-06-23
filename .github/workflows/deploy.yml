@@ -1,0 +1,56 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - sandbox    # → sandbox server
+      - main       # → production server
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.ref_name == 'main' && 'Production' || 'Sandbox' }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'sandbox' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key:      ${{ secrets.DEPLOY_SSH_KEY }}
+          port:     ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+            DEPLOY_PATH="${{ github.ref_name == 'main' && secrets.DEPLOY_PATH_PROD || secrets.DEPLOY_PATH_SANDBOX }}"
+            cd "$DEPLOY_PATH"
+
+            echo "==> Pulling latest code..."
+            git pull origin ${{ github.ref_name }}
+
+            echo "==> Finance app..."
+            cd finance
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            php artisan config:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            # Platform migrations first (Finance owns them)
+            php artisan migrate --path=database/migrations/platform --force
+            php artisan migrate --path=database/migrations/central  --force
+            cd ..
+
+            echo "==> Academics app..."
+            cd academics
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            php artisan config:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            # Academics does NOT migrate platform DB — Finance owns it
+            php artisan migrate --force
+            cd ..
+
+            echo "==> Deploy complete on ${{ github.ref_name }}"

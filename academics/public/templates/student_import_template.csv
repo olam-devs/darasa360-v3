@@ -1,0 +1,11 @@
+first_name,middle_name,last_name,gender,date_of_birth,phone_number,email,class,stream,address
+John,Peter,Doe,Male,15/03/2010,+255712345678,john.doe@example.com,Baby,A,Dar es Salaam
+Jane,Mary,Smith,Female,20/05/2009,0723456789,jane.smith@example.com,Baby,A,Arusha
+Michael,James,Johnson,Male,10/07/2011,+255734567890,,Baby,B,Mwanza
+Sarah,Grace,Williams,Female,05/12/2010,0745678901,,Baby,B,Dodoma
+David,Emmanuel,Brown,Male,25/08/2009,+255756789012,david.brown@example.com,Baby,,Morogoro
+Emily,Rose,Jones,Female,30/01/2011,0767890123,,Baby,,Mbeya
+Daniel,Joseph,Garcia,Male,18/04/2010,+255778901234,daniel.garcia@example.com,Baby,A,Tanga
+Olivia,Faith,Martinez,Female,12/09/2009,0789012345,,Baby,B,Kilimanjaro
+James,Samuel,Rodriguez,Male,22/06/2011,+255701234567,,Baby,,Iringa
+Sophia,Hope,Wilson,Female,08/11/2010,0712987654,sophia.wilson@example.com,Baby,A,Zanzibar

@@ -1,0 +1,161 @@
+{
+  "menu": [
+    {
+      "url": "/school-admin/dashboard",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "school-admin-dashboard"
+    },
+    {
+      "url": "/school-admin/overview",
+      "name": "School Overview",
+      "icon": "menu-icon tf-icons bx bx-building",
+      "slug": "school-overview"
+    },
+    {
+      "url": "/calendar",
+      "name": "School Calendar",
+      "icon": "menu-icon tf-icons bx bx-calendar",
+      "slug": "app-calendar"
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Academic Setup",
+      "icon": "menu-icon tf-icons bx bx-book-open",
+      "slug": "academic-setup",
+      "submenu": [
+        {
+          "url": "/owner/classes",
+          "name": "Manage Classes",
+          "slug": "manage-classes"
+        },
+        {
+          "url": "/owner/subjects/",
+          "name": "Manage Subjects",
+          "slug": "manage-subjects"
+        },
+        {
+          "url": "/owner/grades/",
+          "name": "Set Grades",
+          "slug": "set-grades"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "People Management",
+      "icon": "menu-icon tf-icons bx bx-group",
+      "slug": "people-management",
+      "submenu": [
+        {
+          "url": "/school-admin/staff-management",
+          "name": "Manage Staff",
+          "slug": "manage-staff"
+        },
+        {
+          "url": "/owner/students",
+          "name": "Manage Students",
+          "slug": "manage-students"
+        },
+        {
+          "url": "/teachers/assign",
+          "name": "Assign Teachers",
+          "slug": "assign-teachers"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Promotions",
+      "icon": "menu-icon tf-icons bx bx-trending-up",
+      "slug": "promotions",
+      "submenu": [
+        {
+          "url": "/owner/promotions",
+          "name": "Student Promotion",
+          "slug": "student-promotion"
+        },
+        {
+          "url": "/owner/staff-promotion",
+          "name": "Staff Promotion",
+          "slug": "staff-promotion"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Operations",
+      "icon": "menu-icon tf-icons bx bx-clipboard",
+      "slug": "operations",
+      "submenu": [
+        {
+          "url": "/timetables/",
+          "name": "Timetables",
+          "slug": "timetables"
+        },
+        {
+          "url": "/owner/attendance",
+          "name": "Attendance",
+          "slug": "attendance"
+        },
+        {
+          "url": "/assignments",
+          "name": "Assignments",
+          "slug": "assignments"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Communication",
+      "icon": "menu-icon tf-icons bx bx-message-rounded-dots",
+      "slug": "communication",
+      "submenu": [
+        {
+          "url": "/students/announcements/create",
+          "name": "Send Announcements",
+          "slug": "send-announcements"
+        },
+        {
+          "url": "/sms/send",
+          "name": "Bulk SMS",
+          "slug": "bulk-sms"
+        },
+        {
+          "url": "/suggestions",
+          "name": "Messages",
+          "slug": "messages"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Settings & Admin",
+      "icon": "menu-icon tf-icons bx bx-cog",
+      "slug": "settings-admin",
+      "submenu": [
+        {
+          "url": "/owner/passwords/",
+          "name": "Staff Passwords",
+          "slug": "staff-passwords"
+        },
+        {
+          "url": "/school-admin/system-settings",
+          "name": "System Settings",
+          "slug": "system-settings"
+        },
+        {
+          "url": "/school-admin/training",
+          "name": "Training Resources",
+          "slug": "training-resources"
+        }
+      ]
+    },
+    {
+      "url": "/school-admin/support",
+      "name": "Get Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "get-support"
+    }
+  ]
+}

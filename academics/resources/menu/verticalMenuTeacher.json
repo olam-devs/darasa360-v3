@@ -1,0 +1,139 @@
+{
+  "menu": [
+    {
+      "url": "/teachers",
+      "name": "Dashboard",
+      "icon": "menu-icon tf-icons bx bx-home-circle",
+      "slug": "app-dashboard",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "/calendar",
+      "name": "School Calendar",
+      "icon": "menu-icon tf-icons bx bx-calendar",
+      "slug": "app-calendar",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "My Work",
+      "icon": "menu-icon tf-icons bx bx-briefcase",
+      "slug": "my-work",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/class-teacher/report-cards",
+          "name": "Student Reports",
+          "slug": "student-reports"
+        },
+        {
+          "url": "/teachers/notes",
+          "name": "My Docs",
+          "slug": "my-docs"
+        },
+        {
+          "url": "/timetables/",
+          "name": "My Timetable",
+          "slug": "my-timetable"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Daily Tasks",
+      "icon": "menu-icon tf-icons bx bx-task",
+      "slug": "daily-tasks",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/owner/attendance/daily-attendance",
+          "name": "Take Attendance",
+          "slug": "take-attendance"
+        },
+        {
+          "url": "/exams/marks/enter",
+          "name": "Enter Marks",
+          "slug": "enter-marks"
+        },
+        {
+          "url": "/academic/student-results",
+          "name": "Check Results",
+          "slug": "check-results"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Teaching",
+      "icon": "menu-icon tf-icons bx bx-book-reader",
+      "slug": "teaching",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/notes/",
+          "name": "Send Notes",
+          "slug": "send-notes"
+        },
+        {
+          "url": "/assignments/",
+          "name": "Give Assignments",
+          "slug": "give-assignments"
+        }
+      ]
+    },
+    {
+      "url": "javascript:void(0)",
+      "name": "Communication",
+      "icon": "menu-icon tf-icons bx bx-message-rounded-dots",
+      "slug": "communication",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ],
+      "submenu": [
+        {
+          "url": "/students/class-announcements",
+          "name": "View Announcements",
+          "slug": "view-announcements"
+        },
+        {
+          "url": "/suggestions",
+          "name": "Messages",
+          "slug": "messages"
+        }
+      ]
+    },
+    {
+      "url": "/support",
+      "name": "Support",
+      "icon": "menu-icon tf-icons bx bx-support",
+      "slug": "support",
+      "package": [
+        "core",
+        "standard",
+        "premium"
+      ]
+    }
+  ]
+}
