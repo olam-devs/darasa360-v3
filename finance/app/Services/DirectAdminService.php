@@ -36,21 +36,30 @@ class DirectAdminService
     public function createDatabase(string $nameWithoutPrefix): bool
     {
         try {
-            $dbPassword = config('database.connections.central.password', '');
+            // Create DB only (no user param — DA would create a new user which fails if it already exists)
             $response = $this->post('/CMD_API_DATABASES', [
-                'action'  => 'create',
-                'name'    => $nameWithoutPrefix,
-                'user'    => $this->dbUser,
-                'passwd'  => $dbPassword,
-                'passwd2' => $dbPassword,
+                'action' => 'create',
+                'name'   => $nameWithoutPrefix,
             ]);
+
+            // DA returns "Invalid Username" if it requires a user — fall back to creating with user+passwd
+            if (!$this->isSuccess($response) && str_contains($response->body(), 'Invalid+Username')) {
+                $dbPassword = config('database.connections.central.password', '');
+                $response = $this->post('/CMD_API_DATABASES', [
+                    'action'  => 'create',
+                    'name'    => $nameWithoutPrefix,
+                    'user'    => $this->dbUser . '_' . substr(md5($nameWithoutPrefix), 0, 6),
+                    'passwd'  => $dbPassword,
+                    'passwd2' => $dbPassword,
+                ]);
+            }
 
             if (!$this->isSuccess($response)) {
                 Log::error("DirectAdmin createDatabase failed: " . $response->body());
                 return false;
             }
 
-            // Grant the app DB user access to the new database
+            // Assign the shared app DB user access to the new database
             $fullName = $this->dbPrefix . $nameWithoutPrefix;
             return $this->grantUserAccess($fullName);
 

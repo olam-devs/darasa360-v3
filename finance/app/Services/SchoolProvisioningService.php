@@ -124,6 +124,7 @@ class SchoolProvisioningService
                         throw new \Exception("Failed to create Academics database for school: {$school->name}");
                     }
                     $this->runAcademicsMigrations($academicsDb, $school);
+                    $this->seedAcademicsAdminUser($academicsDb, $school);
                 }
 
                 // 6. Log the activity
@@ -220,6 +221,50 @@ class SchoolProvisioningService
         } catch (\Exception $e) {
             Log::error("Academics migrations failed for {$school->name}: " . $e->getMessage());
             throw $e;
+        }
+    }
+
+    /**
+     * Seed a default school_admin user in the Academics tenant DB so the super-admin
+     * can log into Academics and finish setting up the school (add headmaster etc.).
+     */
+    protected function seedAcademicsAdminUser(string $academicsDb, School $school): void
+    {
+        try {
+            config([
+                'database.connections.academics_tenant' => array_merge(
+                    config('database.connections.mysql'),
+                    ['database' => $academicsDb]
+                )
+            ]);
+            DB::purge('academics_tenant');
+
+            // Find the school_admin role id (role_id = 7 in standard Academics schema)
+            $roleId = DB::connection('academics_tenant')->table('roles')
+                ->where('name', 'school admin')->value('id') ?? 7;
+
+            $existing = DB::connection('academics_tenant')->table('users')
+                ->where('registration_no', 'admin001')->exists();
+
+            if (!$existing) {
+                DB::connection('academics_tenant')->table('users')->insert([
+                    'first_name'      => 'School',
+                    'last_name'       => 'Admin',
+                    'registration_no' => 'admin001',
+                    'email'           => $school->contact_email,
+                    'password'        => Hash::make('admin123'),
+                    'role_id'         => $roleId,
+                    'school_id'       => 1,
+                    'is_active'       => 1,
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+            }
+
+            Log::info("Academics admin user seeded for {$school->name}");
+        } catch (\Exception $e) {
+            Log::warning("Academics admin seed failed for {$school->name}: " . $e->getMessage());
+            // Non-fatal — migrations ran, admin can be created manually
         }
     }
 
