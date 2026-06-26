@@ -36,9 +36,13 @@ class DirectAdminService
     public function createDatabase(string $nameWithoutPrefix): bool
     {
         try {
+            $dbPassword = config('database.connections.central.password', '');
             $response = $this->post('/CMD_API_DATABASES', [
                 'action'  => 'create',
                 'name'    => $nameWithoutPrefix,
+                'user'    => $this->dbUser,
+                'passwd'  => $dbPassword,
+                'passwd2' => $dbPassword,
             ]);
 
             if (!$this->isSuccess($response)) {
