@@ -84,7 +84,7 @@
             <div class="hero-brand-sub">Powered by Darasa360 | Olam Technologies</div>
         </div>
         <div>
-            <div class="hero-tagline">School Finance<br><span>Overview Portal</span></div>
+            <div class="hero-tagline">Smarter School<br><span>Communications</span> Simplified</div>
             <div class="hero-desc">Read-only financial visibility for school headmasters — ledgers, invoices, fee reports and performance metrics.</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">
@@ -97,14 +97,9 @@
 
     <div class="form-side">
         <div class="card">
-            <div style="text-align:center;">
-                <div class="brand-chip">
-                    <img src="/darasa360-book.png" alt="Darasa360">
-                    <div>
-                        <div class="brand-chip-name">Darasa <span>Finance</span></div>
-                        <div class="brand-powered">Powered by Darasa360 | Olam Technologies</div>
-                    </div>
-                </div>
+            <div style="text-align:center;margin-bottom:24px;">
+                <img src="/darasa360-book.png" alt="Darasa360" style="width:100px;height:100px;object-fit:contain;display:block;margin:0 auto 10px;">
+                <div style="font-size:26px;font-weight:800;color:#1e3a8a;letter-spacing:2px;">DARASA360</div>
             </div>
             <div class="portal-heading">Headmaster Portal</div>
             <div class="portal-sub">Sign in to view your school's financial overview</div>

@@ -42,6 +42,7 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin'])->gr
     Route::post('/schools/{school}/sync-name', [SchoolController::class, 'syncNameFromTenant'])->name('schools.sync-name');
     Route::post('/schools/{school}/sync-name-to-tenant', [SchoolController::class, 'syncNameToTenant'])->name('schools.sync-name-to-tenant');
     Route::post('/schools/{school}/toggle-platform-flag', [SchoolController::class, 'togglePlatformFlag'])->name('schools.toggle-platform-flag');
+    Route::post('/schools/{school}/reallot-sms', [SchoolController::class, 'reallotSmsCredits'])->name('schools.reallot-sms');
 
     // Accountant Management for Schools
     Route::post('/schools/{school}/accountants', [SchoolController::class, 'addAccountant'])->name('schools.accountants.store');

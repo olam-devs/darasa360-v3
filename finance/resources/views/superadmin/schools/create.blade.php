@@ -160,14 +160,15 @@
                 <!-- Platform / Systems Configuration -->
                 <div class="border-b pb-6">
                     <h2 class="text-xl font-semibold mb-4">Systems Configuration</h2>
-                    <p class="text-sm text-gray-500 mb-4">Darasa Finance is always enabled. Enable Academics if this school also uses Darasa Academics.</p>
+                    <p class="text-sm text-gray-500 mb-4">Select the systems this school will use. At least one must be enabled.</p>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="flex items-center gap-3 p-4 border rounded-lg bg-blue-50">
-                            <input type="checkbox" checked disabled class="w-5 h-5 text-blue-600">
+                        <div class="flex items-center gap-3 p-4 border rounded-lg" id="finance_card">
+                            <input type="checkbox" name="has_finance" id="has_finance" value="1"
+                                {{ old('has_finance', '1') ? 'checked' : '' }} class="w-5 h-5 text-blue-600">
                             <div>
-                                <div class="font-semibold text-blue-800">Darasa Finance</div>
-                                <div class="text-xs text-gray-500">Fees, invoices, payroll — always included</div>
+                                <label for="has_finance" class="font-semibold cursor-pointer">Darasa Finance</label>
+                                <div class="text-xs text-gray-500">Fees, invoices, payroll, accountant portal</div>
                             </div>
                         </div>
 
@@ -190,8 +191,8 @@
                     </div>
                 </div>
 
-                <!-- Accountant Information -->
-                <div class="border-b pb-6">
+                <!-- Accountant Information (only when Finance is enabled) -->
+                <div class="border-b pb-6" id="accountant_section">
                     <h2 class="text-xl font-semibold mb-4">Default Accountant</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -247,11 +248,32 @@
             }
         }
 
+        function toggleFinanceSection() {
+            const financeChecked = document.getElementById('has_finance').checked;
+            document.getElementById('accountant_section').classList.toggle('hidden', !financeChecked);
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function () {
             toggleDatabaseFields();
+            toggleFinanceSection();
+
+            document.getElementById('has_finance').addEventListener('change', function () {
+                toggleFinanceSection();
+                // Ensure at least one system is checked
+                if (!this.checked && !document.getElementById('has_academics').checked) {
+                    document.getElementById('has_academics').checked = true;
+                    document.getElementById('academics_db_section').classList.remove('hidden');
+                }
+            });
+
             document.getElementById('has_academics').addEventListener('change', function () {
                 document.getElementById('academics_db_section').classList.toggle('hidden', !this.checked);
+                // Ensure at least one system is checked
+                if (!this.checked && !document.getElementById('has_finance').checked) {
+                    document.getElementById('has_finance').checked = true;
+                    toggleFinanceSection();
+                }
             });
         });
     </script>

@@ -17,17 +17,17 @@ return new class extends Migration
         Schema::connection('platform')->create('platform_students', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('school_id');
-            $table->string('student_reg_no', 20)->unique(); // S{code3}{role1}{seq4}
-            $table->string('first_name', 100);
-            $table->string('middle_name', 100)->nullable();
-            $table->string('last_name', 100)->nullable();
-            $table->string('gender', 20)->nullable();
+            $table->string('student_reg_no')->unique(); // S{code3}{role1}{seq4}
+            $table->string('first_name');
+            $table->string('middle_name')->nullable();
+            $table->string('last_name')->nullable();
+            $table->string('gender')->nullable();
             $table->date('date_of_birth')->nullable();
-            $table->string('parent_name', 150)->nullable();
-            $table->string('parent_phone', 30)->nullable();
-            $table->string('parent_email', 191)->nullable();
+            $table->string('parent_name')->nullable();
+            $table->string('parent_phone')->nullable();
+            $table->string('parent_email')->nullable();
             $table->unsignedBigInteger('platform_class_id')->nullable();
-            $table->string('status', 50)->default('active');
+            $table->string('status')->default('active');
 
             $table->boolean('synced_finance')->default(false);
             $table->boolean('synced_academics')->default(false);

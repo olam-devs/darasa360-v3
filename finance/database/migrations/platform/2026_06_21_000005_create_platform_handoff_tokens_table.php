@@ -18,10 +18,10 @@ return new class extends Migration
             $table->id();
             $table->string('token', 128)->unique(); // sha256 hash of the random secret
             $table->unsignedBigInteger('school_id');
-            $table->string('user_ref', 100);          // identifies who is jumping
-            $table->string('role', 50);              // headmaster|owner|parent|accountant
-            $table->string('source_system', 50);     // finance|academics
-            $table->string('target_system', 50);     // finance|academics
+            $table->string('user_ref');          // identifies who is jumping
+            $table->string('role');              // headmaster|owner|parent|accountant
+            $table->string('source_system');     // finance|academics
+            $table->string('target_system');     // finance|academics
             $table->json('payload')->nullable(); // e.g. student reg_no(s) for parents
             $table->timestamp('expires_at');
             $table->timestamp('used_at')->nullable();

@@ -135,13 +135,21 @@ class TenantDatabaseManager
     }
 
     /**
-     * Create a new database for a school.
-     *
-     * @param string $databaseName
-     * @return bool
+     * Create a new database for a school via DirectAdmin API.
+     * Falls back to direct SQL if DA credentials are not configured.
      */
     public function createDatabase(string $databaseName): bool
     {
+        if (config('directadmin.user') && config('directadmin.password')) {
+            $prefix = config('directadmin.db_prefix', '');
+            $nameWithoutPrefix = str_starts_with($databaseName, $prefix)
+                ? substr($databaseName, strlen($prefix))
+                : $databaseName;
+
+            return app(DirectAdminService::class)->createDatabase($nameWithoutPrefix);
+        }
+
+        // Fallback: direct SQL (requires CREATE privilege on the DB user)
         try {
             DB::connection('central')->statement("CREATE DATABASE IF NOT EXISTS `{$databaseName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             return true;
@@ -152,13 +160,15 @@ class TenantDatabaseManager
     }
 
     /**
-     * Drop a school's database.
-     *
-     * @param string $databaseName
-     * @return bool
+     * Drop a school's database via DirectAdmin API.
+     * Falls back to direct SQL if DA credentials are not configured.
      */
     public function dropDatabase(string $databaseName): bool
     {
+        if (config('directadmin.user') && config('directadmin.password')) {
+            return app(DirectAdminService::class)->dropDatabase($databaseName);
+        }
+
         try {
             DB::connection('central')->statement("DROP DATABASE IF EXISTS `{$databaseName}`");
             return true;

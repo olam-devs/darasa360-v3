@@ -14,10 +14,10 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('code', 3)->unique();   // 3-digit school code, reusable on delete
-            $table->string('slug', 150)->nullable();
-            $table->string('location', 191)->nullable();
-            $table->string('status', 50)->default('active'); // active|suspended
-            $table->string('package', 100)->nullable();
+            $table->string('slug')->nullable();
+            $table->string('location')->nullable();
+            $table->string('status')->default('active'); // active|suspended
+            $table->string('package')->nullable();
 
             // Which systems are enabled for this school
             $table->boolean('has_finance')->default(false);
@@ -26,17 +26,17 @@ return new class extends Migration
             $table->boolean('parent_cross_access')->default(false); // per-role grant for parents
 
             // Finance tenant DB connection details
-            $table->string('finance_db_name', 100)->nullable();
-            $table->string('finance_db_host', 100)->nullable();
-            $table->string('finance_db_port', 10)->nullable();
-            $table->string('finance_db_user', 100)->nullable();
-            $table->string('finance_db_pass', 191)->nullable();
+            $table->string('finance_db_name')->nullable();
+            $table->string('finance_db_host')->nullable();
+            $table->string('finance_db_port')->nullable();
+            $table->string('finance_db_user')->nullable();
+            $table->string('finance_db_pass')->nullable();
 
             // Academics tenant DB name (academics resolves host/user from its own env)
-            $table->string('academics_db_name', 100)->nullable();
+            $table->string('academics_db_name')->nullable();
 
             // Billing
-            $table->string('billing_status', 50)->nullable();
+            $table->string('billing_status')->nullable();
             $table->date('billing_start_date')->nullable();
             $table->date('next_billing_date')->nullable();
             $table->decimal('monthly_charge', 12, 2)->nullable();

@@ -15,11 +15,11 @@ return new class extends Migration
             $table->unsignedBigInteger('school_id');
             $table->string('name');
             $table->string('email')->nullable();
-            $table->string('username', 150)->nullable();
+            $table->string('username')->nullable();
             $table->string('password');
-            $table->string('role', 50); // accountant|headmaster|owner|teacher|school_admin
-            $table->string('systems', 50)->default('finance'); // finance|academics|both
-            $table->string('reg_no', 20)->nullable(); // S{code}{role}{seq} for staff
+            $table->string('role'); // accountant|headmaster|owner|teacher|school_admin
+            $table->string('systems')->default('finance'); // finance|academics|both
+            $table->string('reg_no')->nullable(); // S{code}{role}{seq} for staff
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 

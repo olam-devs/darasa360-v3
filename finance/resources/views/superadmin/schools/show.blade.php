@@ -207,6 +207,65 @@
                     </form>
                 </div>
 
+                <!-- SMS Reallocation between Finance & Academics -->
+                @if($school->platform_school_id)
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold mb-1">Reallocate SMS Between Systems</h2>
+                    <p class="text-sm text-gray-500 mb-4">Move unused credits between Finance and Academics for this school. Only available credits (assigned − used) can be moved.</p>
+
+                    @php
+                        $platSchool = \App\Models\Platform\PlatformSchool::find($school->platform_school_id);
+                        $acRow = null;
+                        if ($platSchool?->academics_db_name) {
+                            try {
+                                config(['database.connections.ac_tmp' => array_merge(config('database.connections.mysql'), ['database' => $platSchool->academics_db_name])]);
+                                \Illuminate\Support\Facades\DB::purge('ac_tmp');
+                                $acRow = \Illuminate\Support\Facades\DB::connection('ac_tmp')->table('sms_balances')->where('school_id', $school->id)->first();
+                            } catch (\Exception $e) {}
+                        }
+                        $finAvail = ($school->sms_credits_assigned ?? 0) - ($school->sms_credits_used ?? 0);
+                        $acAvail  = $acRow ? ($acRow->sms_allocated - $acRow->sms_used) : 0;
+                    @endphp
+
+                    <div class="grid grid-cols-2 gap-4 mb-4 text-center">
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Finance Available</p>
+                            <p class="text-2xl font-bold text-blue-700">{{ number_format($finAvail) }}</p>
+                            <p class="text-xs text-gray-400">of {{ number_format($school->sms_credits_assigned ?? 0) }} assigned</p>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-4">
+                            <p class="text-xs text-gray-500 uppercase tracking-wide">Academics Available</p>
+                            <p class="text-2xl font-bold text-green-700">{{ number_format($acAvail) }}</p>
+                            <p class="text-xs text-gray-400">of {{ number_format($acRow?->sms_allocated ?? 0) }} allocated</p>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ route('superadmin.schools.reallot-sms', $school) }}">
+                        @csrf
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Direction</label>
+                                <select name="direction" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="to_academics">Finance → Academics</option>
+                                    <option value="to_finance">Academics → Finance</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Credits to Move</label>
+                                <input type="number" name="amount" min="1" required
+                                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g. 500">
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                                    Reallocate
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                @endif
+
                 <!-- Basic Info -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-xl font-bold mb-4">School Information</h2>

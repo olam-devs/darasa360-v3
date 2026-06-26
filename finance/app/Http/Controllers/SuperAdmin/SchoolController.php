@@ -123,8 +123,9 @@ class SchoolController extends Controller
             'max_students' => 'nullable|integer|min:1',
             'subscription_status' => 'required|in:trial,active,suspended,cancelled',
             'subscription_expires_at' => 'nullable|date',
-            'accountant_name' => 'required|string|max:255',
-            'accountant_email' => 'required|email|unique:school_accountants,email',
+            'has_finance' => 'nullable|boolean',
+            'accountant_name' => $request->boolean('has_finance', true) ? 'required|string|max:255' : 'nullable|string|max:255',
+            'accountant_email' => $request->boolean('has_finance', true) ? 'required|email|unique:school_accountants,email' : 'nullable|email',
             'accountant_password' => 'nullable|string|min:8',
             'db_host' => 'nullable|string',
             'db_port' => 'nullable|string',
@@ -315,6 +316,74 @@ class SchoolController extends Controller
         );
 
         return back()->with('success', $description);
+    }
+
+    /**
+     * Reallocate SMS credits between Finance and Academics for a school.
+     * direction: 'to_academics' or 'to_finance'
+     */
+    public function reallotSmsCredits(Request $request, School $school)
+    {
+        $request->validate([
+            'amount'    => 'required|integer|min:1',
+            'direction' => 'required|in:to_academics,to_finance',
+        ]);
+
+        $amount = (int) $request->amount;
+
+        // Resolve Academics DB name via platform_schools
+        $platformSchool = \App\Models\Platform\PlatformSchool::where('id', $school->platform_school_id)->first();
+        $academicsDb = $platformSchool?->academics_db_name ?? null;
+
+        if (!$academicsDb) {
+            return back()->with('error', 'This school has no Academics database configured — cannot reallocate.');
+        }
+
+        // Connect to Academics DB dynamically
+        config(['database.connections.academics_reallot' => array_merge(
+            config('database.connections.mysql'),
+            ['database' => $academicsDb]
+        )]);
+        DB::purge('academics_reallot');
+
+        DB::transaction(function () use ($request, $school, $amount, $academicsDb) {
+            if ($request->direction === 'to_academics') {
+                $available = $school->sms_credits_assigned - $school->sms_credits_used;
+                if ($amount > $available) {
+                    throw new \Exception("Finance only has {$available} credits available (assigned minus used).");
+                }
+                // Deduct from Finance
+                $school->decrement('sms_credits_assigned', $amount);
+                // Add to Academics sms_balances (upsert in case row missing)
+                DB::connection('academics_reallot')->table('sms_balances')
+                    ->updateOrInsert(
+                        ['school_id' => $school->id],
+                        ['sms_allocated' => DB::raw("sms_allocated + {$amount}"), 'updated_at' => now()]
+                    );
+            } else {
+                // to_finance: take from Academics
+                $acRow = DB::connection('academics_reallot')->table('sms_balances')
+                    ->where('school_id', $school->id)->first();
+                $acAvailable = $acRow ? ($acRow->sms_allocated - $acRow->sms_used) : 0;
+                if ($amount > $acAvailable) {
+                    throw new \Exception("Academics only has {$acAvailable} credits available.");
+                }
+                DB::connection('academics_reallot')->table('sms_balances')
+                    ->where('school_id', $school->id)
+                    ->decrement('sms_allocated', $amount);
+                $school->increment('sms_credits_assigned', $amount);
+            }
+        });
+
+        $label = $request->direction === 'to_academics' ? 'Finance → Academics' : 'Academics → Finance';
+        $this->activityLogger->logSuperAdminAction(
+            auth('superadmin')->user(),
+            'sms_reallocation',
+            "Reallocated {$amount} SMS credits ({$label}) for school #{$school->id}",
+            $school
+        );
+
+        return back()->with('success', "Reallocated {$amount} SMS credits ({$label}) successfully.");
     }
 
     /**
