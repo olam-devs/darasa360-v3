@@ -537,4 +537,64 @@ class StudentController extends Controller
 
         return response()->json(['success' => true, 'message' => "Password set for {$count} student(s)."]);
     }
+
+    public function downloadStudentTemplate()
+    {
+        $headers = ['Content-Type' => 'text/csv', 'Content-Disposition' => 'attachment; filename="students_template.csv"'];
+        $callback = function () {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['name', 'admission_number', 'class_id', 'gender', 'date_of_birth', 'parent_name', 'parent_phone', 'parent_email', 'address']);
+            fputcsv($out, ['John Doe', 'ADM-001', '1', 'Male', '2010-01-15', 'Jane Doe', '0712345678', 'parent@example.com', 'Dar es Salaam']);
+            fclose($out);
+        };
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function uploadStudentCsv(\Illuminate\Http\Request $request)
+    {
+        $request->validate(['file' => 'required|file|mimes:csv,txt|max:2048']);
+
+        $school = auth()->user()->school;
+        if (!$school) {
+            return response()->json(['success' => false, 'message' => 'School not found.'], 403);
+        }
+
+        $file = $request->file('file');
+        $rows = array_map('str_getcsv', file($file->getRealPath()));
+        $headers = array_map('trim', array_shift($rows));
+
+        $imported = 0;
+        $failed = [];
+
+        foreach ($rows as $i => $row) {
+            if (count($row) < 2) continue;
+            $data = array_combine($headers, array_map('trim', $row));
+
+            try {
+                \DB::connection('tenant')->table('students')->insert([
+                    'name'             => $data['name'] ?? '',
+                    'admission_number' => $data['admission_number'] ?? null,
+                    'class_id'         => $data['class_id'] ?? null,
+                    'gender'           => $data['gender'] ?? null,
+                    'date_of_birth'    => $data['date_of_birth'] ?? null,
+                    'parent_name'      => $data['parent_name'] ?? null,
+                    'parent_phone'     => $data['parent_phone'] ?? null,
+                    'parent_email'     => $data['parent_email'] ?? null,
+                    'address'          => $data['address'] ?? null,
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]);
+                $imported++;
+            } catch (\Exception $e) {
+                $failed[] = "Row " . ($i + 2) . ": " . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$imported} student(s) imported." . (count($failed) ? ' Errors: ' . implode('; ', array_slice($failed, 0, 3)) : ''),
+            'imported' => $imported,
+            'errors'   => $failed,
+        ]);
+    }
 }
