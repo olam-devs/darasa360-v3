@@ -104,8 +104,13 @@ class SchoolProvisioningService
                         $this->verifyExistingDatabase($school);
                         $this->syncSettingsToTenant($school);
                     } else {
-                        if (!$this->tenantManager->createDatabase($school->database_name)) {
+                        $result = $this->tenantManager->createDatabase($school->database_name);
+                        if ($result === false) {
                             throw new \Exception("Failed to create Finance database for school: {$school->name}");
+                        }
+                        // DA returns per-DB credentials; store them so tenant connection works
+                        if (is_array($result)) {
+                            $school->update(['db_username' => $result['db_user'], 'db_password' => $result['db_password']]);
                         }
                         $this->runTenantMigrations($school);
                         $this->seedDefaultData($school);
@@ -120,11 +125,13 @@ class SchoolProvisioningService
                     PlatformSchool::where('id', $school->platform_school_id)
                         ->update(['academics_db_name' => $academicsDb]);
 
-                    if (!$this->tenantManager->createDatabase($academicsDb)) {
+                    $result = $this->tenantManager->createDatabase($academicsDb);
+                    if ($result === false) {
                         throw new \Exception("Failed to create Academics database for school: {$school->name}");
                     }
-                    $this->runAcademicsMigrations($academicsDb, $school);
-                    $this->seedAcademicsAdminUser($academicsDb, $school);
+                    $acadCreds = is_array($result) ? $result : [];
+                    $this->runAcademicsMigrations($academicsDb, $school, $acadCreds);
+                    $this->seedAcademicsAdminUser($academicsDb, $school, $acadCreds);
                 }
 
                 // 6. Log the activity
@@ -194,7 +201,19 @@ class SchoolProvisioningService
     /**
      * Run Academics migrations against a newly created Academics tenant DB.
      */
-    protected function runAcademicsMigrations(string $academicsDb, School $school): void
+    protected function academicsTenantConnection(string $academicsDb, array $creds = []): void
+    {
+        config([
+            'database.connections.academics_tenant' => array_merge(
+                config('database.connections.mysql'),
+                ['database' => $academicsDb],
+                $creds ? ['username' => $creds['db_user'], 'password' => $creds['db_password']] : []
+            )
+        ]);
+        DB::purge('academics_tenant');
+    }
+
+    protected function runAcademicsMigrations(string $academicsDb, School $school, array $creds = []): void
     {
         $academicsPath = config('services.academics.path');
         if (!$academicsPath || !is_dir($academicsPath)) {
@@ -202,13 +221,7 @@ class SchoolProvisioningService
             return;
         }
 
-        // Temporarily configure an academics_tenant connection
-        config([
-            'database.connections.academics_tenant' => array_merge(
-                config('database.connections.mysql'),
-                ['database' => $academicsDb]
-            )
-        ]);
+        $this->academicsTenantConnection($academicsDb, $creds);
         DB::purge('academics_tenant');
 
         try {
@@ -228,16 +241,10 @@ class SchoolProvisioningService
      * Seed a default school_admin user in the Academics tenant DB so the super-admin
      * can log into Academics and finish setting up the school (add headmaster etc.).
      */
-    protected function seedAcademicsAdminUser(string $academicsDb, School $school): void
+    protected function seedAcademicsAdminUser(string $academicsDb, School $school, array $creds = []): void
     {
         try {
-            config([
-                'database.connections.academics_tenant' => array_merge(
-                    config('database.connections.mysql'),
-                    ['database' => $academicsDb]
-                )
-            ]);
-            DB::purge('academics_tenant');
+            $this->academicsTenantConnection($academicsDb, $creds);
 
             // Find the school_admin role id (role_id = 7 in standard Academics schema)
             $roleId = DB::connection('academics_tenant')->table('roles')

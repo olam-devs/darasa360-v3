@@ -138,7 +138,11 @@ class TenantDatabaseManager
      * Create a new database for a school via DirectAdmin API.
      * Falls back to direct SQL if DA credentials are not configured.
      */
-    public function createDatabase(string $databaseName): bool
+    /**
+     * Create a database. Returns ['db_user'=>..., 'db_password'=>...] on DA success,
+     * true on direct-SQL success, false on failure.
+     */
+    public function createDatabase(string $databaseName): array|bool
     {
         if (config('directadmin.user') && config('directadmin.password')) {
             $prefix = config('directadmin.db_prefix', '');

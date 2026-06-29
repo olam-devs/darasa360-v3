@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Log;
 /**
  * Manages MySQL database provisioning via DirectAdmin API.
  * Used because shared hosting users cannot run CREATE DATABASE directly.
+ *
+ * DA's assignuser action is not supported in this version, so each DB
+ * gets its own unique MySQL user created at provisioning time. The
+ * credentials are stored on the school record and used for tenant connections.
  */
 class DirectAdminService
 {
@@ -29,17 +33,17 @@ class DirectAdminService
     }
 
     /**
-     * Create a MySQL database via DirectAdmin API and grant access to the app DB user.
-     * DirectAdmin automatically prefixes the DB name with the account username.
-     * Pass the name WITHOUT the prefix (e.g. "olam_secondary") — returns full name.
+     * Create a MySQL database via DirectAdmin API.
+     * Returns ['db_user' => 'olamtecc_xxx', 'db_password' => '...'] on success, false on failure.
+     * DA auto-prefixes both DB name and username with the account prefix.
      */
-    public function createDatabase(string $nameWithoutPrefix): bool
+    public function createDatabase(string $nameWithoutPrefix): array|false
     {
         try {
-            // DA requires a new unique user per DB — use a short hash suffix to avoid collisions.
-            // The shared app user (olamtecc_darasa_user) is then granted access via assignuser.
             $dbPassword = config('database.connections.central.password', '');
-            $uniqueUser = substr($nameWithoutPrefix, 0, 7) . substr(md5($nameWithoutPrefix), 0, 4);
+            // Generate a unique short username (DA has ~16 char limit including prefix)
+            $uniqueUser = substr(preg_replace('/[^a-z0-9]/', '', $nameWithoutPrefix), 0, 6)
+                        . substr(md5($nameWithoutPrefix), 0, 5);
 
             $response = $this->post('/CMD_API_DATABASES', [
                 'action'  => 'create',
@@ -54,9 +58,10 @@ class DirectAdminService
                 return false;
             }
 
-            // Grant the shared app DB user access to the new database
-            $fullName = $this->dbPrefix . $nameWithoutPrefix;
-            return $this->grantUserAccess($fullName);
+            return [
+                'db_user'     => $this->dbPrefix . $uniqueUser,
+                'db_password' => $dbPassword,
+            ];
 
         } catch (\Exception $e) {
             Log::error("DirectAdmin createDatabase exception: " . $e->getMessage());
@@ -66,7 +71,6 @@ class DirectAdminService
 
     /**
      * Drop a MySQL database via DirectAdmin API.
-     * Pass the full name including prefix (e.g. "olamtecc_olam_secondary").
      */
     public function dropDatabase(string $fullName): bool
     {
@@ -76,8 +80,8 @@ class DirectAdminService
 
         try {
             $response = $this->post('/CMD_API_DATABASES', [
-                'action'  => 'delete',
-                'name'    => $nameWithoutPrefix,
+                'action' => 'delete',
+                'name'   => $nameWithoutPrefix,
             ]);
 
             if (!$this->isSuccess($response)) {
@@ -91,40 +95,10 @@ class DirectAdminService
         }
     }
 
-    /**
-     * Grant the configured app DB user ALL PRIVILEGES on a database.
-     */
-    protected function grantUserAccess(string $fullDbName): bool
-    {
-        // DA auto-prefixes usernames — strip the account prefix before passing
-        $dbUserWithoutPrefix = str_starts_with($this->dbUser, $this->dbPrefix)
-            ? substr($this->dbUser, strlen($this->dbPrefix))
-            : $this->dbUser;
-
-        try {
-            $response = $this->post('/CMD_API_DATABASES', [
-                'action'   => 'assignuser',
-                'name'     => $fullDbName,
-                'dbuser'   => $dbUserWithoutPrefix,
-                'passwd'   => config('database.connections.central.password', ''),
-            ]);
-
-            if (!$this->isSuccess($response)) {
-                Log::error("DirectAdmin grantUserAccess failed: " . $response->body());
-                return false;
-            }
-
-            return true;
-        } catch (\Exception $e) {
-            Log::warning("DirectAdmin grantUserAccess exception: " . $e->getMessage());
-            return true; // DB created, grant can be done manually
-        }
-    }
-
     protected function post(string $endpoint, array $data): \Illuminate\Http\Client\Response
     {
         return Http::withBasicAuth($this->user, $this->password)
-            ->withOptions(['verify' => false]) // self-signed certs on shared hosting
+            ->withOptions(['verify' => false])
             ->timeout(30)
             ->asForm()
             ->post("https://{$this->host}:{$this->port}{$endpoint}", $data);
@@ -133,7 +107,6 @@ class DirectAdminService
     protected function isSuccess(\Illuminate\Http\Client\Response $response): bool
     {
         $body = $response->body();
-        // DirectAdmin returns "error=0" on success
         return str_contains($body, 'error=0') || str_contains($body, 'result=success');
     }
 }
