@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'academics' => [
+        'path'    => env('ACADEMICS_APP_PATH'),   // absolute path to academics/ folder
+        'main_db' => env('ACADEMICS_MAIN_DB'),    // e.g. olamtecc_academics_sandbox
+        'url'     => env('ACADEMICS_APP_URL'),
+    ],
+
 ];

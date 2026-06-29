@@ -132,6 +132,7 @@ class SchoolProvisioningService
                     $acadCreds = is_array($result) ? $result : [];
                     $this->runAcademicsMigrations($academicsDb, $school, $acadCreds);
                     $this->seedAcademicsAdminUser($academicsDb, $school, $acadCreds);
+                    $this->registerSchoolInAcademicsMainDb($academicsDb, $school);
                 }
 
                 // 6. Log the activity
@@ -278,6 +279,60 @@ class SchoolProvisioningService
         } catch (\Exception $e) {
             Log::warning("Academics admin seed failed for {$school->name}: " . $e->getMessage());
             // Non-fatal — migrations ran, admin can be created manually
+        }
+    }
+
+    /**
+     * Insert a school record into the Academics main DB so the Academics super-admin
+     * can see and manage the school from their dashboard.
+     */
+    protected function registerSchoolInAcademicsMainDb(string $academicsDb, School $school): void
+    {
+        $academicsMainDb = config('services.academics.main_db');
+        if (!$academicsMainDb) {
+            Log::warning("Academics main DB not configured (ACADEMICS_MAIN_DB). School not registered in Academics.");
+            return;
+        }
+
+        try {
+            config([
+                'database.connections.academics_main' => array_merge(
+                    config('database.connections.mysql'),
+                    ['database' => $academicsMainDb]
+                )
+            ]);
+            DB::purge('academics_main');
+
+            // Find the super-admin role id in the Academics main DB
+            $superAdminRoleId = DB::connection('academics_main')->table('roles')
+                ->where('name', 'super_admin')->value('id') ?? 1;
+
+            // Find the super-admin user id
+            $superAdminId = DB::connection('academics_main')->table('users')
+                ->where('role_id', $superAdminRoleId)
+                ->value('id') ?? 1;
+
+            $alreadyExists = DB::connection('academics_main')->table('schools')
+                ->where('database_url', $academicsDb)
+                ->exists();
+
+            if (!$alreadyExists) {
+                DB::connection('academics_main')->table('schools')->insert([
+                    'name'         => $school->name,
+                    'location'     => $school->address ?? 'Tanzania',
+                    'database_url' => $academicsDb,
+                    'user_id'      => $superAdminId,
+                    'school_code'  => $school->code,
+                    'status'       => 'active',
+                    'is_deleted'   => 0,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+                Log::info("School '{$school->name}' registered in Academics main DB ({$academicsMainDb}).");
+            }
+        } catch (\Exception $e) {
+            Log::warning("Failed to register school in Academics main DB: " . $e->getMessage());
+            // Non-fatal — school admin can register it manually
         }
     }
 
