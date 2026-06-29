@@ -1,4 +1,4 @@
-@extends('superadmin.layouts.app')
+@extends('layouts.superadmin')
 
 @section('title', "Students — {$school->name}")
 
