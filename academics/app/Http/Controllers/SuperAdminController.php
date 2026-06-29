@@ -205,7 +205,7 @@ class SuperAdminController extends Controller
 
         // Calculate billing details
         $school->total_users = $school->users()->count();
-        $school->active_users = $school->users()->where('is_active', true)->count();
+        $school->active_users = $school->total_users; // users table has no is_active column
         $school->monthly_charge = $school->active_users * $school->price_per_user;
         $school->save();
 
