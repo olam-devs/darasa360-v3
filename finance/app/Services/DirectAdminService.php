@@ -96,17 +96,22 @@ class DirectAdminService
      */
     protected function grantUserAccess(string $fullDbName): bool
     {
+        // DA auto-prefixes usernames — strip the account prefix before passing
+        $dbUserWithoutPrefix = str_starts_with($this->dbUser, $this->dbPrefix)
+            ? substr($this->dbUser, strlen($this->dbPrefix))
+            : $this->dbUser;
+
         try {
             $response = $this->post('/CMD_API_DATABASES', [
                 'action'   => 'assignuser',
                 'name'     => $fullDbName,
-                'dbuser'   => $this->dbUser,
+                'dbuser'   => $dbUserWithoutPrefix,
                 'passwd'   => config('database.connections.central.password', ''),
             ]);
 
             if (!$this->isSuccess($response)) {
-                Log::warning("DirectAdmin grantUserAccess failed: " . $response->body());
-                // Not fatal — the DB was created; admin can grant manually
+                Log::error("DirectAdmin grantUserAccess failed: " . $response->body());
+                return false;
             }
 
             return true;
