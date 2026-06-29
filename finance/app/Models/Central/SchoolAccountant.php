@@ -70,6 +70,11 @@ class SchoolAccountant extends Authenticatable
     /**
      * Get the school that owns the accountant.
      */
+    public function getRoleAttribute(): string
+    {
+        return 'accountant';
+    }
+
     public function school()
     {
         return $this->belongsTo(School::class);
