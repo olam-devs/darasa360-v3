@@ -319,7 +319,6 @@ class SchoolProvisioningService
             if (!$alreadyExists) {
                 DB::connection('academics_main')->table('schools')->insert([
                     'name'         => $school->name,
-                    'location'     => $school->address ?? 'Tanzania',
                     'database_url' => $academicsDb,
                     'user_id'      => $superAdminId,
                     'school_code'  => $school->code,
