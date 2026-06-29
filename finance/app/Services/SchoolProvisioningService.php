@@ -346,7 +346,6 @@ class SchoolProvisioningService
                 'email' => $school->contact_email,
                 'phone' => $school->contact_phone,
                 'address' => $school->address,
-                'logo' => $school->logo,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
