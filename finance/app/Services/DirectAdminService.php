@@ -36,30 +36,25 @@ class DirectAdminService
     public function createDatabase(string $nameWithoutPrefix): bool
     {
         try {
-            // Create DB only (no user param — DA would create a new user which fails if it already exists)
-            $response = $this->post('/CMD_API_DATABASES', [
-                'action' => 'create',
-                'name'   => $nameWithoutPrefix,
-            ]);
+            // DA requires a new unique user per DB — use a short hash suffix to avoid collisions.
+            // The shared app user (olamtecc_darasa_user) is then granted access via assignuser.
+            $dbPassword = config('database.connections.central.password', '');
+            $uniqueUser = substr($nameWithoutPrefix, 0, 7) . substr(md5($nameWithoutPrefix), 0, 4);
 
-            // DA returns "Invalid Username" if it requires a user — fall back to creating with user+passwd
-            if (!$this->isSuccess($response) && str_contains($response->body(), 'Invalid+Username')) {
-                $dbPassword = config('database.connections.central.password', '');
-                $response = $this->post('/CMD_API_DATABASES', [
-                    'action'  => 'create',
-                    'name'    => $nameWithoutPrefix,
-                    'user'    => $this->dbUser . '_' . substr(md5($nameWithoutPrefix), 0, 6),
-                    'passwd'  => $dbPassword,
-                    'passwd2' => $dbPassword,
-                ]);
-            }
+            $response = $this->post('/CMD_API_DATABASES', [
+                'action'  => 'create',
+                'name'    => $nameWithoutPrefix,
+                'user'    => $uniqueUser,
+                'passwd'  => $dbPassword,
+                'passwd2' => $dbPassword,
+            ]);
 
             if (!$this->isSuccess($response)) {
                 Log::error("DirectAdmin createDatabase failed: " . $response->body());
                 return false;
             }
 
-            // Assign the shared app DB user access to the new database
+            // Grant the shared app DB user access to the new database
             $fullName = $this->dbPrefix . $nameWithoutPrefix;
             return $this->grantUserAccess($fullName);
 
