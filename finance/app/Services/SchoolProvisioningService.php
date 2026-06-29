@@ -137,6 +137,12 @@ class SchoolProvisioningService
                 // 6. Log the activity
                 $this->activityLogger->logSchoolCreation($school);
 
+                // Carry accountant plain password on school for controller to display
+                if (isset($accountant)) {
+                    $school->accountant_plain_password = $accountant->plain_password ?? null;
+                    $school->accountant_email = $accountant->email;
+                }
+
                 return $school;
             } catch (\Exception $e) {
                 if (!$useExistingDatabase && $hasFinance && $school->database_name) {
@@ -373,7 +379,7 @@ class SchoolProvisioningService
      */
     protected function createDefaultAccountant(School $school, array $data): SchoolAccountant
     {
-        $password = $data['accountant_password'] ?? Str::random(12);
+        $password = (!empty($data['accountant_password'])) ? $data['accountant_password'] : Str::random(12);
 
         $accountant = SchoolAccountant::create([
             'school_id' => $school->id,
@@ -394,6 +400,9 @@ class SchoolProvisioningService
                 'updated_at' => now(),
             ]);
         });
+
+        // Expose plain password so controller can show it in the success message
+        $accountant->plain_password = $password;
 
         return $accountant;
     }

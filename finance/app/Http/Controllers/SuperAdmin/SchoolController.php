@@ -154,8 +154,11 @@ class SchoolController extends Controller
             // Provision the school
             $school = $this->provisioningService->provisionSchool($data);
 
-            return redirect()->route('superadmin.schools.show', $school)
-                ->with('success', "School '{$school->name}' has been created successfully!");
+            $msg = "School '{$school->name}' created successfully!";
+            if ($school->accountant_plain_password) {
+                $msg .= " Accountant login — Email: {$school->accountant_email} | Password: {$school->accountant_plain_password}";
+            }
+            return redirect()->route('superadmin.schools.show', $school)->with('success', $msg);
         } catch (\Exception $e) {
             \Log::error('School creation failed: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
@@ -270,9 +273,20 @@ class SchoolController extends Controller
             return back()->with('error', 'Invalid accountant for this school!');
         }
 
-        $accountant->update([
-            'password' => Hash::make($request->new_password),
-        ]);
+        $hashed = Hash::make($request->new_password);
+
+        $accountant->update(['password' => $hashed]);
+
+        // Also update the tenant users table so the accountant can actually log in
+        try {
+            app(\App\Services\TenantDatabaseManager::class)->executeForSchool($school, function () use ($accountant, $hashed) {
+                DB::connection('tenant')->table('users')
+                    ->where('email', $accountant->email)
+                    ->update(['password' => $hashed]);
+            });
+        } catch (\Exception $e) {
+            \Log::warning("Could not update tenant user password for {$accountant->email}: " . $e->getMessage());
+        }
 
         // Log the activity
         $superAdmin = auth('superadmin')->user();
