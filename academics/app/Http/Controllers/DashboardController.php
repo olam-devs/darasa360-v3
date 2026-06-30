@@ -960,7 +960,28 @@ class DashboardController extends Controller
             $upcomingEvents = collect();
         }
 
-        return view('dashboard.owner', compact('stats', 'announcements', 'upcomingEvents'));
+        // Cross-system jump availability check
+        $canJumpToFinance = false;
+        $schoolCode = session('school_code');
+        $regNo = session('registration_no');
+        if ($schoolCode && $regNo) {
+            try {
+                $ps = \DB::connection('platform')->table('platform_schools')
+                    ->where('code', str_pad((int) $schoolCode, 3, '0', STR_PAD_LEFT))
+                    ->first();
+                if ($ps && $ps->has_finance && $ps->has_academics && $ps->cross_jump_enabled) {
+                    $canJumpToFinance = \DB::connection('platform')->table('platform_cross_access')
+                        ->where('school_id', $ps->id)
+                        ->where('user_ref', $regNo)
+                        ->where('is_active', 1)
+                        ->exists();
+                }
+            } catch (\Throwable $e) {
+                // platform not reachable — button stays hidden
+            }
+        }
+
+        return view('dashboard.owner', compact('stats', 'announcements', 'upcomingEvents', 'canJumpToFinance'));
     }
 
     /**

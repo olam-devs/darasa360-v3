@@ -14,7 +14,16 @@
         <div class="col-sm-7">
           <div class="card-body">
             <h5 class="text-white mb-3">Welcome Back, {{ session('username', session('name', 'School Owner')) }}!</h5>
-            <p class="text-white mb-0">Leading your institution to excellence with vision and dedication.</p>
+            <p class="text-white mb-2">Leading your institution to excellence with vision and dedication.</p>
+            @if(!empty($canJumpToFinance))
+            <form method="POST" action="{{ route('handoff.issue') }}" class="mt-2">
+              @csrf
+              <button type="submit"
+                class="btn btn-light btn-sm fw-semibold d-inline-flex align-items-center gap-1">
+                <i class="bx bx-link-external"></i> Open Finance Portal
+              </button>
+            </form>
+            @endif
           </div>
         </div>
         <div class="col-sm-5 text-center text-sm-left">

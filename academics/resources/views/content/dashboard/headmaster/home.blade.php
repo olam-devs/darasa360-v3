@@ -16,7 +16,15 @@
         <div class="col-sm-7">
           <div class="card-body">
             <h5 class="text-white mb-3">Welcome Back, {{ session('username', session('name', 'Headmaster')) }}!</h5>
-            <p class="text-white mb-0">Your leadership is driving success—keep inspiring excellence every day.</p>
+            <p class="text-white mb-2">Your leadership is driving success—keep inspiring excellence every day.</p>
+            @if(!empty($canJumpToFinance))
+            <form method="POST" action="{{ route('handoff.issue') }}" class="d-inline">
+              @csrf
+              <button type="submit" class="btn btn-warning btn-sm mt-1">
+                <i class="bx bx-transfer me-1"></i> Open Finance Portal
+              </button>
+            </form>
+            @endif
           </div>
         </div>
         <div class="col-sm-5 text-center text-sm-left">

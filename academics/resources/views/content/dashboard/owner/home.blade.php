@@ -24,7 +24,15 @@
         <div class="col-sm-7">
           <div class="card-body">
             <h5 class="card-title text-primary mb-3">Welcome Back, {{ $dashboardData['username'] }}.</h5>
-            <p class="mb-6">Your leadership is driving success—keep inspiring excellence every day.</p>
+            <p class="mb-3">Your leadership is driving success—keep inspiring excellence every day.</p>
+            @if(!empty($canJumpToFinance))
+            <form method="POST" action="{{ route('handoff.issue') }}" class="d-inline">
+              @csrf
+              <button type="submit" class="btn btn-warning btn-sm">
+                <i class="bx bx-transfer me-1"></i> Open Finance Portal
+              </button>
+            </form>
+            @endif
           </div>
         </div>
         <div class="col-sm-5 text-center text-sm-left">
