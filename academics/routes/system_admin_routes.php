@@ -18,6 +18,14 @@ Route::middleware(['auth', 'role:system_admin'])->prefix('system-admin')->name('
     Route::prefix('my-schools')->name('my_schools.')->group(function () {
         Route::get('/', [SystemAdminController::class, 'mySchools'])->name('index');
         Route::get('/{id}', [SystemAdminController::class, 'viewSchool'])->name('view');
+
+        // Staff management for assigned schools
+        Route::get('/{id}/staff', [SystemAdminController::class, 'schoolStaff'])->name('staff');
+        Route::post('/{id}/staff', [SystemAdminController::class, 'createStaff'])->name('staff.create');
+        Route::put('/{id}/staff/{staffId}', [SystemAdminController::class, 'updateStaff'])->name('staff.update');
+        Route::delete('/{id}/staff/{staffId}', [SystemAdminController::class, 'deleteStaff'])->name('staff.delete');
+        Route::post('/{id}/staff/{staffId}/toggle', [SystemAdminController::class, 'toggleStaffStatus'])->name('staff.toggle');
+        Route::post('/{id}/staff/{staffId}/reset-password', [SystemAdminController::class, 'resetStaffPassword'])->name('staff.reset_password');
     });
 
     // Support Tickets

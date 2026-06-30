@@ -27,7 +27,6 @@ class RoleSeeder extends Seeder
       ['name' => 'Admin'],
       ['name' => 'Owner'],
       ['name' => 'Headmaster'],
-      ['name' => 'Accountant'],
       ['name' => 'ClassTeacher'],
       ['name' => 'Teacher'],
       ['name' => 'Student'],

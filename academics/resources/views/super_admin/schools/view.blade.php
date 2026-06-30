@@ -34,9 +34,10 @@
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">School Information</h5>
-        <span class="badge bg-{{ $school->status === 'active' ? 'success' : 'secondary' }}">
-          {{ ucfirst($school->status) }}
-        </span>
+        <div>
+          <a href="{{ route('super_admin.schools.staff', $school->id) }}" class="btn btn-sm btn-primary me-2">Manage Staff</a>
+          <span class="badge bg-{{ $school->status === 'active' ? 'success' : 'secondary' }}">{{ ucfirst($school->status) }}</span>
+        </div>
       </div>
       <div class="card-body">
         <table class="table table-borderless mb-0">

@@ -969,4 +969,124 @@ class SuperAdminController extends Controller
         return back()->with('success', 'School assignment removed successfully!');
     }
 
+    // ── School Staff Management (super admin can access any school) ──────────
+
+    private function tenantForSchool(School $school): void
+    {
+        config([
+            'database.connections.tenant' => array_merge(
+                config('database.connections.mysql'),
+                ['database' => $school->database_url]
+            )
+        ]);
+        DB::purge('tenant');
+    }
+
+    public function schoolStaff(int $id)
+    {
+        $school = School::findOrFail($id);
+        $this->tenantForSchool($school);
+
+        $roles = DB::connection('tenant')->table('school_roles')
+            ->whereNotIn('name', ['Student', 'Accountant'])->get();
+
+        $staff = DB::connection('tenant')->table('schoolUsers')
+            ->leftJoin('school_roles', 'schoolUsers.role_id', '=', 'school_roles.id')
+            ->whereNotIn('school_roles.name', ['Student'])
+            ->select('schoolUsers.*', 'school_roles.name as role_name')
+            ->orderBy('schoolUsers.username')->get();
+
+        return view('super_admin.schools.staff', compact('school', 'staff', 'roles'));
+    }
+
+    public function createSchoolStaff(Request $request, int $id)
+    {
+        $school = School::findOrFail($id);
+        $this->tenantForSchool($school);
+
+        $validated = $request->validate([
+            'username'        => 'required|string|max:255',
+            'registration_no' => 'required|string|max:50',
+            'email'           => 'nullable|email',
+            'phone_number'    => 'nullable|string|max:20',
+            'role_id'         => 'required|integer',
+            'password'        => 'required|string|min:6',
+            'gender'          => 'nullable|in:Male,Female',
+        ]);
+
+        if (DB::connection('tenant')->table('schoolUsers')->where('registration_no', $validated['registration_no'])->exists()) {
+            return back()->withErrors(['error' => 'Registration number already exists.']);
+        }
+
+        DB::connection('tenant')->table('schoolUsers')->insert([
+            'username'        => $validated['username'],
+            'registration_no' => $validated['registration_no'],
+            'email'           => $validated['email'],
+            'phone_number'    => $validated['phone_number'],
+            'role_id'         => $validated['role_id'],
+            'password'        => Hash::make($validated['password']),
+            'gender'          => $validated['gender'] ?? 'Male',
+            'status'          => 'active',
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+
+        return back()->with('success', 'Staff member created successfully!');
+    }
+
+    public function updateSchoolStaff(Request $request, int $id, int $staffId)
+    {
+        $school = School::findOrFail($id);
+        $this->tenantForSchool($school);
+
+        $validated = $request->validate([
+            'username'     => 'required|string|max:255',
+            'email'        => 'nullable|email',
+            'phone_number' => 'nullable|string|max:20',
+            'role_id'      => 'required|integer',
+            'gender'       => 'nullable|in:Male,Female',
+        ]);
+
+        DB::connection('tenant')->table('schoolUsers')->where('id', $staffId)->update(array_merge($validated, ['updated_at' => now()]));
+
+        return back()->with('success', 'Staff updated successfully!');
+    }
+
+    public function deleteSchoolStaff(int $id, int $staffId)
+    {
+        $school = School::findOrFail($id);
+        $this->tenantForSchool($school);
+        DB::connection('tenant')->table('schoolUsers')->where('id', $staffId)->delete();
+        return back()->with('success', 'Staff member deleted.');
+    }
+
+    public function toggleSchoolStaffStatus(int $id, int $staffId)
+    {
+        $school = School::findOrFail($id);
+        $this->tenantForSchool($school);
+
+        $user = DB::connection('tenant')->table('schoolUsers')->where('id', $staffId)->first();
+        if (!$user) abort(404);
+
+        $newStatus = $user->status === 'active' ? 'disabled' : 'active';
+        DB::connection('tenant')->table('schoolUsers')->where('id', $staffId)->update(['status' => $newStatus, 'updated_at' => now()]);
+
+        return back()->with('success', 'Status updated.');
+    }
+
+    public function resetSchoolStaffPassword(Request $request, int $id, int $staffId)
+    {
+        $school = School::findOrFail($id);
+        $this->tenantForSchool($school);
+
+        $validated = $request->validate(['password' => 'required|string|min:6|confirmed']);
+
+        DB::connection('tenant')->table('schoolUsers')->where('id', $staffId)->update([
+            'password'   => Hash::make($validated['password']),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'Password reset successfully.');
+    }
+
 }
