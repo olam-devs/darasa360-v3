@@ -8,7 +8,7 @@
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ route('super_admin.dashboard') }}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{{ route('super_admin.schools') }}">Schools</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('super_admin.schools.index') }}">Schools</a></li>
         <li class="breadcrumb-item active">{{ $school->name }}</li>
       </ol>
     </nav>
@@ -157,7 +157,7 @@
         <h5 class="mb-0">Assign System Admin</h5>
       </div>
       <div class="card-body">
-        <form action="{{ route('super_admin.schools.assignSystemAdmin', $school->id) }}" method="POST">
+        <form action="{{ route('super_admin.schools.assign_admin', $school->id) }}" method="POST">
           @csrf
           <div class="mb-3">
             <label class="form-label">Full Name</label>
