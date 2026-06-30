@@ -143,5 +143,12 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
     Route::prefix('admins')->name('admins.')->group(function () {
         Route::get('/', [SuperAdminController::class, 'listSystemAdmins'])->name('index');
         Route::post('/super-admin', [SuperAdminController::class, 'createSuperAdmin'])->name('create_super');
+        Route::post('/system-admin', [SuperAdminController::class, 'createSystemAdmin'])->name('create_system');
+        Route::post('/school-admin', [SuperAdminController::class, 'createSchoolAdmin'])->name('create_school');
+        Route::get('/allocations', [SuperAdminController::class, 'adminAllocations'])->name('allocations');
     });
+
+    // Cross-system super admin handoff
+    Route::post('/handoff/issue', [\App\Http\Controllers\HandoffController::class, 'issueFromAcademicsSuperAdmin'])->name('handoff.super.issue');
+    Route::get('/handoff/consume', [\App\Http\Controllers\HandoffController::class, 'consumeSuperAdminFromFinance'])->name('handoff.super.consume');
 });

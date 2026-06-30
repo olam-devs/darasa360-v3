@@ -36,20 +36,28 @@
                 <th>Actions</th>
               </tr>
             </thead>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Login (Reg No.)</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Role</th>
+                <th>Assigned Schools</th>
+              </tr>
+            </thead>
             <tbody>
               @forelse($systemAdmins as $admin)
               <tr>
                 <td><strong>{{ $admin->username }}</strong></td>
+                <td><code>{{ $admin->registration_no ?? '—' }}</code></td>
                 <td>{{ $admin->email }}</td>
                 <td>{{ $admin->phone_number }}</td>
                 <td>
                   <span class="badge bg-label-primary">{{ ucfirst(str_replace('_', ' ', $admin->userRole->name ?? 'N/A')) }}</span>
                 </td>
                 <td>
-                  {{ $admin->schoolAdmins->count() }} schools
-                </td>
-                <td>
-                  <a href="#" class="btn btn-sm btn-outline-primary">View</a>
+                  {{ $admin->schoolAdmins->count() }} school(s)
                 </td>
               </tr>
               @empty
@@ -153,23 +161,37 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Create School Admin</h5>
+        <h5 class="modal-title">Create School Admin (tenant-level)</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form action="{{ route('super_admin.admins.create_school') }}" method="POST">
         @csrf
         <div class="modal-body">
+          <p class="text-muted small">Creates an <strong>Admin</strong> user directly in a school's database. The registration number is auto-generated.</p>
+          <div class="mb-3">
+            <label class="form-label">School</label>
+            <select class="form-select" name="school_id" required>
+              <option value="">— Select school —</option>
+              @foreach(\App\Models\School::orderBy('name')->get() as $s)
+                <option value="{{ $s->id }}">{{ $s->name }}</option>
+              @endforeach
+            </select>
+          </div>
           <div class="mb-3">
             <label class="form-label">Username</label>
             <input type="text" class="form-control" name="username" required>
           </div>
           <div class="mb-3">
             <label class="form-label">Email</label>
-            <input type="email" class="form-control" name="email" required>
+            <input type="email" class="form-control" name="email">
           </div>
           <div class="mb-3">
             <label class="form-label">Phone Number</label>
-            <input type="text" class="form-control" name="phone_number" required>
+            <input type="text" class="form-control" name="phone_number">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Gender</label>
+            <select class="form-select" name="gender"><option value="Male">Male</option><option value="Female">Female</option></select>
           </div>
           <div class="mb-3">
             <label class="form-label">Password</label>

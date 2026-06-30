@@ -3,14 +3,20 @@
 @section('title', 'Super Admin Dashboard')
 
 @section('content')
-<div class="row">
-  <div class="col-12">
-    <div class="card mb-4">
-      <div class="card-body">
-        <h3 class="card-title mb-1">Super Admin Dashboard</h3>
-        <p class="card-text text-muted">Complete system oversight and management</p>
-      </div>
+<div class="row mb-3">
+  <div class="col-12 d-flex justify-content-between align-items-center">
+    <div>
+      <h3 class="mb-1">Super Admin Dashboard</h3>
+      <p class="text-muted mb-0">Complete system oversight and management</p>
     </div>
+    @if(env('FINANCE_APP_URL'))
+    <form method="POST" action="{{ route('super_admin.handoff.super.issue') }}">
+      @csrf
+      <button type="submit" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
+        <i class="bx bx-transfer"></i> Open Finance Admin Panel
+      </button>
+    </form>
+    @endif
   </div>
 </div>
 

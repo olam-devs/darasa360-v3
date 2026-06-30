@@ -311,15 +311,23 @@ class SuperAdminController extends Controller
 
         $superAdminRole = Role::where('name', 'super_admin')->first();
 
+        $seq = User::where('role_id', $superAdminRole->id)->count() + 1;
+        $regNo = 'superadmin' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+        while (User::where('registration_no', $regNo)->exists()) {
+            $seq++;
+            $regNo = 'superadmin' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+        }
+
         User::create([
-            'username' => $validated['username'],
-            'password' => Hash::make($validated['password']),
-            'email' => $validated['email'],
-            'phone_number' => $validated['phone_number'],
-            'role_id' => $superAdminRole->id,
+            'username'        => $validated['username'],
+            'registration_no' => $regNo,
+            'password'        => Hash::make($validated['password']),
+            'email'           => $validated['email'],
+            'phone_number'    => $validated['phone_number'],
+            'role_id'         => $superAdminRole->id,
         ]);
 
-        return back()->with('success', 'Super admin created successfully!');
+        return back()->with('success', "Super admin created. Login with: {$regNo}");
     }
 
     /**
@@ -341,12 +349,20 @@ class SuperAdminController extends Controller
         try {
             $systemAdminRole = Role::where('name', 'system_admin')->first();
 
+            $seq = User::where('role_id', $systemAdminRole->id)->count() + 1;
+            $regNo = 'sysadmin' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+            while (User::where('registration_no', $regNo)->exists()) {
+                $seq++;
+                $regNo = 'sysadmin' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+            }
+
             $systemAdmin = User::create([
-                'username' => $validated['username'],
-                'password' => Hash::make($validated['password']),
-                'email' => $validated['email'],
-                'phone_number' => $validated['phone_number'],
-                'role_id' => $systemAdminRole->id,
+                'username'        => $validated['username'],
+                'registration_no' => $regNo,
+                'password'        => Hash::make($validated['password']),
+                'email'           => $validated['email'],
+                'phone_number'    => $validated['phone_number'],
+                'role_id'         => $systemAdminRole->id,
             ]);
 
             // Assign to schools if provided
@@ -368,6 +384,11 @@ class SuperAdminController extends Controller
                 $message .= ' Assigned to ' . count($validated['school_ids']) . ' school(s).';
             }
 
+            $message = "System admin created. Login with: {$regNo}";
+            if (!empty($validated['school_ids'])) {
+                $message .= ' Assigned to ' . count($validated['school_ids']) . ' school(s).';
+            }
+
             return back()->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -375,6 +396,67 @@ class SuperAdminController extends Controller
         }
     }
 
+
+    /**
+     * Create School Admin — creates a tenant-level Admin user for a specific school
+     */
+    public function createSchoolAdmin(Request $request)
+    {
+        $validated = $request->validate([
+            'school_id'    => 'required|exists:schools,id',
+            'username'     => 'required|string|max:255',
+            'email'        => 'nullable|email',
+            'phone_number' => 'nullable|string|max:20',
+            'password'     => 'required|string|min:6',
+            'gender'       => 'nullable|in:Male,Female',
+        ]);
+
+        $school = School::findOrFail($validated['school_id']);
+        $this->tenantForSchool($school);
+
+        $adminRole = DB::connection('tenant')->table('school_roles')->where('name', 'Admin')->first();
+        if (!$adminRole) {
+            return back()->withErrors(['error' => 'Admin role not found in school tenant DB.']);
+        }
+
+        $seq = DB::connection('tenant')->table('schoolUsers')->where('role_id', $adminRole->id)->count() + 1;
+        $code = str_pad($school->school_code, 3, '0', STR_PAD_LEFT);
+        $regNo = 'S' . $code . $adminRole->id . str_pad($seq, 4, '0', STR_PAD_LEFT);
+        while (DB::connection('tenant')->table('schoolUsers')->where('registration_no', $regNo)->exists()) {
+            $seq++;
+            $regNo = 'S' . $code . $adminRole->id . str_pad($seq, 4, '0', STR_PAD_LEFT);
+        }
+
+        DB::connection('tenant')->table('schoolUsers')->insert([
+            'username'        => $validated['username'],
+            'registration_no' => $regNo,
+            'email'           => $validated['email'] ?? null,
+            'phone_number'    => $validated['phone_number'] ?? null,
+            'role_id'         => $adminRole->id,
+            'password'        => Hash::make($validated['password']),
+            'gender'          => $validated['gender'] ?? 'Male',
+            'status'          => 'active',
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+
+        return back()->with('success', "School admin created for {$school->name}. Reg No: {$regNo}");
+    }
+
+    /**
+     * Admin allocations — shows which system admins are assigned to which schools
+     */
+    public function adminAllocations()
+    {
+        $allocations = SchoolAdmin::with(['admin', 'school'])
+            ->where('admin_type', 'system_admin')
+            ->get();
+
+        $systemAdmins = User::whereHas('userRole', fn($q) => $q->where('name', 'system_admin'))->get();
+        $schools      = School::orderBy('name')->get();
+
+        return view('super_admin.admins.allocations', compact('allocations', 'systemAdmins', 'schools'));
+    }
 
     /**
      * SMS Management Index - Redirect to allocations page

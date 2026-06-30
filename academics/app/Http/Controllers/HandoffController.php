@@ -152,6 +152,78 @@ class HandoffController extends Controller
     }
 
     // -------------------------------------------------------------------------
+    // SUPER ADMIN CROSS-JUMP
+    // -------------------------------------------------------------------------
+
+    /**
+     * Academics super admin → Finance super admin panel
+     */
+    public function issueFromAcademicsSuperAdmin(Request $request)
+    {
+        $financeUrl = rtrim(env('FINANCE_APP_URL', ''), '/');
+        if (!$financeUrl) {
+            return back()->with('error', 'Finance system URL not configured (FINANCE_APP_URL).');
+        }
+
+        $token = \Illuminate\Support\Str::random(64);
+
+        DB::connection('platform')->table('platform_handoff_tokens')->insert([
+            'token'         => $token,
+            'school_id'     => 0,
+            'user_ref'      => session('registration_no', 'super_admin'),
+            'role'          => 'super_admin',
+            'source_system' => 'academics',
+            'target_system' => 'finance',
+            'payload'       => json_encode(['type' => 'super_admin_jump']),
+            'expires_at'    => now()->addSeconds(90),
+            'created_at'    => now(),
+            'updated_at'    => now(),
+        ]);
+
+        return redirect()->away($financeUrl . '/superadmin/handoff/consume?token=' . urlencode($token));
+    }
+
+    /**
+     * Finance super admin lands here from Finance → Academics jump
+     */
+    public function consumeSuperAdminFromFinance(Request $request)
+    {
+        $tokenStr = $request->query('token');
+        if (!$tokenStr) {
+            return redirect()->route('login')->with('error', 'Missing access token.');
+        }
+
+        $record = $this->findAndConsumeToken($tokenStr);
+        if (!$record || $record->role !== 'super_admin') {
+            return redirect()->route('login')->with('error', 'Invalid or expired super admin link.');
+        }
+
+        // Find the Academics super admin user
+        $superAdminRole = DB::table('roles')->where('name', 'super_admin')->first();
+        $adminUser = DB::table('users')
+            ->where('role_id', $superAdminRole->id ?? 0)
+            ->first();
+
+        if (!$adminUser) {
+            return redirect()->route('login')->with('error', 'Super admin not found in Academics.');
+        }
+
+        session([
+            'user_id'         => $adminUser->id,
+            'role'            => 'super admin',
+            'registration_no' => $adminUser->registration_no,
+            'name'            => $adminUser->username,
+            'username'        => $adminUser->username,
+            'school_db'       => null,
+            'school_code'     => null,
+            'handoff_from'    => 'finance',
+        ]);
+
+        return redirect()->route('super_admin.dashboard')
+            ->with('success', 'Signed in from Finance super admin panel.');
+    }
+
+    // -------------------------------------------------------------------------
     // HELPERS
     // -------------------------------------------------------------------------
 
