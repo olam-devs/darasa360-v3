@@ -166,16 +166,27 @@
         }
     }
 
+    const sidebarCategories = ['finance', 'books', 'expenses', 'students', 'communication'];
+
     function toggleCategory(category) {
         const submenu = document.getElementById(category + '-submenu');
         const arrow = document.getElementById(category + '-arrow');
+        const isOpen = !submenu.classList.contains('hidden');
 
-        if (submenu.classList.contains('hidden')) {
+        // Close all categories
+        sidebarCategories.forEach(function(cat) {
+            const s = document.getElementById(cat + '-submenu');
+            const a = document.getElementById(cat + '-arrow');
+            if (s && a) {
+                s.classList.add('hidden');
+                a.classList.remove('rotate-180');
+            }
+        });
+
+        // If it was closed, open it now
+        if (!isOpen) {
             submenu.classList.remove('hidden');
             arrow.classList.add('rotate-180');
-        } else {
-            submenu.classList.add('hidden');
-            arrow.classList.remove('rotate-180');
         }
     }
 </script>
