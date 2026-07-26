@@ -352,9 +352,9 @@ public function showForm(Request $request)
 
   private function configureTenantConnection($schoolDb)
   {
-    // Your existing method to set DB connection dynamically for tenant
-    config(['database.connections.tenant.database' => $schoolDb]);
-    DB::purge('tenant');
-    DB::reconnect('tenant');
+    $school = \App\Models\School::where('database_url', $schoolDb)->first();
+    if ($school) {
+      $school->useAsTenant();
+    }
   }
 }

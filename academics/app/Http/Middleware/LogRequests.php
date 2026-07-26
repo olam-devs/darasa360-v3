@@ -164,8 +164,7 @@ class LogRequests
     // Query from the main database (mysql) not the tenant database
     $school = \App\Models\School::on('mysql')->where('school_code', $schoolCode)->first();
     if ($school) {
-      config(['database.connections.tenant.database' => $school->database_url]);
-      DB::purge('tenant');
+      $school->useAsTenant();
     }
   }
 

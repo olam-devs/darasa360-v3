@@ -23,18 +23,15 @@ class MigrateAllSchools extends Command
     foreach ($schools as $school) {
       $this->info("Processing: {$school->name} ({$school->database_url})");
 
-      // 1. Configure dynamic connection
-      Config::set('database.connections.school_dynamic', [
-        'driver' => 'mysql',
-        'host' => env('DB_HOST', '127.0.0.1'),
-        'port' => env('DB_PORT', '3306'),
-        'database' => $school->database_url,
-        'username' => env('DB_USERNAME', 'root'),
-        'password' => env('DB_PASSWORD', ''),
-        'charset' => 'utf8mb4',
-        'collation' => 'utf8mb4_unicode_ci',
-      ]);
+      if (!$school->db_username || !$school->db_password) {
+        $this->error("Skipping {$school->name}: no dedicated db_username/db_password stored yet (shared credentials are not guaranteed to have access to this school's database on this host).");
+        continue;
+      }
 
+      // 1. Configure dynamic connection - use the school's own dedicated
+      // credentials, not the shared env() ones, since the shared user does
+      // not automatically have access to every tenant database on this host.
+      Config::set('database.connections.school_dynamic', $school->tenantConnectionConfig());
       DB::purge('school_dynamic');
 
       // Migration files under database/migrations/school hardcode
@@ -42,12 +39,10 @@ class MigrateAllSchools extends Command
       // (same as the HTTP-request path, where InitializeTenantDatabase
       // middleware repoints 'tenant' per request). Outside a request there's
       // no middleware, so this command must repoint it itself or every
-      // school's migrations silently run against whatever 'tenant.database'
-      // was last statically configured to, while the tracking table (which
-      // does correctly use school_dynamic) wrongly records them as applied.
-      Config::set('database.connections.tenant.database', $school->database_url);
-      DB::purge('tenant');
-      DB::reconnect('tenant');
+      // school's migrations silently run against whatever 'tenant' was last
+      // configured to, while the tracking table (which does correctly use
+      // school_dynamic) wrongly records them as applied.
+      $school->useAsTenant();
 
       // 2. Verify connection
       try {

@@ -7,11 +7,15 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Manages MySQL database provisioning via DirectAdmin API.
- * Used because shared hosting users cannot run CREATE DATABASE directly.
+ * Used because shared hosting users cannot run CREATE DATABASE / CREATE USER
+ * / GRANT directly (see DatabaseHelper's now-removed raw-SQL attempts —
+ * those silently failed, which is what this service replaces).
  *
- * DA's assignuser action is not supported in this version, so each DB
- * gets its own unique MySQL user created at provisioning time. The
- * credentials are stored on the school record and used for tenant connections.
+ * Mirrors the Finance app's already-working App\Services\DirectAdminService.
+ * DA's assignuser action is not available on this server, so each school's
+ * database gets its own dedicated MySQL user created at provisioning time.
+ * Credentials are stored on the School record (db_username/db_password)
+ * and used for that school's tenant connection specifically.
  */
 class DirectAdminService
 {
@@ -20,7 +24,6 @@ class DirectAdminService
     protected string $user;
     protected string $password;
     protected string $dbPrefix;
-    protected string $dbUser;
 
     public function __construct()
     {
@@ -29,21 +32,20 @@ class DirectAdminService
         $this->user     = config('directadmin.user', '');
         $this->password = config('directadmin.password', '');
         $this->dbPrefix = config('directadmin.db_prefix', '');
-        $this->dbUser   = config('directadmin.db_user', '');
     }
 
     /**
-     * Create a MySQL database via DirectAdmin API.
+     * Create a MySQL database + dedicated user via DirectAdmin API.
      * Returns ['db_user' => 'olamtecc_xxx', 'db_password' => '...'] on success, false on failure.
      * DA auto-prefixes both DB name and username with the account prefix.
      */
     public function createDatabase(string $nameWithoutPrefix): array|false
     {
         try {
-            $dbPassword = config('database.connections.central.password', '');
-            // Generate a unique short username (DA has ~16 char limit including prefix)
-            $uniqueUser = substr(preg_replace('/[^a-z0-9]/', '', $nameWithoutPrefix), 0, 6)
-                        . substr(md5($nameWithoutPrefix), 0, 5);
+            $dbPassword = config('database.connections.mysql.password', '');
+            // Generate a unique short username (DA has a combined length limit including prefix)
+            $uniqueUser = substr(preg_replace('/[^a-z0-9]/', '', strtolower($nameWithoutPrefix)), 0, 6)
+                        . substr(md5($nameWithoutPrefix . microtime()), 0, 5);
 
             $response = $this->post('/CMD_API_DATABASES', [
                 'action'  => 'create',

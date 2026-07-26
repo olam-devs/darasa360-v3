@@ -18,24 +18,13 @@ class SeedAllSchools extends Command
         $schools = School::all();
 
         foreach ($schools as $school) {
+            if (!$school->db_username || !$school->db_password) {
+                $this->warn("Skipping {$school->name}: no dedicated db credentials stored yet.");
+                continue;
+            }
+
             $this->info("Seeding database for school: {$school->name}");
-
-            // Set dynamic tenant DB config
-            Config::set('database.connections.tenant', [
-                'driver' => 'mysql',
-                'host' => env('DB_HOST', '127.0.0.1'),
-                'port' => env('DB_PORT', '3306'),
-                'database' => $school->database_url,
-                'username' => env('DB_USERNAME', 'root'),
-                'password' => env('DB_PASSWORD', ''),
-                'charset' => 'utf8mb4',
-                'collation' => 'utf8mb4_unicode_ci',
-                'prefix' => '',
-            ]);
-
-            // Refresh connection
-            DB::purge('tenant');
-            DB::reconnect('tenant');
+            $school->useAsTenant();
 
             // Run the seeder on tenant connection
             $this->call(MasterTenantSeeder::class, [], 'tenant');

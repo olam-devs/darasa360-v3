@@ -128,34 +128,51 @@ class SuperAdminController extends Controller
             $nextNum  = $lastCode ? ((int) $lastCode + 1) : 1;
             $schoolCode = str_pad($nextNum, 3, '0', STR_PAD_LEFT);
 
-            // Build database URL using DatabaseHelper
-            $dbUrl = DatabaseHelper::buildDatabaseUrl(
-                $validated['db_username'],
-                $validated['db_name']
-            );
+            // Create the database + a dedicated MySQL user via the DirectAdmin API.
+            // Raw SQL (CREATE DATABASE/CREATE USER/GRANT) doesn't work for this
+            // app's DB user on this shared host - mirrors the Finance app's
+            // already-working DirectAdminService.
+            $prefix = config('directadmin.db_prefix', '');
+            $dbName = $validated['db_name'];
+            $nameWithoutPrefix = str_starts_with($dbName, $prefix) && $prefix !== ''
+                ? substr($dbName, strlen($prefix))
+                : $dbName;
 
-            // Create database and MySQL user with proper permissions
-            DatabaseHelper::createDatabaseUser(
-                $validated['db_username'],
-                $validated['db_name']
-            );
-
-            // Test the connection
-            if (!DatabaseHelper::testConnection($dbUrl)) {
-                throw new \Exception('Failed to connect to the created database. Please check credentials.');
+            $created = app(\App\Services\DirectAdminService::class)->createDatabase($nameWithoutPrefix);
+            if (!$created) {
+                throw new \Exception('Failed to provision the database via DirectAdmin. Check storage/logs/laravel.log for the API response.');
             }
 
-            // Create school record
+            // Create school record - database_url is a bare database name
+            // everywhere else this app reads it, so store it that way here too.
             $school = School::create([
                 'name' => $validated['school_name'],
                 'location_id' => $validated['location_id'],
-                'database_url' => $dbUrl,
+                'database_url' => $prefix . $nameWithoutPrefix,
+                'db_username' => $created['db_user'],
+                'db_password' => $created['db_password'],
                 'school_code' => $schoolCode,
                 'price_per_user' => $validated['price_per_user'] ?? 0,
                 'billing_start_date' => now(),
                 'next_billing_date' => now()->addMonth(),
                 'billing_status' => 'active',
                 'status' => 'active',
+            ]);
+
+            // Test the connection using the school's own freshly-created credentials
+            $school->useAsTenant();
+            try {
+                DB::connection('tenant')->getPdo();
+            } catch (\Exception $e) {
+                throw new \Exception('Database was created but the connection test failed: ' . $e->getMessage());
+            }
+
+            // Run the per-school schema migrations - without this the tenant
+            // database exists but has zero tables.
+            \Artisan::call('migrate', [
+                '--path' => 'database/migrations/school',
+                '--database' => 'tenant',
+                '--force' => true,
             ]);
 
             // Get owner role
@@ -181,8 +198,12 @@ class SuperAdminController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             // Clean up the tenant database if it was created before the failure
+            // (raw DROP DATABASE doesn't work on this host's shared DB user,
+            // same reason CREATE DATABASE needs the DirectAdmin API - see above)
             try {
-                DB::statement("DROP DATABASE IF EXISTS `{$validated['db_name']}`");
+                if (!empty($nameWithoutPrefix)) {
+                    app(\App\Services\DirectAdminService::class)->dropDatabase(($prefix ?? '') . $nameWithoutPrefix);
+                }
             } catch (\Exception $cleanupEx) {
                 // Ignore cleanup errors
             }
@@ -827,25 +848,13 @@ class SuperAdminController extends Controller
             return;
         }
 
-        $parsed = parse_url($dbUrl);
-
-        config([
-            'database.connections.tenant' => [
-                'driver' => 'mysql',
-                'host' => $parsed['host'] ?? '127.0.0.1',
-                'port' => $parsed['port'] ?? '3306',
-                'database' => ltrim($parsed['path'] ?? '', '/'),
-                'username' => $parsed['user'] ?? 'root',
-                'password' => $parsed['pass'] ?? '',
-                'charset' => 'utf8mb4',
-                'collation' => 'utf8mb4_unicode_ci',
-                'prefix' => '',
-                'strict' => true,
-            ]
-        ]);
-
-        DB::purge('tenant');
-        DB::reconnect('tenant');
+        // $dbUrl is actually just a bare database name in practice (schools.database_url
+        // has never stored a real mysql:// URL despite this method's original parse_url()
+        // call implying otherwise), so look the school up by that name directly.
+        $school = \App\Models\School::where('database_url', $dbUrl)->first();
+        if ($school) {
+            $school->useAsTenant();
+        }
     }
 
     /**

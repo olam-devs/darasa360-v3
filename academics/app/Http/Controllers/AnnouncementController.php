@@ -369,17 +369,9 @@ class AnnouncementController extends Controller
 
   protected function configureTenantConnection($databaseName)
   {
-    // Copy the default database config
-    $config = config('database.connections.mysql');
-
-    // Override the database name dynamically
-    $config['database'] = $databaseName;
-
-    // Set the tenant connection config dynamically
-    config(['database.connections.tenant' => $config]);
-
-    // Reconnect to apply changes
-    DB::purge('tenant');
-    DB::reconnect('tenant');
+    $school = \App\Models\School::where('database_url', $databaseName)->first();
+    if ($school) {
+      $school->useAsTenant();
+    }
   }
 }

@@ -55,9 +55,11 @@ class ProcessNotifications extends Command
             $this->line("Processing school: {$school->name}");
 
             // Set tenant database
-            config(['database.connections.tenant.database' => $school->database_url]);
-            DB::purge('tenant');
-            DB::reconnect('tenant');
+            if (!$school->db_username || !$school->db_password) {
+                $this->warn("  Skipping {$school->name}: no dedicated db credentials stored yet.");
+                continue;
+            }
+            $school->useAsTenant();
 
             // Process notifications for this school
             $notificationService = new NotificationService();

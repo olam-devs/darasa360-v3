@@ -13,6 +13,8 @@ class School extends Model
     'name',
     'location_id',
     'database_url',
+    'db_username',
+    'db_password',
     'package',
     'user_id',
     'is_deleted',
@@ -27,6 +29,10 @@ class School extends Model
     'next_billing_date',
     'total_users',
     'active_users'
+  ];
+
+  protected $hidden = [
+    'db_password',
   ];
 
 
@@ -72,5 +78,43 @@ class School extends Model
   public function allAdmins()
   {
     return $this->hasMany(SchoolAdmin::class);
+  }
+
+  /**
+   * Build the full 'tenant' database connection config array for this school.
+   * Falls back to the shared env credentials only if this school doesn't yet
+   * have its own dedicated db_username/db_password (e.g. legacy rows created
+   * before per-school credentials existed) - but the shared credential is
+   * NOT guaranteed to have access to every tenant database on this host, so
+   * that fallback should be treated as "probably broken until backfilled",
+   * not a real working default.
+   */
+  public function tenantConnectionConfig(): array
+  {
+    return [
+      'driver' => 'mysql',
+      'host' => env('DB_HOST', '127.0.0.1'),
+      'port' => env('DB_PORT', '3306'),
+      'database' => $this->database_url,
+      'username' => $this->db_username ?: env('DB_USERNAME', 'root'),
+      'password' => $this->db_password ?: env('DB_PASSWORD', ''),
+      'charset' => 'utf8mb4',
+      'collation' => 'utf8mb4_unicode_ci',
+      'prefix' => '',
+      'strict' => true,
+      'engine' => env('DB_ENGINE', 'InnoDB'),
+    ];
+  }
+
+  /**
+   * Point Laravel's 'tenant' connection at this school and reconnect.
+   * The one canonical way to switch tenant context - use this instead of
+   * hand-rolling Config::set('database.connections.tenant', ...) again.
+   */
+  public function useAsTenant(): void
+  {
+    \Illuminate\Support\Facades\Config::set('database.connections.tenant', $this->tenantConnectionConfig());
+    \Illuminate\Support\Facades\DB::purge('tenant');
+    \Illuminate\Support\Facades\DB::reconnect('tenant');
   }
 }

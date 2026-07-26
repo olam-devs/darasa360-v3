@@ -88,25 +88,13 @@ class SystemAdminController extends Controller
             return;
         }
 
-        $parsed = parse_url($dbUrl);
-
-        config([
-            'database.connections.tenant' => [
-                'driver' => 'mysql',
-                'host' => $parsed['host'] ?? '127.0.0.1',
-                'port' => $parsed['port'] ?? '3306',
-                'database' => ltrim($parsed['path'] ?? '', '/'),
-                'username' => $parsed['user'] ?? 'root',
-                'password' => $parsed['pass'] ?? '',
-                'charset' => 'utf8mb4',
-                'collation' => 'utf8mb4_unicode_ci',
-                'prefix' => '',
-                'strict' => true,
-            ]
-        ]);
-
-        DB::purge('tenant');
-        DB::reconnect('tenant');
+        // $dbUrl is actually just a bare database name in practice (schools.database_url
+        // has never stored a real mysql:// URL despite this method's original parse_url()
+        // call implying otherwise), so look the school up by that name directly.
+        $school = \App\Models\School::where('database_url', $dbUrl)->first();
+        if ($school) {
+            $school->useAsTenant();
+        }
     }
 
     /**

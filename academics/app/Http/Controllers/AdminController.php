@@ -301,8 +301,10 @@ class AdminController extends Controller
     $userId = $request->input('user_id');
     $package = $request->input('package');
 
-    // Build database URL using DatabaseHelper
-    $databaseUrl = \App\Helpers\DatabaseHelper::buildDatabaseUrl($dbUsername, $dbName);
+    // database_url is stored (and read everywhere else in this app) as a
+    // bare database name, not a mysql:// URL - despite what buildDatabaseUrl()
+    // would suggest.
+    $databaseUrl = $dbName;
 
     $location = Location::findOrFail($locationId);
     $locationCode = (int) $location->code;
@@ -326,33 +328,36 @@ class AdminController extends Controller
     ]);
 
     try {
-      // Create database and MySQL user with proper permissions
-      \App\Helpers\DatabaseHelper::createDatabaseUser($dbUsername, $dbName);
+      // Create the database + a dedicated MySQL user via the DirectAdmin API.
+      // Raw SQL (CREATE DATABASE/CREATE USER/GRANT) doesn't work for this
+      // app's DB user on this shared host - DatabaseHelper::createDatabaseUser()
+      // used to attempt that and silently swallow the failure. This mirrors
+      // the Finance app's already-working DirectAdminService.
+      $prefix = config('directadmin.db_prefix', '');
+      $nameWithoutPrefix = str_starts_with($dbName, $prefix) && $prefix !== ''
+        ? substr($dbName, strlen($prefix))
+        : $dbName;
 
-      // Test the connection
-      if (!\App\Helpers\DatabaseHelper::testConnection($databaseUrl)) {
-        throw new \Exception('Failed to connect to the created database. Please check credentials.');
+      $created = app(\App\Services\DirectAdminService::class)->createDatabase($nameWithoutPrefix);
+      if (!$created) {
+        throw new \Exception('Failed to provision the database via DirectAdmin. Check storage/logs/laravel.log for the API response.');
       }
 
-      // Parse database URL for connection configuration
-      $dbConfig = \App\Helpers\DatabaseHelper::parseDatabaseUrl($databaseUrl);
+      // DA always applies its own account prefix regardless of what was
+      // typed in the form, so make sure the stored name matches what was
+      // actually created rather than trusting the raw form input.
+      $school->database_url = $prefix . $nameWithoutPrefix;
+      $school->db_username = $created['db_user'];
+      $school->db_password = $created['db_password'];
+      $school->save();
 
-      // Configure tenant connection to target DB
-      Config::set('database.connections.tenant', [
-        'driver' => $dbConfig['driver'],
-        'host' => $dbConfig['host'],
-        'port' => $dbConfig['port'],
-        'database' => $dbConfig['database'],
-        'username' => $dbConfig['username'],
-        'password' => $dbConfig['password'],
-        'charset' => 'utf8mb4',
-        'collation' => 'utf8mb4_unicode_ci',
-        'prefix' => '',
-        'strict' => true,
-      ]);
-
-      DB::purge('tenant');
-      DB::reconnect('tenant');
+      // Test the connection using the school's own freshly-created credentials
+      $school->useAsTenant();
+      try {
+        DB::connection('tenant')->getPdo();
+      } catch (\Exception $e) {
+        throw new \Exception('Database was created but the connection test failed: ' . $e->getMessage());
+      }
 
       // Run migrations on the new database
       \Artisan::call('migrate', [
@@ -411,6 +416,13 @@ class AdminController extends Controller
 
       return redirect('/admins/manage-schools')->with('success', 'School and admin created successfully.');
     } catch (\Exception $e) {
+      if (!empty($school->db_username)) {
+        try {
+          app(\App\Services\DirectAdminService::class)->dropDatabase($school->database_url);
+        } catch (\Exception $cleanupEx) {
+          // Ignore cleanup errors
+        }
+      }
       $school->delete();
       Log::error('Add School Error', ['message' => $e->getMessage()]);
       return response()->json(['error' => 'Failed to create school: ' . $e->getMessage()], 500);
@@ -899,17 +911,9 @@ class AdminController extends Controller
 
   protected function configureTenantConnection($databaseName)
   {
-    // Copy the default database config
-    $config = config('database.connections.mysql');
-
-    // Override the database name dynamically
-    $config['database'] = $databaseName;
-
-    // Set the tenant connection config dynamically
-    config(['database.connections.tenant' => $config]);
-
-    // Reconnect to apply changes
-    DB::purge('tenant');
-    DB::reconnect('tenant');
+    $school = \App\Models\School::where('database_url', $databaseName)->first();
+    if ($school) {
+      $school->useAsTenant();
+    }
   }
 }
