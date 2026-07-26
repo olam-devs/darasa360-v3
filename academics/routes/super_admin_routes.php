@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SuperAdminController;
+use App\Http\Controllers\HandoffController;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,4 +74,11 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
         Route::get('/{id}', [SuperAdminController::class, 'viewSupportTicket'])->name('view');
         Route::post('/{id}/resolve', [SuperAdminController::class, 'resolveSupportTicket'])->name('resolve');
     });
+
+    // Cross-system super admin handoff to Finance
+    // (was previously only defined in routes/super_admin.php, which this
+    // app never actually loads - see bootstrap/app.php - so this button had
+    // never worked)
+    Route::post('/handoff/issue', [HandoffController::class, 'issueFromAcademicsSuperAdmin'])->name('handoff.super.issue');
+    Route::get('/handoff/consume', [HandoffController::class, 'consumeSuperAdminFromFinance'])->name('handoff.super.consume');
 });

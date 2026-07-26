@@ -10,7 +10,7 @@
       <p class="text-muted mb-0">Complete system oversight and management</p>
     </div>
     @if(env('FINANCE_APP_URL'))
-    <form method="POST" action="{{ route('handoff.super.issue') }}">
+    <form method="POST" action="{{ route('super_admin.handoff.super.issue') }}">
       @csrf
       <button type="submit" class="btn btn-outline-primary d-inline-flex align-items-center gap-1">
         <i class="bx bx-transfer"></i> Open Finance Admin Panel
