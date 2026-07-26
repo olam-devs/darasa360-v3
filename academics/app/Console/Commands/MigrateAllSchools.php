@@ -57,8 +57,16 @@ class MigrateAllSchools extends Command
       $migrator->setConnection('school_dynamic');
 
       $files = $migrator->getMigrationFiles(database_path('migrations/school'));
-      $ran = $migrator->getRepository()->getRan();
-      $pendingMigrations = array_diff(array_keys($files), $ran);
+
+      // A brand new school database has no migrations table yet - treat
+      // that as "everything is pending" rather than erroring, since the
+      // repository query below assumes the table already exists.
+      if (!$migrator->getRepository()->repositoryExists()) {
+        $pendingMigrations = array_keys($files);
+      } else {
+        $ran = $migrator->getRepository()->getRan();
+        $pendingMigrations = array_diff(array_keys($files), $ran);
+      }
       $pendingCount = count($pendingMigrations);
 
       if ($pendingCount > 0) {
