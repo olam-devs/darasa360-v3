@@ -11,78 +11,95 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Guarded with hasTable() throughout: this migration was never run
+        // against live (only sandbox), where 'central' is a separate database.
+        // Live's .env consolidates 'central' into the same database as the
+        // default connection, which already had its own activity_logs table
+        // (see 2026_07_26_200000_add_missing_columns_to_activity_logs_table.php)
+        // - so this must be safe to run without clobbering what's already there.
+
         // Super Admins Table
-        Schema::create('super_admins', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email', 191)->unique();
-            $table->string('password');
-            $table->string('master_password'); // Encrypted password for accessing any school
-            $table->boolean('is_active')->default(true);
-            $table->rememberToken();
-            $table->timestamps();
-        });
+        if (!Schema::connection('central')->hasTable('super_admins')) {
+            Schema::connection('central')->create('super_admins', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->string('email', 191)->unique();
+                $table->string('password');
+                $table->string('master_password'); // Encrypted password for accessing any school
+                $table->boolean('is_active')->default(true);
+                $table->rememberToken();
+                $table->timestamps();
+            });
+        }
 
         // Schools Table
-        Schema::create('schools', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('slug', 191)->unique(); // For URL routing (e.g., school001)
-            $table->string('database_name', 191)->unique(); // e.g., darasa_school_001
-            $table->string('domain')->nullable(); // Optional custom domain
-            $table->string('logo')->nullable();
-            $table->string('contact_email')->nullable();
-            $table->string('contact_phone')->nullable();
-            $table->text('address')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->enum('subscription_status', ['trial', 'active', 'suspended', 'cancelled'])->default('active');
-            $table->timestamp('subscription_expires_at')->nullable();
-            $table->integer('max_students')->default(1000);
-            $table->timestamps();
-        });
+        if (!Schema::connection('central')->hasTable('schools')) {
+            Schema::connection('central')->create('schools', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->string('slug', 191)->unique(); // For URL routing (e.g., school001)
+                $table->string('database_name', 191)->unique(); // e.g., darasa_school_001
+                $table->string('domain')->nullable(); // Optional custom domain
+                $table->string('logo')->nullable();
+                $table->string('contact_email')->nullable();
+                $table->string('contact_phone')->nullable();
+                $table->text('address')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->enum('subscription_status', ['trial', 'active', 'suspended', 'cancelled'])->default('active');
+                $table->timestamp('subscription_expires_at')->nullable();
+                $table->integer('max_students')->default(1000);
+                $table->timestamps();
+            });
+        }
 
         // School Accountants Table (linked to schools)
-        Schema::create('school_accountants', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
-            $table->string('name');
-            $table->string('email', 191)->unique();
-            $table->string('password');
-            $table->boolean('is_active')->default(true);
-            $table->rememberToken();
-            $table->timestamps();
-        });
+        if (!Schema::connection('central')->hasTable('school_accountants')) {
+            Schema::connection('central')->create('school_accountants', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
+                $table->string('name');
+                $table->string('email', 191)->unique();
+                $table->string('password');
+                $table->boolean('is_active')->default(true);
+                $table->rememberToken();
+                $table->timestamps();
+            });
+        }
 
         // Activity Logs Table
-        Schema::create('activity_logs', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('school_id')->nullable()->constrained('schools')->onDelete('cascade');
-            $table->enum('user_type', ['super_admin', 'accountant']);
-            $table->unsignedBigInteger('user_id');
-            $table->string('action'); // e.g., 'create_school', 'impersonate', 'toggle_status'
-            $table->text('description')->nullable();
-            $table->string('ip_address')->nullable();
-            $table->timestamps();
-            
-            $table->index(['school_id', 'created_at']);
-            $table->index(['user_type', 'user_id']);
-        });
+        if (!Schema::connection('central')->hasTable('activity_logs')) {
+            Schema::connection('central')->create('activity_logs', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('school_id')->nullable()->constrained('schools')->onDelete('cascade');
+                $table->enum('user_type', ['super_admin', 'accountant']);
+                $table->unsignedBigInteger('user_id');
+                $table->string('action'); // e.g., 'create_school', 'impersonate', 'toggle_status'
+                $table->text('description')->nullable();
+                $table->string('ip_address')->nullable();
+                $table->timestamps();
+
+                $table->index(['school_id', 'created_at']);
+                $table->index(['user_type', 'user_id']);
+            });
+        }
 
         // Analytics Summary Table (for cross-school analytics)
-        Schema::create('analytics_summary', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
-            $table->date('date');
-            $table->integer('total_students')->default(0);
-            $table->decimal('total_fees_expected', 15, 2)->default(0);
-            $table->decimal('total_fees_collected', 15, 2)->default(0);
-            $table->decimal('collection_rate', 5, 2)->default(0); // Percentage
-            $table->integer('active_parents')->default(0);
-            $table->timestamps();
-            
-            $table->unique(['school_id', 'date']);
-            $table->index('date');
-        });
+        if (!Schema::connection('central')->hasTable('analytics_summary')) {
+            Schema::connection('central')->create('analytics_summary', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
+                $table->date('date');
+                $table->integer('total_students')->default(0);
+                $table->decimal('total_fees_expected', 15, 2)->default(0);
+                $table->decimal('total_fees_collected', 15, 2)->default(0);
+                $table->decimal('collection_rate', 5, 2)->default(0); // Percentage
+                $table->integer('active_parents')->default(0);
+                $table->timestamps();
+
+                $table->unique(['school_id', 'date']);
+                $table->index('date');
+            });
+        }
     }
 
     /**
