@@ -129,12 +129,25 @@ class SchoolProvisioningService
                 // Academics provisioning itself, in its own process, avoids all
                 // of that - see academics/app/Services/SchoolProvisioningService.
                 if ($hasAcademics) {
-                    $academicsDb = $data['academics_db_name'] ?? throw new \Exception('academics_db_name is required when has_academics is set.');
+                    $requestedAcademicsDb = $data['academics_db_name'] ?? throw new \Exception('academics_db_name is required when has_academics is set.');
+
+                    // Don't trust the HTTP response body for the actual database
+                    // name - this cross-app call runs 100+ migrations and can take
+                    // long enough that this host's proxy/timeout layer has been
+                    // observed to interfere with getting a clean response back,
+                    // even when the underlying provisioning genuinely succeeded.
+                    // Academics' DirectAdminService always prefixes deterministically
+                    // the same way Finance's own does, so compute it locally instead.
+                    $acadPrefix = config('directadmin.db_prefix', '');
+                    $acadNameWithoutPrefix = str_starts_with($requestedAcademicsDb, $acadPrefix) && $acadPrefix !== ''
+                        ? substr($requestedAcademicsDb, strlen($acadPrefix))
+                        : $requestedAcademicsDb;
+                    $academicsDb = $acadPrefix . $acadNameWithoutPrefix;
 
                     $response = $this->callAcademicsInternalApi('/internal-api/schools', [
                         'school_name' => $data['name'],
                         'location_name' => $data['academics_location_name'] ?? $data['address'] ?? $data['name'],
-                        'db_name' => $academicsDb,
+                        'db_name' => $requestedAcademicsDb,
                         'owner_name' => $data['academics_owner_name'],
                         'owner_email' => $data['academics_owner_email'],
                         'owner_phone' => $data['academics_owner_phone'],
@@ -143,12 +156,8 @@ class SchoolProvisioningService
                     ]);
 
                     if (!($response['ok'] ?? false)) {
-                        throw new \Exception('Academics provisioning failed: ' . ($response['error'] ?? 'unknown error'));
+                        throw new \Exception('Academics provisioning failed: ' . ($response['error'] ?? 'unknown error - check whether it actually succeeded anyway via Academics\' schools list before retrying, this host can time out the connection well after the real work has completed'));
                     }
-
-                    // Academics returns the actual database name it used (its
-                    // DirectAdmin-prefixed version), not necessarily what we asked for.
-                    $academicsDb = $response['database_url'] ?? $academicsDb;
 
                     $school->update(['academics_db_name' => $academicsDb]);
                     PlatformSchool::where('id', $school->platform_school_id)
@@ -231,7 +240,7 @@ class SchoolProvisioningService
 
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'X-Internal-Api-Secret' => $secret,
-        ])->timeout(180)->post($baseUrl . $path, $payload);
+        ])->timeout(300)->post($baseUrl . $path, $payload);
 
         $decoded = $response->json();
         if (!is_array($decoded)) {
