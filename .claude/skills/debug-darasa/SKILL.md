@@ -18,6 +18,12 @@ ssh -p 22 olamtecc@vda6000.is.cc "tail -100 ~/domains/<app-domain>/public_html/<
 
 ## Known error signatures
 
+**Browser shows "500 Internal Server Error" but `laravel.log` has no matching exception around that timestamp**
+Not an application error — a web-server-level execution-time timeout. Happens on Academics' "Create School" (runs 100+ migrations synchronously in-request) and similar long-running admin actions. Check the actual data first (`SELECT` the school/record directly, or reload the relevant list page) before assuming it failed — the underlying work likely completed fine, just after the HTTP response window closed. Don't blindly retry the same action; retrying a school creation that actually succeeded will try to reprovision an already-existing school.
+
+**`DirectAdmin dropDatabase` / classic API delete returns `error=0` but the database still exists**
+The classic `/CMD_API_DATABASES?action=delete` claims success without actually deleting anything on this server (verified 2026-07-26). Both apps' `DirectAdminService::dropDatabase()` already use the working alternative (`DELETE /api/db-manage/databases/{name}` on the REST API) — if you're calling DirectAdmin's delete directly for some one-off cleanup, use that REST endpoint, not the classic one.
+
 **`Unable to locate file in Vite manifest: resources/assets/vendor/...` / `ViteManifestNotFoundException`**
 Academics only. The third-party template's vendor scss/js source (`academics/resources/assets/vendor/`) isn't in git — see `CLAUDE.md`. A fresh `npm run build` produces an incomplete manifest missing these chunks. Fix: copy the already-compiled `public/build/` from `academics-sandbox`'s server (still has the old working build) rather than trying to rebuild from source. Longer-term fix is re-sourcing the vendor template and committing it — not yet done as of 2026-07-26 (check Claude memory for current status).
 
