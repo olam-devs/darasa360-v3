@@ -182,11 +182,11 @@
                         </div>
 
                         <div id="academics_db_section" class="{{ old('has_academics') ? '' : 'hidden' }} md:col-span-2">
-                            <label class="block text-gray-700 font-medium mb-2">Academics Tenant DB Name</label>
+                            <label class="block text-gray-700 font-medium mb-2">Academics Tenant DB Name *</label>
                             <input type="text" name="academics_db_name" value="{{ old('academics_db_name') }}"
-                                placeholder="e.g. olam_school_001"
+                                placeholder="e.g. acad_school_001"
                                 class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <p class="text-sm text-gray-500 mt-1">Leave empty if the Academics tenant DB has not been provisioned yet — you can set it later.</p>
+                            <p class="text-sm text-gray-500 mt-1">This gets created (with its own dedicated database user) via the Academics app's provisioning API when you submit — not optional if Darasa Academics is checked above.</p>
                         </div>
                     </div>
                 </div>
@@ -194,7 +194,7 @@
                 <!-- Accountant Information (only when Finance is enabled) -->
                 <div class="border-b pb-6" id="accountant_section">
                     <h2 class="text-xl font-semibold mb-4">Default Accountant</h2>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Accountant Name *</label>
@@ -213,6 +213,53 @@
                             <input type="password" name="accountant_password" placeholder="Leave empty to auto-generate"
                                 class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <p class="text-sm text-gray-500 mt-1">Minimum 8 characters. Auto-generated if empty.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Academics Owner Account (only when Academics is enabled) -->
+                <div class="border-b pb-6 {{ old('has_academics') ? '' : 'hidden' }}" id="academics_owner_section">
+                    <h2 class="text-xl font-semibold mb-4">Academics Owner Account</h2>
+                    <p class="text-sm text-gray-500 mb-4">Created in Academics itself via its own provisioning API — this is the account that logs into the Academics side for this school.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Location *</label>
+                            <input type="text" name="academics_location_name" value="{{ old('academics_location_name') }}"
+                                placeholder="e.g. Dar es Salaam"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-sm text-gray-500 mt-1">Created in Academics if it doesn't already exist there.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Owner Name *</label>
+                            <input type="text" name="academics_owner_name" value="{{ old('academics_owner_name') }}"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Owner Email *</label>
+                            <input type="email" name="academics_owner_email" value="{{ old('academics_owner_email') }}"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Owner Phone *</label>
+                            <input type="text" name="academics_owner_phone" value="{{ old('academics_owner_phone') }}"
+                                placeholder="+255XXXXXXXXX"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Owner Username *</label>
+                            <input type="text" name="academics_owner_username" value="{{ old('academics_owner_username') }}"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">Owner Password *</label>
+                            <input type="password" name="academics_owner_password" placeholder="Minimum 6 characters"
+                                class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
                 </div>
@@ -269,6 +316,7 @@
 
             document.getElementById('has_academics').addEventListener('change', function () {
                 document.getElementById('academics_db_section').classList.toggle('hidden', !this.checked);
+                document.getElementById('academics_owner_section').classList.toggle('hidden', !this.checked);
                 // Ensure at least one system is checked
                 if (!this.checked && !document.getElementById('has_finance').checked) {
                     document.getElementById('has_finance').checked = true;

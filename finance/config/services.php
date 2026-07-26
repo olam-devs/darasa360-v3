@@ -36,9 +36,13 @@ return [
     ],
 
     'academics' => [
-        'path'    => env('ACADEMICS_APP_PATH'),   // absolute path to academics/ folder
-        'main_db' => env('ACADEMICS_MAIN_DB'),    // e.g. olamtecc_academics_sandbox
+        'path'    => env('ACADEMICS_APP_PATH'),   // absolute path to academics/ folder (unused now - see internal_api)
+        'main_db' => env('ACADEMICS_MAIN_DB'),    // unused now - see internal_api
         'url'     => env('ACADEMICS_APP_URL'),
+    ],
+
+    'internal_api' => [
+        'secret' => env('INTERNAL_API_SECRET'),
     ],
 
 ];

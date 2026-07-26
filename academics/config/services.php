@@ -38,5 +38,8 @@ return [
     'endpoint_multi' => env('SMS_ENDPOINT_MULTI', 'https://messaging-service.co.tz/api/sms/v2/text/multi'),
   ],
 
+  'internal_api' => [
+    'secret' => env('INTERNAL_API_SECRET'),
+  ],
 
 ];

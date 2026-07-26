@@ -119,20 +119,40 @@ class SchoolProvisioningService
                 }
 
                 // ── Academics tenant DB ───────────────────────────────────
+                // Delegates entirely to Academics' own internal API rather than
+                // trying to run Academics' migrations from within Finance's own
+                // process (that used to point at the wrong migrations path -
+                // Academics' central/admin schema, not database/migrations/school
+                // - and would have run against Finance's own 'tenant' connection
+                // config since the migration files hardcode Schema::connection
+                // ('tenant'), not whatever ad-hoc connection name Finance set up).
+                // Academics provisioning itself, in its own process, avoids all
+                // of that - see academics/app/Services/SchoolProvisioningService.
                 if ($hasAcademics) {
-                    $academicsDb = $data['academics_db_name'] ?? $this->generateAcademicsDbName($data['name']);
+                    $academicsDb = $data['academics_db_name'] ?? throw new \Exception('academics_db_name is required when has_academics is set.');
+
+                    $response = $this->callAcademicsInternalApi('/internal-api/schools', [
+                        'school_name' => $data['name'],
+                        'location_name' => $data['academics_location_name'] ?? $data['address'] ?? $data['name'],
+                        'db_name' => $academicsDb,
+                        'owner_name' => $data['academics_owner_name'],
+                        'owner_email' => $data['academics_owner_email'],
+                        'owner_phone' => $data['academics_owner_phone'],
+                        'owner_username' => $data['academics_owner_username'],
+                        'owner_password' => $data['academics_owner_password'],
+                    ]);
+
+                    if (!($response['ok'] ?? false)) {
+                        throw new \Exception('Academics provisioning failed: ' . ($response['error'] ?? 'unknown error'));
+                    }
+
+                    // Academics returns the actual database name it used (its
+                    // DirectAdmin-prefixed version), not necessarily what we asked for.
+                    $academicsDb = $response['database_url'] ?? $academicsDb;
+
                     $school->update(['academics_db_name' => $academicsDb]);
                     PlatformSchool::where('id', $school->platform_school_id)
                         ->update(['academics_db_name' => $academicsDb]);
-
-                    $result = $this->tenantManager->createDatabase($academicsDb);
-                    if ($result === false) {
-                        throw new \Exception("Failed to create Academics database for school: {$school->name}");
-                    }
-                    $acadCreds = is_array($result) ? $result : [];
-                    $this->runAcademicsMigrations($academicsDb, $school, $acadCreds);
-                    $this->seedAcademicsAdminUser($academicsDb, $school, $acadCreds);
-                    $this->registerSchoolInAcademicsMainDb($academicsDb, $school);
                 }
 
                 // 6. Log the activity
@@ -195,144 +215,30 @@ class SchoolProvisioningService
     }
 
     /**
-     * Generate a unique Academics tenant DB name with the server prefix.
+     * Call Academics' internal cross-app API (see academics/routes/internal_api.php).
+     * Academics provisions itself entirely in its own process using its own,
+     * already-correct provisioning service - this just makes the request and
+     * returns the decoded response.
      */
-    protected function generateAcademicsDbName(string $schoolName): string
+    public function callAcademicsInternalApi(string $path, array $payload): array
     {
-        $prefix = config('directadmin.db_prefix', '');
-        $slug   = substr(Str::slug($schoolName, '_'), 0, 25);
-        $count  = School::count() + 1;
-        return $prefix . 'acad_' . str_pad($count, 3, '0', STR_PAD_LEFT) . '_' . $slug;
-    }
+        $baseUrl = rtrim(config('services.academics.url', ''), '/');
+        $secret = config('services.internal_api.secret');
 
-    /**
-     * Run Academics migrations against a newly created Academics tenant DB.
-     */
-    protected function academicsTenantConnection(string $academicsDb, array $creds = []): void
-    {
-        config([
-            'database.connections.academics_tenant' => array_merge(
-                config('database.connections.mysql'),
-                ['database' => $academicsDb],
-                $creds ? ['username' => $creds['db_user'], 'password' => $creds['db_password']] : []
-            )
-        ]);
-        DB::purge('academics_tenant');
-    }
-
-    protected function runAcademicsMigrations(string $academicsDb, School $school, array $creds = []): void
-    {
-        $academicsPath = config('services.academics.path');
-        if (!$academicsPath || !is_dir($academicsPath)) {
-            Log::warning("Academics migrations skipped — ACADEMICS_APP_PATH not set or invalid.");
-            return;
+        if (!$baseUrl || !$secret) {
+            throw new \Exception('Academics internal API not configured (ACADEMICS_APP_URL / INTERNAL_API_SECRET).');
         }
 
-        $this->academicsTenantConnection($academicsDb, $creds);
-        DB::purge('academics_tenant');
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'X-Internal-Api-Secret' => $secret,
+        ])->timeout(180)->post($baseUrl . $path, $payload);
 
-        try {
-            Artisan::call('migrate', [
-                '--database' => 'academics_tenant',
-                '--path'     => $academicsPath . '/database/migrations',
-                '--force'    => true,
-            ]);
-            Log::info("Academics migrations done for school {$school->name} on DB {$academicsDb}");
-        } catch (\Exception $e) {
-            Log::error("Academics migrations failed for {$school->name}: " . $e->getMessage());
-            throw $e;
-        }
-    }
-
-    /**
-     * Seed a default school_admin user in the Academics tenant DB so the super-admin
-     * can log into Academics and finish setting up the school (add headmaster etc.).
-     */
-    protected function seedAcademicsAdminUser(string $academicsDb, School $school, array $creds = []): void
-    {
-        try {
-            $this->academicsTenantConnection($academicsDb, $creds);
-
-            // Find the school_admin role id (role_id = 7 in standard Academics schema)
-            $roleId = DB::connection('academics_tenant')->table('roles')
-                ->where('name', 'school admin')->value('id') ?? 7;
-
-            $existing = DB::connection('academics_tenant')->table('users')
-                ->where('registration_no', 'admin001')->exists();
-
-            if (!$existing) {
-                DB::connection('academics_tenant')->table('users')->insert([
-                    'first_name'      => 'School',
-                    'last_name'       => 'Admin',
-                    'registration_no' => 'admin001',
-                    'email'           => $school->contact_email,
-                    'password'        => Hash::make('admin123'),
-                    'role_id'         => $roleId,
-                    'school_id'       => 1,
-                    'is_active'       => 1,
-                    'created_at'      => now(),
-                    'updated_at'      => now(),
-                ]);
-            }
-
-            Log::info("Academics admin user seeded for {$school->name}");
-        } catch (\Exception $e) {
-            Log::warning("Academics admin seed failed for {$school->name}: " . $e->getMessage());
-            // Non-fatal — migrations ran, admin can be created manually
-        }
-    }
-
-    /**
-     * Insert a school record into the Academics main DB so the Academics super-admin
-     * can see and manage the school from their dashboard.
-     */
-    protected function registerSchoolInAcademicsMainDb(string $academicsDb, School $school): void
-    {
-        $academicsMainDb = config('services.academics.main_db');
-        if (!$academicsMainDb) {
-            Log::warning("Academics main DB not configured (ACADEMICS_MAIN_DB). School not registered in Academics.");
-            return;
+        $decoded = $response->json();
+        if (!is_array($decoded)) {
+            throw new \Exception('Academics internal API returned a non-JSON response (HTTP ' . $response->status() . '): ' . substr($response->body(), 0, 300));
         }
 
-        try {
-            config([
-                'database.connections.academics_main' => array_merge(
-                    config('database.connections.mysql'),
-                    ['database' => $academicsMainDb]
-                )
-            ]);
-            DB::purge('academics_main');
-
-            // Find the super-admin role id in the Academics main DB
-            $superAdminRoleId = DB::connection('academics_main')->table('roles')
-                ->where('name', 'super_admin')->value('id') ?? 1;
-
-            // Find the super-admin user id
-            $superAdminId = DB::connection('academics_main')->table('users')
-                ->where('role_id', $superAdminRoleId)
-                ->value('id') ?? 1;
-
-            $alreadyExists = DB::connection('academics_main')->table('schools')
-                ->where('database_url', $academicsDb)
-                ->exists();
-
-            if (!$alreadyExists) {
-                DB::connection('academics_main')->table('schools')->insert([
-                    'name'         => $school->name,
-                    'database_url' => $academicsDb,
-                    'user_id'      => $superAdminId,
-                    'school_code'  => $school->code,
-                    'status'       => 'active',
-                    'is_deleted'   => 0,
-                    'created_at'   => now(),
-                    'updated_at'   => now(),
-                ]);
-                Log::info("School '{$school->name}' registered in Academics main DB ({$academicsMainDb}).");
-            }
-        } catch (\Exception $e) {
-            Log::warning("Failed to register school in Academics main DB: " . $e->getMessage());
-            // Non-fatal — school admin can register it manually
-        }
+        return $decoded;
     }
 
     protected function runTenantMigrations(School $school): void

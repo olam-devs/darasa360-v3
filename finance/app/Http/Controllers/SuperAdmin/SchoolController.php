@@ -133,7 +133,13 @@ class SchoolController extends Controller
             'db_password' => 'nullable|string',
             'use_existing_database' => 'nullable|boolean',
             'has_academics' => 'nullable|boolean',
-            'academics_db_name' => 'nullable|string|max:255',
+            'academics_db_name' => $request->boolean('has_academics') ? 'required|string|max:64|regex:/^[a-zA-Z0-9_]+$/' : 'nullable|string|max:255',
+            'academics_location_name' => $request->boolean('has_academics') ? 'required|string|max:255' : 'nullable|string|max:255',
+            'academics_owner_name' => $request->boolean('has_academics') ? 'required|string|max:255' : 'nullable|string|max:255',
+            'academics_owner_email' => $request->boolean('has_academics') ? 'required|email' : 'nullable|email',
+            'academics_owner_phone' => $request->boolean('has_academics') ? 'required|string|max:20' : 'nullable|string|max:20',
+            'academics_owner_username' => $request->boolean('has_academics') ? 'required|string|max:255' : 'nullable|string|max:255',
+            'academics_owner_password' => $request->boolean('has_academics') ? 'required|string|min:6' : 'nullable|string|min:6',
         ];
 
         // Add existing database name validation if using existing database
@@ -535,7 +541,68 @@ class SchoolController extends Controller
     }
 
     /**
-     * Toggle a platform flag: has_academics, cross_jump_enabled, parent_cross_access.
+     * Actually provision Academics for a school that doesn't have it yet
+     * (as opposed to togglePlatformFlag, which only flips the boolean and
+     * does no real provisioning - that's fine for turning it back off, but
+     * turning it on needs a real database + migrations + owner account).
+     */
+    public function enableAcademics(Request $request, School $school)
+    {
+        if ($school->has_academics) {
+            return back()->with('error', 'Academics is already enabled for this school.');
+        }
+
+        $validated = $request->validate([
+            'academics_db_name' => 'required|string|max:64|regex:/^[a-zA-Z0-9_]+$/',
+            'academics_location_name' => 'required|string|max:255',
+            'academics_owner_name' => 'required|string|max:255',
+            'academics_owner_email' => 'required|email',
+            'academics_owner_phone' => 'required|string|max:20',
+            'academics_owner_username' => 'required|string|max:255',
+            'academics_owner_password' => 'required|string|min:6',
+        ]);
+
+        try {
+            $response = $this->provisioningService->callAcademicsInternalApi('/internal-api/schools', [
+                'school_name' => $school->name,
+                'location_name' => $validated['academics_location_name'],
+                'db_name' => $validated['academics_db_name'],
+                'owner_name' => $validated['academics_owner_name'],
+                'owner_email' => $validated['academics_owner_email'],
+                'owner_phone' => $validated['academics_owner_phone'],
+                'owner_username' => $validated['academics_owner_username'],
+                'owner_password' => $validated['academics_owner_password'],
+            ]);
+
+            if (!($response['ok'] ?? false)) {
+                throw new \Exception($response['error'] ?? 'unknown error');
+            }
+
+            $academicsDb = $response['database_url'] ?? $validated['academics_db_name'];
+
+            $school->update([
+                'has_academics' => true,
+                'academics_db_name' => $academicsDb,
+            ]);
+            if ($school->platform_school_id) {
+                \App\Models\Platform\PlatformSchool::where('id', $school->platform_school_id)
+                    ->update(['has_academics' => true, 'academics_db_name' => $academicsDb]);
+            }
+
+            $superAdmin = auth('superadmin')->user();
+            $this->activityLogger->logSuperAdminAction($superAdmin, 'enable_academics', "Academics provisioned for {$school->name}", $school);
+
+            return back()->with('success', "Academics has been provisioned for {$school->name}.");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to enable Academics: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Toggle a platform flag: cross_jump_enabled, parent_cross_access
+     * (has_academics enabling goes through enableAcademics() above instead,
+     * since it needs real provisioning; disabling it here is still fine -
+     * it doesn't drop the database, just hides the feature).
      */
     public function togglePlatformFlag(Request $request, School $school)
     {
@@ -544,6 +611,10 @@ class SchoolController extends Controller
 
         if (!in_array($flag, $allowed, true)) {
             return back()->with('error', 'Invalid flag.');
+        }
+
+        if ($flag === 'has_academics' && !$school->has_academics) {
+            return back()->with('error', 'Use the "Enable Academics" form to turn this on - it needs to actually provision a database.');
         }
 
         // cross_jump_enabled requires both systems to be enabled

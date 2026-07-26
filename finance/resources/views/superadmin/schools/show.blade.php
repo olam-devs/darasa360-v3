@@ -93,8 +93,7 @@
                     <p class="text-sm text-gray-500 mb-4">School code: <span class="font-mono font-bold text-blue-700">{{ $school->code ?? 'Not assigned' }}</span></p>
 
                     @php
-                        $flags = [
-                            ['key' => 'has_academics',      'label' => 'Darasa Academics',        'desc' => 'Classes, exams, attendance, report cards'],
+                        $simpleFlags = [
                             ['key' => 'cross_jump_enabled',  'label' => 'Cross-System Jump (SSO)', 'desc' => 'Allowed users jump between Finance & Academics without re-login'],
                             ['key' => 'parent_cross_access', 'label' => 'Parent Cross-Access',     'desc' => 'Parents can jump to Finance fee portal from Academics'],
                         ];
@@ -110,7 +109,56 @@
                             <span class="px-3 py-1 bg-blue-600 text-white rounded-full text-sm font-semibold">Always On</span>
                         </div>
 
-                        @foreach($flags as $flag)
+                        <!-- Darasa Academics: real provisioning form when off, simple status when on -->
+                        <div class="p-3 rounded-lg border {{ $school->has_academics ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200' }}">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="font-semibold {{ $school->has_academics ? 'text-green-800' : 'text-gray-700' }}">Darasa Academics</div>
+                                    <div class="text-xs text-gray-500">Classes, exams, attendance, report cards</div>
+                                </div>
+                                @if($school->has_academics)
+                                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-green-600 text-white">Enabled</span>
+                                @else
+                                <button type="button" onclick="document.getElementById('enable_academics_form').classList.toggle('hidden')"
+                                    class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-300 text-gray-700 hover:bg-gray-400">
+                                    Enable Academics
+                                </button>
+                                @endif
+                            </div>
+
+                            @if($school->has_academics)
+                            <div class="mt-2 p-2 bg-white border rounded text-sm">
+                                <span class="font-medium text-gray-600">Academics DB:</span>
+                                <span class="font-mono text-gray-800">{{ $school->academics_db_name ?: 'Not set' }}</span>
+                            </div>
+                            @else
+                            <form id="enable_academics_form" method="POST" action="{{ route('superadmin.schools.enable-academics', $school) }}" class="hidden mt-3 space-y-3 border-t pt-3">
+                                @csrf
+                                <p class="text-xs text-gray-500">This actually provisions a real Academics database (via Academics' own provisioning API) and creates the owner account below — it's not just a flag.</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <input type="text" name="academics_db_name" placeholder="Academics DB name (e.g. acad_school_001)" required
+                                        class="px-3 py-2 border rounded-lg text-sm">
+                                    <input type="text" name="academics_location_name" placeholder="Location (e.g. Dar es Salaam)" required
+                                        class="px-3 py-2 border rounded-lg text-sm">
+                                    <input type="text" name="academics_owner_name" placeholder="Owner name" required
+                                        class="px-3 py-2 border rounded-lg text-sm">
+                                    <input type="email" name="academics_owner_email" placeholder="Owner email" required
+                                        class="px-3 py-2 border rounded-lg text-sm">
+                                    <input type="text" name="academics_owner_phone" placeholder="Owner phone (+255...)" required
+                                        class="px-3 py-2 border rounded-lg text-sm">
+                                    <input type="text" name="academics_owner_username" placeholder="Owner username" required
+                                        class="px-3 py-2 border rounded-lg text-sm">
+                                    <input type="password" name="academics_owner_password" placeholder="Owner password (min 6 chars)" required
+                                        class="px-3 py-2 border rounded-lg text-sm">
+                                </div>
+                                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+                                    Provision Academics
+                                </button>
+                            </form>
+                            @endif
+                        </div>
+
+                        @foreach($simpleFlags as $flag)
                         <div class="flex items-center justify-between p-3 rounded-lg border {{ $school->{$flag['key']} ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200' }}">
                             <div>
                                 <div class="font-semibold {{ $school->{$flag['key']} ? 'text-green-800' : 'text-gray-700' }}">{{ $flag['label'] }}</div>
@@ -125,13 +173,6 @@
                             </form>
                         </div>
                         @endforeach
-
-                        @if($school->has_academics)
-                        <div class="mt-2 p-3 bg-gray-50 border rounded-lg text-sm">
-                            <span class="font-medium text-gray-600">Academics DB:</span>
-                            <span class="font-mono text-gray-800">{{ $school->academics_db_name ?: 'Not set' }}</span>
-                        </div>
-                        @endif
                     </div>
                 </div>
 
