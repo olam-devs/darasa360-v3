@@ -7,6 +7,8 @@ description: Diagnose errors on the Darasa360 Finance/Academics live or sandbox 
 
 Always start from the actual error, not a guess. Read `CLAUDE.md` at the repo root first for the standing gotchas (SSH port, MyISAM, sandbox-drift) — most issues you'll hit are already documented there or below.
 
+**This workflow is not done when the error is fixed — it's done when Step 4 (logging) is also done.** If you diagnose and fix something whose error signature isn't already listed below, adding it is a required part of the task, not a follow-up suggestion. Don't wait to be asked.
+
 ## Step 1 — Get the real error
 
 ```bash
@@ -56,6 +58,13 @@ mysql -u <db_user> -p'<password>' -D <database> -e "SHOW VARIABLES LIKE 'default
 ```
 Credentials are in Claude memory (`project_darasa_finance.md`), not duplicated here since this file is committed to git.
 
-## After fixing anything here
+## Step 4 — Log it (mandatory if the error signature above didn't already cover it)
 
-Update Claude's memory (`project_darasa_finance.md`) with what broke and how it was fixed if it's not already covered above, and consider adding a new entry to this file if it's a *pattern* likely to recur (vs. a one-off). The goal is that the same error is faster to diagnose every time it's hit, not just fixed once.
+Before ending the session/task, if you just diagnosed and fixed something not already listed under "Known error signatures":
+
+1. **Edit this file** — add a new entry under "Known error signatures" with the exact error text (or a distinctive substring of it), what caused it, and the fix. Match the existing format: bold error snippet, then a short paragraph.
+2. **Commit it** — `git add .claude/skills/debug-darasa/SKILL.md && git commit -m "docs: add <short description> to debug-darasa"` on `sandbox`, then fast-forward-merge into `main` per the usual workflow (see `deploy-to-live`). This file only helps future sessions if it's actually pushed, not left as a local edit.
+3. If the underlying fact is more "standing knowledge" than "error lookup" (e.g. a new server quirk, not a one-off bug), put it in `CLAUDE.md` instead/also.
+4. If it's a one-off mistake specific to this conversation rather than a pattern likely to recur, skip logging it — this file is for recurring signatures, not a changelog.
+
+Treat this the same as you'd treat writing a test after fixing a bug: the fix isn't complete until the next occurrence is cheaper to resolve than this one was.

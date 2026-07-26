@@ -113,3 +113,7 @@ ssh -p 22 olamtecc@vda6000.is.cc "tail -100 ~/domains/<app-domain>/public_html/<
 and see the `debug-darasa` skill for known error signatures.
 
 Also spot-check whatever the actual change was end-to-end (log in, load the specific page that changed) — a 200 on `/` doesn't prove a specific feature works.
+
+## Step 7 — Log anything new (mandatory if you hit a problem not already covered above)
+
+If any step above needed a workaround that isn't already documented in this file, `CLAUDE.md`, or `debug-darasa`, add it before considering the deploy finished — edit the relevant file, commit on `sandbox`, fast-forward-merge to `main`, push both. A deploy that required improvising isn't actually done until the improvisation is captured for next time.
