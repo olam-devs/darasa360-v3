@@ -53,7 +53,7 @@ return [
       'prefix' => '',
       'prefix_indexes' => true,
       'strict' => true,
-      'engine' => null,
+      'engine' => env('DB_ENGINE', 'InnoDB'),
       'options' => extension_loaded('pdo_mysql') ? array_filter([
         PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
       ]) : [],
@@ -70,6 +70,7 @@ return [
       'collation' => 'utf8mb4_unicode_ci',
       'prefix' => '',
       'strict' => false,
+      'engine' => env('DB_ENGINE', 'InnoDB'),
     ],
 
     'tenant' => [
@@ -84,7 +85,7 @@ return [
       'collation' => 'utf8mb4_unicode_ci',
       'prefix' => '',
       'strict' => true,
-      'engine' => null,
+      'engine' => env('DB_ENGINE', 'InnoDB'),
     ],
 
     'mariadb' => [
@@ -101,7 +102,7 @@ return [
       'prefix' => '',
       'prefix_indexes' => true,
       'strict' => true,
-      'engine' => null,
+      'engine' => env('DB_ENGINE', 'InnoDB'),
       'options' => extension_loaded('pdo_mysql') ? array_filter([
         PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
       ]) : [],
