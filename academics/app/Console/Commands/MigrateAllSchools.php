@@ -37,6 +37,18 @@ class MigrateAllSchools extends Command
 
       DB::purge('school_dynamic');
 
+      // Migration files under database/migrations/school hardcode
+      // Schema::connection('tenant') rather than the dynamic connection above
+      // (same as the HTTP-request path, where InitializeTenantDatabase
+      // middleware repoints 'tenant' per request). Outside a request there's
+      // no middleware, so this command must repoint it itself or every
+      // school's migrations silently run against whatever 'tenant.database'
+      // was last statically configured to, while the tracking table (which
+      // does correctly use school_dynamic) wrongly records them as applied.
+      Config::set('database.connections.tenant.database', $school->database_url);
+      DB::purge('tenant');
+      DB::reconnect('tenant');
+
       // 2. Verify connection
       try {
         DB::connection('school_dynamic')->getPdo();
