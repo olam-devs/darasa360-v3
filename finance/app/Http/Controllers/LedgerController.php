@@ -78,10 +78,9 @@ class LedgerController extends Controller
         $openingBalance = 0;
         if ($dateFrom) {
             // Get all vouchers before the start date
-            $openingBalance = Voucher::where('student_id', $studentId)
-                ->where('date', '<', $dateFrom)
-                ->selectRaw('SUM(debit) - SUM(credit) as balance')
-                ->value('balance') ?? 0;
+            $openingBalance = $this->ledgerNetBalance(
+                Voucher::where('student_id', $studentId)->where('date', '<', $dateFrom)->get()
+            );
         }
 
         // Get voucher entries
@@ -102,17 +101,22 @@ class LedgerController extends Controller
         $sales = [];
         $entries = [];
         $runningBalance = $openingBalance;
+        $totalDebit = 0.0;
+        $totalCredit = 0.0;
 
         foreach ($vouchers as $voucher) {
-            $runningBalance += $voucher->debit - $voucher->credit;
+            $amounts = $this->ledgerDisplayAmounts($voucher);
+            $runningBalance += $amounts['debit'] - $amounts['credit'];
+            $totalDebit += $amounts['debit'];
+            $totalCredit += $amounts['credit'];
 
             $entry = [
                 'date' => $voucher->date,
                 'particular' => $voucher->particular?->name ?? 'N/A',
                 'voucher_type' => $voucher->voucher_type,
                 'voucher_number' => $voucher->voucher_number,
-                'debit' => $voucher->debit,
-                'credit' => $voucher->credit,
+                'debit' => $amounts['debit'],
+                'credit' => $amounts['credit'],
                 'balance' => $runningBalance,
                 'notes' => $voucher->notes,
             ];
@@ -124,8 +128,6 @@ class LedgerController extends Controller
             }
         }
 
-        $totalDebit = $vouchers->sum('debit');
-        $totalCredit = $vouchers->sum('credit');
         $closingBalance = $openingBalance + $totalDebit - $totalCredit;
 
         return response()->json([
@@ -163,10 +165,9 @@ class LedgerController extends Controller
             // Calculate opening balance if date filter is applied
             $openingBalance = 0;
             if ($dateFrom) {
-                $openingBalance = Voucher::where('student_id', $student->id)
-                    ->where('date', '<', $dateFrom)
-                    ->selectRaw('SUM(debit) - SUM(credit) as balance')
-                    ->value('balance') ?? 0;
+                $openingBalance = $this->ledgerNetBalance(
+                    Voucher::where('student_id', $student->id)->where('date', '<', $dateFrom)->get()
+                );
             }
             $totalOpeningBalance += $openingBalance;
 
@@ -180,8 +181,13 @@ class LedgerController extends Controller
                 $query->where('date', '<=', $dateTo);
             }
 
-            $totalDebit = $query->sum('debit');
-            $totalCredit = $query->sum('credit');
+            $totalDebit = 0.0;
+            $totalCredit = 0.0;
+            foreach ($query->get() as $voucher) {
+                $amounts = $this->ledgerDisplayAmounts($voucher);
+                $totalDebit += $amounts['debit'];
+                $totalCredit += $amounts['credit'];
+            }
 
             $particularsSales = $student->particulars->sum('pivot.sales');
             $balance = $openingBalance + $totalDebit - $totalCredit;
@@ -437,11 +443,14 @@ class LedgerController extends Controller
     }
 
     /**
-     * Debit/credit shown on the particular ledger (one fee item, all students).
-     * Fee assignments are stored as Sales (DR). Payments are Receipt vouchers with amount in debit (canonical);
-     * for this sub-ledger they are shown as credit so balance = fees billed − receipts − other credits.
+     * Debit/credit shown on accounts-receivable-style ledgers (student, class, particular).
+     * Canonical voucher storage keeps every voucher's amount in `debit` — Sales AND Receipt
+     * alike (see VoucherController::store()) — so a Receipt must be flipped to `credit` here,
+     * otherwise a payment would add to the student's outstanding balance instead of reducing it.
+     * Fee assignments (Sales) stay DR; Receipts/Payments become CR so balance = fees billed − receipts.
+     * Used by studentLedger/classLedger/particularLedger and their PDF/CSV exports.
      */
-    private function particularLedgerDisplayedAmounts(Voucher $voucher): array
+    private function ledgerDisplayAmounts(Voucher $voucher): array
     {
         return match ($voucher->voucher_type) {
             'Sales' => ['debit' => (float) $voucher->debit, 'credit' => 0.0],
@@ -452,6 +461,20 @@ class LedgerController extends Controller
             ],
             default => ['debit' => (float) $voucher->debit, 'credit' => (float) $voucher->credit],
         };
+    }
+
+    /**
+     * Net DR-CR balance of a voucher collection using {@see ledgerDisplayAmounts()}'s mapping.
+     */
+    private function ledgerNetBalance($vouchers): float
+    {
+        $balance = 0.0;
+        foreach ($vouchers as $voucher) {
+            $amounts = $this->ledgerDisplayAmounts($voucher);
+            $balance += $amounts['debit'] - $amounts['credit'];
+        }
+
+        return $balance;
     }
 
     public function particularLedger($particularId, Request $request)
@@ -544,7 +567,7 @@ class LedgerController extends Controller
                 ];
             }
 
-            $shown = $this->particularLedgerDisplayedAmounts($voucher);
+            $shown = $this->ledgerDisplayAmounts($voucher);
             $displayDebit = $shown['debit'];
             $displayCredit = $shown['credit'];
 
@@ -693,10 +716,9 @@ class LedgerController extends Controller
         // Calculate opening balance if date filter is applied
         $openingBalance = 0;
         if ($dateFrom) {
-            $openingBalance = Voucher::where('student_id', $studentId)
-                ->where('date', '<', $dateFrom)
-                ->selectRaw('SUM(debit) - SUM(credit) as balance')
-                ->value('balance') ?? 0;
+            $openingBalance = $this->ledgerNetBalance(
+                Voucher::where('student_id', $studentId)->where('date', '<', $dateFrom)->get()
+            );
         }
 
         // Get voucher entries
@@ -717,17 +739,22 @@ class LedgerController extends Controller
         $salesData = [];
         $entryData = [];
         $runningBalance = $openingBalance;
+        $totalDebit = 0.0;
+        $totalCredit = 0.0;
 
         foreach ($vouchers as $voucher) {
-            $runningBalance += $voucher->debit - $voucher->credit;
+            $amounts = $this->ledgerDisplayAmounts($voucher);
+            $runningBalance += $amounts['debit'] - $amounts['credit'];
+            $totalDebit += $amounts['debit'];
+            $totalCredit += $amounts['credit'];
 
             $entry = [
                 'date' => $voucher->date,
                 'particular' => $voucher->particular?->name ?? 'N/A',
                 'voucher_type' => $voucher->voucher_type,
                 'voucher_number' => $voucher->voucher_number,
-                'debit' => $voucher->debit,
-                'credit' => $voucher->credit,
+                'debit' => $amounts['debit'],
+                'credit' => $amounts['credit'],
                 'balance' => $runningBalance,
                 'notes' => $voucher->notes,
             ];
@@ -739,8 +766,6 @@ class LedgerController extends Controller
             }
         }
 
-        $totalDebit = $vouchers->sum('debit');
-        $totalCredit = $vouchers->sum('credit');
         $balance = $openingBalance + $totalDebit - $totalCredit;
 
         $dateRange = 'All Transactions';
@@ -766,10 +791,9 @@ class LedgerController extends Controller
         $classLedger = $students->map(function ($student) use ($dateFrom, $dateTo, &$totalOpeningBalance) {
             $openingBalance = 0;
             if ($dateFrom) {
-                $openingBalance = Voucher::where('student_id', $student->id)
-                    ->where('date', '<', $dateFrom)
-                    ->selectRaw('SUM(debit) - SUM(credit) as balance')
-                    ->value('balance') ?? 0;
+                $openingBalance = $this->ledgerNetBalance(
+                    Voucher::where('student_id', $student->id)->where('date', '<', $dateFrom)->get()
+                );
             }
             $totalOpeningBalance += $openingBalance;
 
@@ -785,22 +809,26 @@ class LedgerController extends Controller
             }
 
             $vouchers = $query->orderBy('date')->get();
-            $totalDebit = $vouchers->sum('debit');
-            $totalCredit = $vouchers->sum('credit');
-
-            $balance = $openingBalance + $totalDebit - $totalCredit;
+            $totalDebit = 0.0;
+            $totalCredit = 0.0;
 
             // Build particulars array
-            $particulars = $vouchers->map(function ($voucher) {
+            $particulars = $vouchers->map(function ($voucher) use (&$totalDebit, &$totalCredit) {
+                $amounts = $this->ledgerDisplayAmounts($voucher);
+                $totalDebit += $amounts['debit'];
+                $totalCredit += $amounts['credit'];
+
                 return [
                     'date' => $voucher->date,
                     'particular' => $voucher->particular?->name ?? 'N/A',
                     'voucher_type' => $voucher->voucher_type,
                     'voucher_number' => $voucher->voucher_number,
-                    'debit' => $voucher->debit,
-                    'credit' => $voucher->credit,
+                    'debit' => $amounts['debit'],
+                    'credit' => $amounts['credit'],
                 ];
             })->toArray();
+
+            $balance = $openingBalance + $totalDebit - $totalCredit;
 
             return [
                 'student' => $student,
@@ -1030,7 +1058,7 @@ class LedgerController extends Controller
                 ];
             }
 
-            $shown = $this->particularLedgerDisplayedAmounts($voucher);
+            $shown = $this->ledgerDisplayAmounts($voucher);
             $displayDebit = $shown['debit'];
             $displayCredit = $shown['credit'];
 
@@ -1060,7 +1088,7 @@ class LedgerController extends Controller
         $totalDebit = 0;
         $totalCredit = 0;
         foreach ($vouchersCollection as $v) {
-            $shown = $this->particularLedgerDisplayedAmounts($v);
+            $shown = $this->ledgerDisplayAmounts($v);
             $totalDebit += $shown['debit'];
             $totalCredit += $shown['credit'];
         }
@@ -1152,10 +1180,9 @@ class LedgerController extends Controller
         foreach ($students as $student) {
             $openingBalance = 0;
             if ($dateFrom) {
-                $openingBalance = Voucher::where('student_id', $student->id)
-                    ->where('date', '<', $dateFrom)
-                    ->selectRaw('SUM(debit) - SUM(credit) as balance')
-                    ->value('balance') ?? 0;
+                $openingBalance = $this->ledgerNetBalance(
+                    Voucher::where('student_id', $student->id)->where('date', '<', $dateFrom)->get()
+                );
             }
 
             $query = Voucher::where('student_id', $student->id);
@@ -1168,8 +1195,13 @@ class LedgerController extends Controller
                 $query->where('date', '<=', $dateTo);
             }
 
-            $totalDebit = $query->sum('debit');
-            $totalCredit = $query->sum('credit');
+            $totalDebit = 0.0;
+            $totalCredit = 0.0;
+            foreach ($query->get() as $voucher) {
+                $amounts = $this->ledgerDisplayAmounts($voucher);
+                $totalDebit += $amounts['debit'];
+                $totalCredit += $amounts['credit'];
+            }
             $balance = $openingBalance + $totalDebit - $totalCredit;
 
             fputcsv($handle, [
@@ -1536,10 +1568,9 @@ class LedgerController extends Controller
             // Calculate opening balance
             $openingBalance = 0;
             if ($dateFrom) {
-                $openingBalance = Voucher::where('student_id', $student->id)
-                    ->where('date', '<', $dateFrom)
-                    ->selectRaw('SUM(debit) - SUM(credit) as balance')
-                    ->value('balance') ?? 0;
+                $openingBalance = $this->ledgerNetBalance(
+                    Voucher::where('student_id', $student->id)->where('date', '<', $dateFrom)->get()
+                );
             }
 
             // Get vouchers
@@ -1556,30 +1587,27 @@ class LedgerController extends Controller
 
             $vouchers = $query->orderBy('date')->get();
 
-            $totalDebit = $vouchers->sum('debit');
-            $totalCredit = $vouchers->sum('credit');
-            $balance = $openingBalance + $totalDebit - $totalCredit;
+            $totalDebit = 0.0;
+            $totalCredit = 0.0;
+            $running = $openingBalance;
+            $ledgerData = $vouchers->map(function ($voucher) use (&$running, &$totalDebit, &$totalCredit) {
+                $amounts = $this->ledgerDisplayAmounts($voucher);
+                $totalDebit += $amounts['debit'];
+                $totalCredit += $amounts['credit'];
+                $running += $amounts['debit'] - $amounts['credit'];
 
-            $ledgerData = $vouchers->map(function ($voucher) use (&$runningBalance) {
                 return [
                     'date' => $voucher->date,
                     'particular' => $voucher->particular?->name ?? 'N/A',
                     'voucher_type' => $voucher->voucher_type,
                     'voucher_number' => $voucher->voucher_number,
-                    'debit' => $voucher->debit,
-                    'credit' => $voucher->credit,
-                    'balance' => 0, // Calculated in view or we can calculate here if needed better
+                    'debit' => $amounts['debit'],
+                    'credit' => $amounts['credit'],
+                    'balance' => $running,
                 ];
             });
 
-            // Re-calculate running balance for the array
-            $running = $openingBalance;
-            $ledgerData = $ledgerData->map(function ($item) use (&$running) {
-                $running += $item['debit'] - $item['credit'];
-                $item['balance'] = $running;
-
-                return $item;
-            });
+            $balance = $openingBalance + $totalDebit - $totalCredit;
 
             // Only add students with transactions or balances?
             // User likely wants all students or at least those with activity.

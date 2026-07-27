@@ -349,6 +349,9 @@ const API_BASE = '/api';
             } catch (error) {
                 showDarasaToast({ type: 'error', title: 'Student ledger', message: darasaAxiosMessage(error) });
             }
+        }
+
+        async function viewClassLedger(classIdParam, page = 1) {
             const classId = classIdParam || document.getElementById('classLedgerSelect').value;
             if (!classId) {
                 showDarasaToast({ type: 'warning', title: 'Class ledger', message: 'Please select a class.' });
