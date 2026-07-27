@@ -96,6 +96,15 @@ class SchoolProvisioningService
                 '--force' => true,
             ]);
 
+            // RoleSeeder hardcodes DB::connection('tenant'), which useAsTenant()
+            // above already pointed at this school - without this, school_roles
+            // is empty for every new school and anything role-dependent (staff
+            // assignment, etc.) is unusable until someone manually seeds it.
+            \Artisan::call('db:seed', [
+                '--class' => 'Database\\Seeders\\RoleSeeder',
+                '--force' => true,
+            ]);
+
             $ownerRole = Role::where('name', 'owner')->first();
 
             $owner = User::create([
