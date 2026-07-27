@@ -58,6 +58,9 @@
                   <a href="{{ route('owner.attendance.download', $attendance->id) }}" class="btn btn-sm btn-outline-success me-1" title="Download Excel Template">
                     <i class="bx bx-download"></i>
                   </a>
+                  <button class="btn btn-sm btn-outline-secondary me-1" data-bs-toggle="modal" data-bs-target="#uploadModal_{{ $attendance->id }}" title="Upload Filled Template">
+                    <i class="bx bx-upload"></i>
+                  </button>
                   <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#attendanceModal_{{ $attendance->id }}">
                     <i class="bx bx-list-check"></i> Take Attendance
                   </button>
@@ -82,6 +85,35 @@
 
     {{-- MODALS --}}
     @foreach($attendanceTypes as $attendance)
+      <div class="modal fade" id="uploadModal_{{ $attendance->id }}" tabindex="-1" aria-labelledby="uploadModalLabel_{{ $attendance->id }}" aria-hidden="true">
+        <div class="modal-dialog">
+          <form method="POST" action="{{ route('owner.attendance.upload', $attendance->id) }}" enctype="multipart/form-data">
+            @csrf
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel_{{ $attendance->id }}">Upload Filled Template: {{ $attendance->title }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <p class="text-muted small">
+                  Download the template first, fill it in (X = absent, leave blank or ✓ = present),
+                  set the "Attendance valid through" date on each month sheet you edited, then upload it here.
+                  Only dates up to that cutoff (and not beyond today) are saved.
+                </p>
+                <div class="mb-3">
+                  <label class="form-label">Filled Template (.xlsx)</label>
+                  <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Upload</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div class="modal fade" id="attendanceModal_{{ $attendance->id }}" tabindex="-1" aria-labelledby="attendanceModalLabel_{{ $attendance->id }}" aria-hidden="true">
         <div class="modal-dialog modal-xl">
           <form method="POST" action="{{ route('teacher.submitAttendance') }}">

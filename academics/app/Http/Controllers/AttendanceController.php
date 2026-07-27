@@ -8,7 +8,10 @@ use App\Models\DailyAttendanceEntry;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Exports\AttendanceMonthSheetExport;
 use App\Exports\AttendanceTemplateExport;
+use App\Imports\AttendanceUploadImport;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 
 class AttendanceController extends Controller
@@ -187,7 +190,16 @@ class AttendanceController extends Controller
     }
 
     $allStudents = $query->get();
-    DailyAttendanceEntry::on('tenant')->where('attendance_id', $attendanceId)->delete();
+    $today = now()->toDateString();
+
+    // Only clear TODAY's entries for this attendance record before
+    // re-inserting - this used to delete every date ever recorded for the
+    // whole attendance_id, so taking attendance on a new day silently wiped
+    // out every previous day's history.
+    DailyAttendanceEntry::on('tenant')
+      ->where('attendance_id', $attendanceId)
+      ->whereDate('date', $today)
+      ->delete();
 
     foreach ($allStudents as $student) {
       $status = in_array($student->id, $presentStudentIds) ? 'present' : 'absent';
@@ -196,11 +208,112 @@ class AttendanceController extends Controller
         'attendance_id' => $attendanceId,
         'student_id' => $student->id,
         'status' => $status,
-        'date' => now(),
+        'date' => $today,
       ]);
     }
 
     return redirect()->back()->with('success', 'Attendance submitted successfully.');
+  }
+
+  /**
+   * Process a filled-in attendance template (see AttendanceMonthSheetExport
+   * for the exact row layout this expects: row 1 is the teacher-editable
+   * cutoff date, row 4 is the header with one column per date).
+   *
+   * Upserts per (attendance_id, student_id, date) instead of wipe-and-replace
+   * like submitAttendance() used to, so re-uploading a template - or mixing
+   * direct "Take Attendance" edits with template uploads - never destroys
+   * unrelated dates' history.
+   */
+  public function uploadAttendanceTemplate(Request $request, $attendanceId)
+  {
+    if (!(new HelperController)->isLoggedIn($request)) return redirect('/login');
+    $this->switchTenantDB();
+
+    $request->validate([
+      'file' => 'required|file|mimes:xlsx,xls',
+    ]);
+
+    $attendance = Attendance::on('tenant')->findOrFail($attendanceId);
+    $rangeStart = Carbon::parse($attendance->from_date);
+    $rangeEnd = Carbon::parse($attendance->to_date);
+
+    $students = Student::on('tenant')
+      ->where('class_id', $attendance->class_id)
+      ->when($attendance->stream_id, fn($q) => $q->where('stream_id', $attendance->stream_id))
+      ->get()
+      ->keyBy(fn($s) => (string) $s->registration_no);
+
+    $sheets = Excel::toArray(new AttendanceUploadImport(), $request->file('file'));
+
+    $saved = 0;
+    $headerRowIndex = AttendanceMonthSheetExport::HEADER_ROW - 1; // 0-indexed
+
+    DB::connection('tenant')->beginTransaction();
+    try {
+      foreach ($sheets as $sheetRows) {
+        if (count($sheetRows) <= $headerRowIndex) {
+          continue; // not a sheet this importer recognizes
+        }
+
+        $cutoffRaw = trim((string) ($sheetRows[0][1] ?? ''));
+        $cutoff = $cutoffRaw !== '' ? Carbon::parse($cutoffRaw) : Carbon::today();
+        // A teacher could type a future/out-of-range date by mistake - never
+        // let the sheet apply attendance beyond today or beyond this record's
+        // own range regardless of what's written in the cell.
+        if ($cutoff->gt(Carbon::today())) $cutoff = Carbon::today();
+        if ($cutoff->gt($rangeEnd)) $cutoff = $rangeEnd;
+        if ($cutoff->lt($rangeStart)) continue; // nothing in range to apply
+
+        $headerRow = $sheetRows[$headerRowIndex];
+        $dateColumns = [];
+        foreach ($headerRow as $colIndex => $value) {
+          if ($colIndex < 3 || $value === null || $value === '') continue;
+          try {
+            $date = Carbon::createFromFormat('d/m/Y', trim((string) $value));
+          } catch (\Throwable $e) {
+            continue;
+          }
+          if ($date->lt($rangeStart) || $date->gt($rangeEnd) || $date->gt($cutoff)) continue;
+          $dateColumns[$colIndex] = $date;
+        }
+
+        if (empty($dateColumns)) continue;
+
+        for ($r = $headerRowIndex + 1; $r < count($sheetRows); $r++) {
+          $row = $sheetRows[$r];
+          $regNo = trim((string) ($row[2] ?? ''));
+          if ($regNo === '' || !$students->has($regNo)) continue;
+          $student = $students->get($regNo);
+
+          foreach ($dateColumns as $colIndex => $date) {
+            $cell = trim((string) ($row[$colIndex] ?? ''));
+            $status = strtoupper($cell) === 'X' ? 'absent' : 'present';
+
+            DailyAttendanceEntry::on('tenant')->updateOrCreate(
+              [
+                'attendance_id' => $attendance->id,
+                'student_id' => $student->id,
+                'date' => $date->toDateString(),
+              ],
+              ['status' => $status]
+            );
+            $saved++;
+          }
+        }
+      }
+
+      DB::connection('tenant')->commit();
+    } catch (\Throwable $e) {
+      DB::connection('tenant')->rollBack();
+      return redirect()->back()->with('error', 'Failed to import attendance template: ' . $e->getMessage());
+    }
+
+    if ($saved === 0) {
+      return redirect()->back()->with('error', 'Nothing was imported - check the file matches the downloaded template and the cutoff date/registration numbers are valid.');
+    }
+
+    return redirect()->back()->with('success', "Attendance imported: {$saved} entries saved.");
   }
 
 

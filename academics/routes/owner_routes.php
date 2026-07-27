@@ -161,6 +161,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
     Route::post('/take-attendance', [AttendanceController::class, 'takeAttendance'])->name('ownertakeAttendance');
     Route::post('/teacher/submit-attendance', [AttendanceController::class, 'submitAttendance'])->name('teacher.submitAttendance');
     Route::get('/download-template/{id}', [AttendanceController::class, 'downloadAttendanceTemplate'])->name('owner.attendance.download');
+    Route::post('/upload-template/{id}', [AttendanceController::class, 'uploadAttendanceTemplate'])->name('owner.attendance.upload');
   });
 
 
