@@ -273,6 +273,9 @@ class SchoolProvisioningService
         $check = $this->callAcademicsInternalApi('/internal-api/schools/exists', ['db_name' => $expectedDbName], 'get');
 
         if (!($check['exists'] ?? false)) {
+            if ($check['row_exists_but_incomplete'] ?? false) {
+                throw new \Exception("Academics provisioning was interrupted mid-migration for {$expectedDbName} - a school record exists but is not usable (this host can kill very long-running requests before they finish, even server-side). This needs manual cleanup (drop the partial database via DirectAdmin, delete the incomplete school row in Academics) before retrying with the same name - see CLAUDE.md.");
+            }
             throw new \Exception("Academics provisioning could not be confirmed (no readable response, and the school does not exist yet at {$expectedDbName}). It may still be running in the background - check Academics' schools list before retrying.");
         }
 

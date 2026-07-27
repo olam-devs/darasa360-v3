@@ -18,15 +18,27 @@ class InternalApiController extends Controller
      * lost to this host's proxy-level timeout on long-running requests
      * (the create call itself runs 100+ migrations and can take minutes;
      * this lookup takes milliseconds and won't hit the same issue).
+     *
+     * IMPORTANT: the School row itself is created *before* migrations run
+     * (see SchoolProvisioningService::provisionSchool), so row-existence
+     * alone does NOT prove the school is actually usable - this host has
+     * been observed to kill the request mid-migration, leaving a school
+     * row with an incomplete/broken tenant database and no owner account.
+     * user_id only gets set as the very last step (after migrations and
+     * owner-account creation both succeeded and the transaction committed),
+     * so that's what "exists" here actually means: fully provisioned, not
+     * just "a row happens to be there".
      */
     public function schoolExists(Request $request)
     {
         $dbName = $request->query('db_name');
         $school = $dbName ? \App\Models\School::where('database_url', $dbName)->first() : null;
+        $complete = $school && $school->user_id !== null;
 
         return response()->json([
             'ok' => true,
-            'exists' => (bool) $school,
+            'exists' => $complete,
+            'row_exists_but_incomplete' => $school && !$complete,
             'school_id' => $school->id ?? null,
         ]);
     }
