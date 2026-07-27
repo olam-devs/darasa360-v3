@@ -183,9 +183,20 @@ class SuperAdminController extends Controller
             // Get system_admin role
             $systemAdminRole = Role::where('name', 'system_admin')->first();
 
+            // Registration number is the only login credential this app accepts
+            // (see AuthLogicController) - must be generated here, same pattern as
+            // createSystemAdmin() below, or this account can never log in.
+            $seq = User::where('role_id', $systemAdminRole->id)->count() + 1;
+            $regNo = 'sysadmin' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+            while (User::where('registration_no', $regNo)->exists()) {
+                $seq++;
+                $regNo = 'sysadmin' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+            }
+
             // Create system admin user
             $systemAdmin = User::create([
                 'username' => $validated['admin_username'],
+                'registration_no' => $regNo,
                 'password' => Hash::make($validated['admin_password']),
                 'email' => $validated['admin_email'],
                 'phone_number' => $validated['admin_phone'],
@@ -202,7 +213,7 @@ class SuperAdminController extends Controller
 
             DB::commit();
 
-            return back()->with('success', 'System admin assigned successfully!');
+            return back()->with('success', "System admin assigned successfully! Login with: {$regNo}");
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Failed to assign admin: ' . $e->getMessage()]);
