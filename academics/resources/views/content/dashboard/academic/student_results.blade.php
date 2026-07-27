@@ -346,7 +346,7 @@
 </style>
 
 @isset($results)
-@push('scripts')
+@section('page-script')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const genderFilter = document.getElementById('genderFilter');
@@ -483,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-@endpush
+@endsection
 @endisset
 
 @endsection

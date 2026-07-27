@@ -153,7 +153,7 @@
 </div>
 @endsection
 
-@push('scripts')
+@section('page-script')
 <script>
 function toggleSmsInput(schoolId) {
   const select = document.getElementById('operation_type_' + schoolId);
@@ -170,4 +170,4 @@ function toggleSmsInput(schoolId) {
   }
 }
 </script>
-@endpush
+@endsection

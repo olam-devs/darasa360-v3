@@ -284,7 +284,7 @@
   </div>
 </div>
 
-@push('scripts')
+@section('page-script')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let examCount = 0;
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-@endpush
+@endsection
 
 @push('styles')
 <style>

@@ -350,7 +350,7 @@
   </div>
 </div>
 
-@push('scripts')
+@section('page-script')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const dashboardData = @json($dashboardData);
@@ -524,5 +524,5 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-@endpush
+@endsection
 @endsection

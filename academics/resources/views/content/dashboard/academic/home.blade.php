@@ -267,7 +267,7 @@
   </div>
 </div>
 
-@push('scripts')
+@section('page-script')
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -512,5 +512,5 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-@endpush
+@endsection
 @endsection
