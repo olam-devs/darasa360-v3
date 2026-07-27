@@ -16,8 +16,16 @@ return Application::configure(basePath: dirname(__DIR__))
     },
   )
   ->withMiddleware(function (Middleware $middleware) {
-    $middleware->append(\App\Http\Middleware\InitializeTenantDatabase::class);
-    $middleware->append(\App\Http\Middleware\LogRequests::class);
+    // Must run in the 'web' group specifically (after StartSession), not the
+    // bare global stack - plain append()/prepend() run before StartSession,
+    // so session('school_db') always read null here and the tenant DB
+    // connection was never actually switched for any real login. Every
+    // school-level page (school-admin, teacher, headmaster, ...) was
+    // silently hitting the unconfigured placeholder 'tenant' connection.
+    $middleware->web(append: [
+      \App\Http\Middleware\InitializeTenantDatabase::class,
+      \App\Http\Middleware\LogRequests::class,
+    ]);
     $middleware->validateCsrfTokens(except: [
       'api/*'
     ]);
