@@ -34,7 +34,7 @@
     @foreach($invoiceData['items_by_year'] as $yearData)
     <div class="year-block">
         <div class="year-header">
-            📅 Academic Year: {{ $yearData['year_name'] }}
+            Academic Year: {{ $yearData['year_name'] }}
             @if($yearData['subtotal_balance'] > 0)
                 <span class="year-badge year-badge-due">Balance: TSh {{ number_format($yearData['subtotal_balance'], 2) }}</span>
             @else
