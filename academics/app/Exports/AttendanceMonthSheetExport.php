@@ -20,16 +20,17 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 /**
  * One calendar month's worth of attendance for a single Attendance record.
  * Row layout (see HEADER_ROW below - the importer reads by this same layout,
- * keep the two in sync):
+ * keep the two in sync). Note: an actually-empty array row (`[]`) does not
+ * produce a blank spreadsheet row via FromArray - PhpSpreadsheet just skips
+ * it - so there's no spacer row between the instructions and the header.
  *   1: cutoff-date label/value the teacher edits before re-uploading
  *   2: instructions
- *   3: blank spacer
- *   4: #, Student Name, Registration No, then one column per date in this month
- *   5+: student rows
+ *   3: #, Student Name, Registration No, then one column per date in this month
+ *   4+: student rows
  */
 class AttendanceMonthSheetExport implements FromArray, WithTitle, WithStyles, WithColumnWidths, WithEvents
 {
-    public const HEADER_ROW = 4;
+    public const HEADER_ROW = 3;
 
     protected Attendance $attendance;
     protected Carbon $monthStart;
@@ -83,7 +84,6 @@ class AttendanceMonthSheetExport implements FromArray, WithTitle, WithStyles, Wi
         $rows = [];
         $rows[] = ['Attendance valid through (YYYY-MM-DD):', $cutoff->toDateString()];
         $rows[] = ['Mark X for ABSENT. Leave blank or put a check for PRESENT. Only dates on/before the date above are saved when this file is uploaded.'];
-        $rows[] = [];
 
         $header = ['#', 'Student Name', 'Registration No'];
         foreach ($this->dates as $date) {
