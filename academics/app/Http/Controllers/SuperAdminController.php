@@ -1004,13 +1004,14 @@ class SuperAdminController extends Controller
 
     private function tenantForSchool(School $school): void
     {
-        config([
-            'database.connections.tenant' => array_merge(
-                config('database.connections.mysql'),
-                ['database' => $school->database_url]
-            )
-        ]);
-        DB::purge('tenant');
+        // This host doesn't grant the shared central DB user access to
+        // arbitrary tenant databases - each school has its own dedicated
+        // db_username/db_password. School::useAsTenant() is the canonical
+        // way to switch tenant context (see its docblock); this used to
+        // hand-roll a merge of the default 'mysql' connection (the shared
+        // user) with just the database name swapped, which always hit
+        // "Access denied" for any real school.
+        $school->useAsTenant();
     }
 
     public function schoolStaff(int $id)
