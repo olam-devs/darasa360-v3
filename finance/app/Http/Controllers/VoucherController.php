@@ -104,6 +104,25 @@ class VoucherController extends Controller
                 ->where('particular_id', $particular->id)
                 ->first();
 
+            // A student's first ever voucher for a particular has no pivot row yet
+            // (particulars are never explicitly "assigned" to a student anywhere in
+            // the UI - it's created lazily here). Without this, every "first
+            // transaction" silently skipped the balance-tracking blocks below,
+            // leaving Outstanding/Supposed Amount at 0 despite a real voucher
+            // existing in the ledger.
+            if (! $pivot) {
+                $student->particulars()->attach($particular->id, [
+                    'sales' => 0,
+                    'debit' => 0,
+                    'credit' => 0,
+                    'overpayment' => 0,
+                ]);
+
+                $pivot = $student->particulars()
+                    ->where('particular_id', $particular->id)
+                    ->first();
+            }
+
             // If this is a Receipt and exceeds outstanding balance, split into:
             // - Receipt to the particular (up to outstanding)
             // - Receipt to "Advance Payment" (remaining), tracked on student.advance_balance
