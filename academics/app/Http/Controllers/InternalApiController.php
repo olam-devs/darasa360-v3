@@ -12,6 +12,25 @@ use Illuminate\Http\Request;
  */
 class InternalApiController extends Controller
 {
+    /**
+     * Fast, read-only check - used by Finance to confirm whether a school
+     * creation actually succeeded when the create call's own response was
+     * lost to this host's proxy-level timeout on long-running requests
+     * (the create call itself runs 100+ migrations and can take minutes;
+     * this lookup takes milliseconds and won't hit the same issue).
+     */
+    public function schoolExists(Request $request)
+    {
+        $dbName = $request->query('db_name');
+        $school = $dbName ? \App\Models\School::where('database_url', $dbName)->first() : null;
+
+        return response()->json([
+            'ok' => true,
+            'exists' => (bool) $school,
+            'school_id' => $school->id ?? null,
+        ]);
+    }
+
     public function createSchool(Request $request, SchoolProvisioningService $provisioning)
     {
         $validated = $request->validate([

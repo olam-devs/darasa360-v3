@@ -144,7 +144,7 @@ class SchoolProvisioningService
                         : $requestedAcademicsDb;
                     $academicsDb = $acadPrefix . $acadNameWithoutPrefix;
 
-                    $response = $this->callAcademicsInternalApi('/internal-api/schools', [
+                    $this->provisionAcademicsSchool([
                         'school_name' => $data['name'],
                         'location_name' => $data['academics_location_name'] ?? $data['address'] ?? $data['name'],
                         'db_name' => $requestedAcademicsDb,
@@ -153,11 +153,7 @@ class SchoolProvisioningService
                         'owner_phone' => $data['academics_owner_phone'],
                         'owner_username' => $data['academics_owner_username'],
                         'owner_password' => $data['academics_owner_password'],
-                    ]);
-
-                    if (!($response['ok'] ?? false)) {
-                        throw new \Exception('Academics provisioning failed: ' . ($response['error'] ?? 'unknown error - check whether it actually succeeded anyway via Academics\' schools list before retrying, this host can time out the connection well after the real work has completed'));
-                    }
+                    ], $academicsDb);
 
                     $school->update(['academics_db_name' => $academicsDb]);
                     PlatformSchool::where('id', $school->platform_school_id)
@@ -229,7 +225,7 @@ class SchoolProvisioningService
      * already-correct provisioning service - this just makes the request and
      * returns the decoded response.
      */
-    public function callAcademicsInternalApi(string $path, array $payload): array
+    public function callAcademicsInternalApi(string $path, array $payload, string $method = 'post'): ?array
     {
         $baseUrl = rtrim(config('services.academics.url', ''), '/');
         $secret = config('services.internal_api.secret');
@@ -238,16 +234,49 @@ class SchoolProvisioningService
             throw new \Exception('Academics internal API not configured (ACADEMICS_APP_URL / INTERNAL_API_SECRET).');
         }
 
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
+        $http = \Illuminate\Support\Facades\Http::withHeaders([
             'X-Internal-Api-Secret' => $secret,
-        ])->timeout(300)->post($baseUrl . $path, $payload);
+        ])->timeout(300);
+
+        $response = $method === 'get' ? $http->get($baseUrl . $path, $payload) : $http->post($baseUrl . $path, $payload);
 
         $decoded = $response->json();
-        if (!is_array($decoded)) {
-            throw new \Exception('Academics internal API returned a non-JSON response (HTTP ' . $response->status() . '): ' . substr($response->body(), 0, 300));
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * Provision a school in Academics, tolerating this host's tendency to
+     * garble/timeout the HTTP response on this specific call (it runs 100+
+     * migrations and can take minutes) even when the underlying work
+     * genuinely succeeded - verified this happening repeatedly during
+     * testing (2026-07-26/27). Rather than treat "couldn't read the
+     * response" the same as "it failed", fall back to asking Academics'
+     * own fast, read-only /internal-api/schools/exists endpoint (a simple
+     * DB lookup, not subject to the same timeout risk) before deciding.
+     *
+     * @throws \Exception only on a *confirmed* failure (either an explicit
+     *         ok:false from Academics, or exists:false after checking).
+     */
+    public function provisionAcademicsSchool(array $payload, string $expectedDbName): void
+    {
+        $response = $this->callAcademicsInternalApi('/internal-api/schools', $payload);
+
+        if ($response !== null) {
+            if (!($response['ok'] ?? false)) {
+                throw new \Exception('Academics provisioning failed: ' . ($response['error'] ?? 'unknown error'));
+            }
+            return; // clean, confirmed success
         }
 
-        return $decoded;
+        Log::warning("Academics create-school response was unreadable (likely a proxy timeout on this host) for {$expectedDbName} - verifying via the exists check instead of assuming failure.");
+
+        $check = $this->callAcademicsInternalApi('/internal-api/schools/exists', ['db_name' => $expectedDbName], 'get');
+
+        if (!($check['exists'] ?? false)) {
+            throw new \Exception("Academics provisioning could not be confirmed (no readable response, and the school does not exist yet at {$expectedDbName}). It may still be running in the background - check Academics' schools list before retrying.");
+        }
+
+        Log::info("Confirmed via exists-check: Academics provisioning for {$expectedDbName} actually succeeded despite the unreadable create response.");
     }
 
     protected function runTenantMigrations(School $school): void

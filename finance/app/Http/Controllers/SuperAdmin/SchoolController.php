@@ -562,23 +562,24 @@ class SchoolController extends Controller
             'academics_owner_password' => 'required|string|min:6',
         ]);
 
+        $prefix = config('directadmin.db_prefix', '');
+        $requestedDb = $validated['academics_db_name'];
+        $nameWithoutPrefix = str_starts_with($requestedDb, $prefix) && $prefix !== ''
+            ? substr($requestedDb, strlen($prefix))
+            : $requestedDb;
+        $academicsDb = $prefix . $nameWithoutPrefix;
+
         try {
-            $response = $this->provisioningService->callAcademicsInternalApi('/internal-api/schools', [
+            $this->provisioningService->provisionAcademicsSchool([
                 'school_name' => $school->name,
                 'location_name' => $validated['academics_location_name'],
-                'db_name' => $validated['academics_db_name'],
+                'db_name' => $requestedDb,
                 'owner_name' => $validated['academics_owner_name'],
                 'owner_email' => $validated['academics_owner_email'],
                 'owner_phone' => $validated['academics_owner_phone'],
                 'owner_username' => $validated['academics_owner_username'],
                 'owner_password' => $validated['academics_owner_password'],
-            ]);
-
-            if (!($response['ok'] ?? false)) {
-                throw new \Exception($response['error'] ?? 'unknown error');
-            }
-
-            $academicsDb = $response['database_url'] ?? $validated['academics_db_name'];
+            ], $academicsDb);
 
             $school->update([
                 'has_academics' => true,
@@ -594,6 +595,7 @@ class SchoolController extends Controller
 
             return back()->with('success', "Academics has been provisioned for {$school->name}.");
         } catch (\Exception $e) {
+            \Log::error("enableAcademics failed for school {$school->id} ({$school->name}): " . $e->getMessage());
             return back()->with('error', 'Failed to enable Academics: ' . $e->getMessage());
         }
     }

@@ -15,4 +15,5 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware([VerifyInternalApiSecret::class])->prefix('internal-api')->group(function () {
     Route::post('/schools', [InternalApiController::class, 'createSchool']);
+    Route::get('/schools/exists', [InternalApiController::class, 'schoolExists']);
 });
