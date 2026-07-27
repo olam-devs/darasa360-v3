@@ -48,6 +48,11 @@ class StudentController extends Controller
 
     public function store(Request $request)
     {
+        // Add Student form's Gender dropdown sends "Male"/"Female" (capitalized
+        // for display); normalize before validating so it matches storage/CSV
+        // convention (lowercase) instead of rejecting every real submission.
+        $request->merge(['gender' => strtolower((string) $request->input('gender'))]);
+
         $validated = $request->validate([
             'student_reg_no' => 'required|string|unique:students',
             'name' => 'required|string|max:255',
@@ -86,6 +91,8 @@ class StudentController extends Controller
     public function update(Request $request, $id)
     {
         $student = Student::findOrFail($id);
+
+        $request->merge(['gender' => strtolower((string) $request->input('gender'))]);
 
         $validated = $request->validate([
             'student_reg_no' => 'required|string|unique:students,student_reg_no,'.$id,
