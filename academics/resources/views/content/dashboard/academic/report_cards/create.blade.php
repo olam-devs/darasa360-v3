@@ -214,52 +214,6 @@
           <button type="button" class="btn btn-lg btn-primary shadow-sm" id="addExamBtn">
             <i class="bx bx-plus-circle me-2"></i>Add Exam
           </button>
-
-          {{-- Exam Template (Hidden) --}}
-          <div id="examTemplate" class="d-none">
-            <div class="exam-config-item card mb-3 shadow-sm">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                  <h6 class="mb-0 fw-bold">
-                    <i class="bx bx-notepad text-primary me-2"></i>
-                    Exam <span class="exam-number"></span>
-                  </h6>
-                  <button type="button" class="btn btn-sm btn-outline-danger remove-exam-btn">
-                    <i class="bx bx-trash"></i> Remove
-                  </button>
-                </div>
-
-                <div class="row g-3">
-                  <div class="col-md-8">
-                    <label class="form-label fw-semibold">Select Exam <span class="text-danger">*</span></label>
-                    <select name="exams[INDEX][exam_id]" class="form-select exam-select" required>
-                      <option value="">-- Select Exam --</option>
-                      @foreach($exams as $exam)
-                      <option value="{{ $exam->id }}">{{ $exam->name }}</option>
-                      @endforeach
-                    </select>
-                  </div>
-
-                  <div class="col-md-4">
-                    <label class="form-label fw-semibold">
-                      Weight (%) <span class="text-danger">*</span>
-                    </label>
-                    <div class="input-group input-group-lg">
-                      <input type="number"
-                             name="exams[INDEX][percentage_weight]"
-                             class="form-control percentage-input"
-                             min="0"
-                             max="100"
-                             step="0.01"
-                             placeholder="0.00"
-                             required>
-                      <span class="input-group-text">%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <hr class="my-5">
@@ -280,6 +234,55 @@
           </div>
         </div>
       </form>
+
+      {{-- Exam Template (Hidden) - kept outside the form: it's only ever used as an
+           innerHTML string source for cloning real rows, and a required/named field
+           in here (even display:none) still participates in this browser's native
+           form constraint validation, silently blocking every submission. --}}
+      <div id="examTemplate" class="d-none">
+        <div class="exam-config-item card mb-3 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="mb-0 fw-bold">
+                <i class="bx bx-notepad text-primary me-2"></i>
+                Exam <span class="exam-number"></span>
+              </h6>
+              <button type="button" class="btn btn-sm btn-outline-danger remove-exam-btn">
+                <i class="bx bx-trash"></i> Remove
+              </button>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label fw-semibold">Select Exam <span class="text-danger">*</span></label>
+                <select name="exams[INDEX][exam_id]" class="form-select exam-select" required>
+                  <option value="">-- Select Exam --</option>
+                  @foreach($exams as $exam)
+                  <option value="{{ $exam->id }}">{{ $exam->name }}</option>
+                  @endforeach
+                </select>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">
+                  Weight (%) <span class="text-danger">*</span>
+                </label>
+                <div class="input-group input-group-lg">
+                  <input type="number"
+                         name="exams[INDEX][percentage_weight]"
+                         class="form-control percentage-input"
+                         min="0"
+                         max="100"
+                         step="0.01"
+                         placeholder="0.00"
+                         required>
+                  <span class="input-group-text">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
