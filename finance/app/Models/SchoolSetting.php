@@ -10,11 +10,10 @@ class SchoolSetting extends BaseModel
 
     /**
      * The connection name for the model.
-     * Using default mysql connection for single-school setup
      *
      * @var string|null
      */
-    protected $connection = 'mysql';
+    protected $connection = 'tenant';
 
     protected $fillable = [
         'school_name',
