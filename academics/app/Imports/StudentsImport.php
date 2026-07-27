@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use App\Models\Student;
 use App\Models\SchoolClass;
+use App\Models\SchoolRole;
 use App\Models\Stream;
 use App\Helpers\RegistrationHelper;
 use App\Models\Classroom;
@@ -130,7 +131,10 @@ public function collection(Collection $rows)
             // ========== END DUPLICATE CHECKS ==========
 
             // Generate registration number
-            $roleId = 7; // Student role
+            // Was hardcoded to 7 ("Academic" per RoleSeeder's actual order,
+            // despite this comment) - every imported student was misfiled as
+            // staff. See the same fix in StudentController::store().
+            $roleId = SchoolRole::where('name', 'Student')->value('id') ?? 7;
             $registrationNo = RegistrationHelper::generateRegistrationNo($roleId, $this->schoolId, $this->tenantDb);
 
             // Use database transaction for data integrity

@@ -13,6 +13,7 @@ use App\Models\ExamMark;
 use App\Models\Grade;
 use App\Models\Notes;
 use App\Models\School;
+use App\Models\SchoolRole;
 use App\Models\Student;
 use App\Models\Stream;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -238,7 +239,11 @@ class StudentController extends Controller
     ]);
 
 
-    $roleId = 7;
+    // Was hardcoded to 7 ("Academic" per RoleSeeder's actual order), so every
+    // student created here was misfiled as staff - showed up in Manage Staff,
+    // and would have failed anything gated on role === 'Student' (e.g. the
+    // mobile app login restriction in AuthLogicController).
+    $roleId = SchoolRole::where('name', 'Student')->value('id') ?? 7;
     $schoolCode = session('school_code') ?? '000';
     $registrationNo = RegistrationHelper::generateRegistrationNo($roleId, $schoolCode);
 

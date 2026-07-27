@@ -250,19 +250,25 @@ class OwnerController extends Controller
     DB::purge('tenant');
     DB::reconnect('tenant');
 
-    // Fetch staff users with role_id >= 3 and exclude role_id 6
+    // Comments here have always said "exclude id 6" (Student), but the code
+    // excluded 7 ("Academic" per RoleSeeder's real order) instead - so actual
+    // students showed up in Manage Staff while Academic-role staff were
+    // wrongly hidden from it. Look the id up by name instead of hardcoding
+    // either number.
+    $studentRoleId = SchoolRole::where('name', 'Student')->value('id');
+
+    // Fetch staff users with role_id >= 3, excluding students
     $staffs = SchoolUser::on('tenant')
       ->where('role_id', '>=', 3)
-      ->where('role_id', '!=', 7)
-      // ->where('role_id', '!=', 4)
+      ->where('role_id', '!=', $studentRoleId)
       ->with('role_name')  // if role relationship is defined
       ->paginate(5);
 
-    // Fetch all roles with id >= 3 and exclude id 6
+    // Fetch all roles with id >= 3, excluding Student
     $roles = DB::connection('tenant')
       ->table('school_roles')
       ->where('id', '>=', 3)
-      ->where('id', '!=', 7)
+      ->where('id', '!=', $studentRoleId)
       ->get();
 
     return view('content.dashboard.owner.manage_staff', compact('staffs', 'roles'));
