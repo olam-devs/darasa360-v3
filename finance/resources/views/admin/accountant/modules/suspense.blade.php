@@ -734,7 +734,7 @@ const API_BASE = '/api';
                 console.log('Particular details received:', data);
 
                 // Display particular details
-                document.getElementById('particular_amount_required').textContent = formatTSh(data.debit || 0);
+                document.getElementById('particular_amount_required').textContent = formatTSh(data.sales || 0);
                 document.getElementById('particular_amount_paid').textContent = formatTSh(data.credit || 0);
                 document.getElementById('particular_outstanding').textContent = formatTSh(data.balance || 0);
 
