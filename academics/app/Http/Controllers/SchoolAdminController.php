@@ -327,7 +327,7 @@ class SchoolAdminController extends Controller
                 return back()->withErrors(['error' => 'Registration number already exists']);
             }
 
-            DB::connection('tenant')->table('schoolUsers')->insert([
+            $userId = DB::connection('tenant')->table('schoolUsers')->insertGetId([
                 'username'        => $validated['username'],
                 'registration_no' => $validated['registration_no'],
                 'email'           => $validated['email'],
@@ -339,6 +339,27 @@ class SchoolAdminController extends Controller
                 'created_at'      => now(),
                 'updated_at'      => now(),
             ]);
+
+            // Teacher/ClassTeacher staff also need a row in 'teachers' - that's
+            // the table the "Assign Teachers" page's dropdown reads from
+            // (Teacher::on('tenant')->get() in TeacherController). Without
+            // this, a Teacher or ClassTeacher created here could never be
+            // assigned to a class - the dropdown would just be empty. Look
+            // role ids up by name rather than hardcoding them; this codebase
+            // has repeatedly hardcoded the wrong numbers for these two roles.
+            $teacherRoleIds = DB::connection('tenant')->table('school_roles')
+                ->whereIn('name', ['Teacher', 'ClassTeacher'])
+                ->pluck('id');
+
+            if ($teacherRoleIds->contains($validated['role_id'])) {
+                DB::connection('tenant')->table('teachers')->insert([
+                    'user_id'    => $userId,
+                    'name'       => $validated['username'],
+                    'phone'      => $validated['phone_number'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             DB::connection('tenant')->commit();
             return back()->with('success', 'Staff member created successfully!');
