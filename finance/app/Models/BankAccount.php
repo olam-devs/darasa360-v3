@@ -16,20 +16,15 @@ class BankAccount extends BaseModel
     protected $connection = 'tenant';
 
     protected $fillable = [
-        'school_setting_id',
-        'bank_name',
+        'account_name',
         'account_number',
-        'display_order',
+        'bank_name',
+        'branch',
+        'swift_code',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
-
-    // Relationships
-    public function schoolSetting()
-    {
-        return $this->belongsTo(SchoolSetting::class);
-    }
 }

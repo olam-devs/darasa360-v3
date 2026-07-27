@@ -3,15 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\BankAccount;
-use App\Models\SchoolSetting;
 use Illuminate\Http\Request;
 
 class BankAccountController extends Controller
 {
     public function index()
     {
-        $bankAccounts = BankAccount::orderBy('display_order')->get();
-        return response()->json($bankAccounts);
+        $bankAccounts = BankAccount::orderBy('bank_name')->get();
+
+        return response()->json(['bank_accounts' => $bankAccounts]);
     }
 
     public function store(Request $request)
@@ -19,11 +19,12 @@ class BankAccountController extends Controller
         $validated = $request->validate([
             'bank_name' => 'required|string|max:255',
             'account_number' => 'required|string|max:255',
-            'display_order' => 'nullable|integer',
         ]);
 
-        $settings = SchoolSetting::getSettings();
-        $validated['school_setting_id'] = $settings->id;
+        // The Add Bank Account form only collects bank name + account number;
+        // account_name has no dedicated field anywhere in the UI, so derive it
+        // from bank_name (same pattern as school_classes.code auto-derivation).
+        $validated['account_name'] = $validated['bank_name'];
 
         $bankAccount = BankAccount::create($validated);
 
@@ -37,7 +38,6 @@ class BankAccountController extends Controller
         $validated = $request->validate([
             'bank_name' => 'required|string|max:255',
             'account_number' => 'required|string|max:255',
-            'display_order' => 'nullable|integer',
             'is_active' => 'boolean',
         ]);
 

@@ -632,7 +632,6 @@ const API_BASE = '/api';
 
                 alert('✅ Student assigned successfully!');
                 // Reload the class view
-                const className = amountInput.closest('[class*="border-2"]').parentElement.querySelector('h4').textContent.replace('Students in ', '');
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error assigning student:', error);
