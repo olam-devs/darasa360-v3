@@ -20,16 +20,39 @@ class SchoolClassController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|unique:school_classes',
-            'code' => 'required|string|unique:school_classes',
+            'code' => 'nullable|string|unique:school_classes',
             'level' => 'nullable|string',
             'capacity' => 'nullable|integer',
             'description' => 'nullable|string',
             'display_order' => 'nullable|integer',
         ]);
 
+        if (empty($validated['code'])) {
+            $validated['code'] = $this->generateUniqueCode($validated['name']);
+        }
+
         $class = SchoolClass::create($validated);
 
         return response()->json($class, 201);
+    }
+
+    /**
+     * The class create/edit form has no Code input (code is an internal reference
+     * only shown in the list), so derive one from the name when not supplied.
+     */
+    private function generateUniqueCode(string $name): string
+    {
+        $base = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $name));
+        $base = $base !== '' ? substr($base, 0, 10) : 'CLASS';
+
+        $code = $base;
+        $suffix = 1;
+        while (SchoolClass::where('code', $code)->exists()) {
+            $code = $base.$suffix;
+            $suffix++;
+        }
+
+        return $code;
     }
 
     public function show($id)
@@ -44,13 +67,17 @@ class SchoolClassController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|unique:school_classes,name,' . $id,
-            'code' => 'required|string|unique:school_classes,code,' . $id,
+            'code' => 'nullable|string|unique:school_classes,code,' . $id,
             'level' => 'nullable|string',
             'capacity' => 'nullable|integer',
             'description' => 'nullable|string',
             'display_order' => 'nullable|integer',
             'is_active' => 'boolean',
         ]);
+
+        if (empty($validated['code'])) {
+            unset($validated['code']);
+        }
 
         $class->update($validated);
 
