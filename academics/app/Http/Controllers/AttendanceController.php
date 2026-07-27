@@ -270,7 +270,11 @@ class AttendanceController extends Controller
         foreach ($headerRow as $colIndex => $value) {
           if ($colIndex < 3 || $value === null || $value === '') continue;
           try {
-            $date = Carbon::createFromFormat('d/m/Y', trim((string) $value));
+            // createFromFormat() inherits the current time-of-day for any
+            // part not in the format string, so without startOfDay() a date
+            // equal to today's calendar date compares as "after" the
+            // midnight $cutoff below and gets wrongly excluded.
+            $date = Carbon::createFromFormat('d/m/Y', trim((string) $value))->startOfDay();
           } catch (\Throwable $e) {
             continue;
           }
