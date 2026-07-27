@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\EnsureCanEditHistory;
+use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\HeadmasterAuthMiddleware;
 use App\Http\Middleware\IdentifyTenant;
 use App\Http\Middleware\ParentAuthMiddleware;
@@ -41,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'can.edit.history' => EnsureCanEditHistory::class,
             'finance.portal' => \App\Http\Middleware\EnsureFinancePortalAccess::class,
             'portal.session' => \App\Http\Middleware\EnsurePortalSession::class,
+            'tenant.context' => EnsureTenantContext::class,
         ]);
 
         $middleware->appendToGroup('web', [
