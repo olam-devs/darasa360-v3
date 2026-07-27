@@ -23,6 +23,14 @@ Route::middleware(['auth', 'role:super_admin'])->prefix('super-admin')->name('su
         Route::get('/{id}', [SuperAdminController::class, 'viewSchool'])->name('view');
         Route::post('/{id}/assign-admin', [SuperAdminController::class, 'assignSystemAdmin'])->name('assign_admin');
         Route::put('/{id}/billing', [SuperAdminController::class, 'updateBilling'])->name('update_billing');
+
+        // Staff management per school
+        Route::get('/{id}/staff', [SuperAdminController::class, 'schoolStaff'])->name('staff');
+        Route::post('/{id}/staff', [SuperAdminController::class, 'createSchoolStaff'])->name('staff.create');
+        Route::put('/{id}/staff/{staffId}', [SuperAdminController::class, 'updateSchoolStaff'])->name('staff.update');
+        Route::delete('/{id}/staff/{staffId}', [SuperAdminController::class, 'deleteSchoolStaff'])->name('staff.delete');
+        Route::post('/{id}/staff/{staffId}/toggle', [SuperAdminController::class, 'toggleSchoolStaffStatus'])->name('staff.toggle');
+        Route::post('/{id}/staff/{staffId}/reset-password', [SuperAdminController::class, 'resetSchoolStaffPassword'])->name('staff.reset_password');
     });
 
     // System Admins Management
