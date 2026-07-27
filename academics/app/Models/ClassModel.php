@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ClassModel extends Model
 {
+  protected $connection = 'tenant';
+
   protected $table = 'classes'; // important if your model isn't named `Class`
 
   public function teachers(): BelongsToMany
