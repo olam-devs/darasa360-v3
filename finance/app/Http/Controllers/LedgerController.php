@@ -232,7 +232,7 @@ class LedgerController extends Controller
                 'to' => $paginatedStudents->lastItem(),
             ],
             'summary' => [
-                'opening_balance' => $dateFrom ? $totalOpeningBalance : null,
+                'opening_balance' => $dateFrom ? $totalOpeningBalance : 0,
                 'total_sales' => $totalSales,
                 'total_receipts' => $totalReceipts,
                 'total_balance' => $totalBalance,
