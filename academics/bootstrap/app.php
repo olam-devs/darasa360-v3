@@ -35,6 +35,22 @@ return Application::configure(basePath: dirname(__DIR__))
       'role'        => \App\Http\Middleware\RoleMiddleware::class,
       'tenant.role' => \App\Http\Middleware\TenantRoleMiddleware::class,
     ]);
+
+    // SubstituteBindings (implicit route-model binding) sits at the end of
+    // Laravel's default 'web' group, and InitializeTenantDatabase was only
+    // appended after it with no explicit priority - so any route with a
+    // bound tenant-connected model (e.g. AssignmentController::update()'s
+    // `Assignment $assignment`, reachable from headmaster/owner/teacher
+    // routes) resolved the model BEFORE the tenant DB was switched, using
+    // whatever the 'tenant' connection defaults to instead of the real
+    // school's database. Writes could still land on the right row only by
+    // coincidence (Eloquent re-resolves the connection at save time, after
+    // this middleware runs) - same bug class found and fixed in Finance's
+    // bootstrap/app.php on 2026-07-28. Force tenant switching to run first.
+    $middleware->prependToPriorityList(
+      before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+      prepend: \App\Http\Middleware\InitializeTenantDatabase::class,
+    );
   })
   ->withExceptions(function (Exceptions $exceptions) {
     //
