@@ -41,6 +41,12 @@
         @if(!empty($readOnly))
         <p class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">Read-only view — contact the accountant to make changes.</p>
         @endif
+        @if(session('success'))
+        <p class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-900">{{ session('success') }}</p>
+        @endif
+        @if(session('error'))
+        <p class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-900">{{ session('error') }}</p>
+        @endif
         @yield('content')
     </main>
     @stack('scripts')
