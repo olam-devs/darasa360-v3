@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Headmaster;
 use App\Services\ActivityLogger;
+use App\Traits\HasSchoolContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class HeadmasterManagementController extends Controller
 {
+    use HasSchoolContext;
+
     protected ActivityLogger $activityLogger;
 
     public function __construct(ActivityLogger $activityLogger)
@@ -16,14 +19,6 @@ class HeadmasterManagementController extends Controller
         $this->activityLogger = $activityLogger;
     }
 
-    /**
-     * Get the current school ID from the tenant context.
-     */
-    protected function getSchoolId(): ?int
-    {
-        $school = app('current_school', null);
-        return $school ? $school->id : null;
-    }
     /**
      * Display headmaster management page.
      */

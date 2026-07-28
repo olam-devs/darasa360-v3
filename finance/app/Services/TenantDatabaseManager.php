@@ -97,7 +97,15 @@ class TenantDatabaseManager
      */
     public function getCurrentSchool(): ?School
     {
-        return static::$currentSchool ?? app('current_school', null);
+        if (static::$currentSchool) {
+            return static::$currentSchool;
+        }
+
+        try {
+            return app('current_school');
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     /**

@@ -20,14 +20,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('/handoff/consume', [HandoffController::class, 'consumeFromAcademics'])->name('handoff.consume');
 
 // Headmaster Authentication
-Route::prefix('headmaster')->name('headmaster.')->group(function () {
+Route::prefix('headmaster')->name('headmaster.')->middleware(['headmaster.tenant.context'])->group(function () {
     Route::get('/login', [HeadmasterAuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [HeadmasterAuthController::class, 'login'])->name('login.post');
     Route::post('/logout', [HeadmasterAuthController::class, 'logout'])->name('logout');
 });
 
 // Headmaster Protected Routes
-Route::prefix('headmaster')->name('headmaster.')->middleware(['headmaster.auth'])->group(function () {
+Route::prefix('headmaster')->name('headmaster.')->middleware(['headmaster.tenant.context', 'headmaster.auth'])->group(function () {
     Route::get('/dashboard', [HeadmasterController::class, 'dashboard'])->name('dashboard');
     Route::get('/ledgers', [HeadmasterController::class, 'ledgers'])->name('ledgers');
     Route::get('/particular-ledger', [HeadmasterController::class, 'particularLedger'])->name('particular-ledger');

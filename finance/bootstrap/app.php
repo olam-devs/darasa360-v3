@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\EnsureCanEditHistory;
+use App\Http\Middleware\EnsureHeadmasterTenantContext;
 use App\Http\Middleware\EnsureParentPortalTenantContext;
 use App\Http\Middleware\EnsureTenantContext;
 use App\Http\Middleware\HeadmasterAuthMiddleware;
@@ -45,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'portal.session' => \App\Http\Middleware\EnsurePortalSession::class,
             'tenant.context' => EnsureTenantContext::class,
             'parent.tenant.context' => EnsureParentPortalTenantContext::class,
+            'headmaster.tenant.context' => EnsureHeadmasterTenantContext::class,
         ]);
 
         $middleware->appendToGroup('web', [

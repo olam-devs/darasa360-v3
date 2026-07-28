@@ -28,7 +28,11 @@ class SmsController extends Controller
      */
     protected function getCurrentSchool(): ?School
     {
-        return app('current_school', null);
+        try {
+            return app('current_school');
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 
     /**
