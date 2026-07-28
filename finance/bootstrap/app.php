@@ -52,6 +52,29 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', [
             RedirectLocalhostTo127::class,
         ]);
+
+        // Route-model binding (SubstituteBindings) is the LAST middleware in
+        // Laravel's default 'web' group, so without this it resolves
+        // {student}/{headmaster}/{class}/etc. route params BEFORE our
+        // tenant-switching middleware ever runs - silently reading from
+        // whichever database the 'tenant' connection defaults to (this
+        // environment's central DB) instead of the actual school's tenant
+        // DB. Writes still landed correctly (Eloquent re-resolves the
+        // connection at save time, after switching), which is what made
+        // this go unnoticed - but any route using implicit model binding
+        // was reading stale/wrong data. Force our middleware to run first.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: EnsureTenantContext::class,
+        );
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: EnsureParentPortalTenantContext::class,
+        );
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: EnsureHeadmasterTenantContext::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
