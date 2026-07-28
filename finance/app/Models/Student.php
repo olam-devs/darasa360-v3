@@ -30,6 +30,9 @@ class Student extends BaseModel
         'admission_date',
         'status',
         'advance_balance',
+        'portal_password',
+        'portal_password_set_at',
+        'portal_password_set_by',
     ];
 
     protected $casts = [
