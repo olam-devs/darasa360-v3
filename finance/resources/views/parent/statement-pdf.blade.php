@@ -175,13 +175,20 @@
             <tbody>
                 @php $runningBalance = 0; @endphp
                 @foreach($transactions as $transaction)
-                    @php $runningBalance += $transaction->debit - $transaction->credit; @endphp
+                    @php
+                        // Canonical voucher storage keeps every amount in
+                        // `debit` (Sales AND Receipt alike) - use the mapped
+                        // display amounts, or every payment inflates the
+                        // balance instead of reducing it.
+                        $txnAmounts = $transaction->displayAmounts();
+                        $runningBalance += $txnAmounts['debit'] - $txnAmounts['credit'];
+                    @endphp
                     <tr>
                         <td>{{ date('d/m/Y', strtotime($transaction->date)) }}</td>
                         <td>{{ $transaction->voucher_number ?? '-' }}</td>
                         <td>{{ $transaction->particular->name ?? 'General' }}</td>
-                        <td class="amount debit">{{ $transaction->debit > 0 ? 'TSh ' . number_format($transaction->debit, 2) : '-' }}</td>
-                        <td class="amount credit">{{ $transaction->credit > 0 ? 'TSh ' . number_format($transaction->credit, 2) : '-' }}</td>
+                        <td class="amount debit">{{ $txnAmounts['debit'] > 0 ? 'TSh ' . number_format($txnAmounts['debit'], 2) : '-' }}</td>
+                        <td class="amount credit">{{ $txnAmounts['credit'] > 0 ? 'TSh ' . number_format($txnAmounts['credit'], 2) : '-' }}</td>
                         <td class="amount">TSh {{ number_format($runningBalance, 2) }}</td>
                     </tr>
                 @endforeach

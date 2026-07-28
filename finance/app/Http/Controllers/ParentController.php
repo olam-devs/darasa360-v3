@@ -39,13 +39,18 @@ class ParentController extends Controller
         $school = SchoolSetting::getSettings();
         $currentAcademicYear = AcademicYear::current();
 
-        // Calculate Totals
-        $totalFees = DB::table('particular_student')
+        // Calculate Totals. Read "paid" from the particular_student pivot's
+        // credit column (kept in sync by VoucherController::store()), not
+        // Voucher::credit directly - canonical voucher storage keeps every
+        // voucher's amount in `debit`, Receipts included, so a raw
+        // sum('credit') on vouchers is always 0 for normal payments.
+        $totals = DB::table('particular_student')
             ->where('student_id', $student->id)
-            ->sum('sales'); // Total Expected
+            ->selectRaw('SUM(sales) as total_fees, SUM(credit) as total_paid')
+            ->first();
 
-        $totalPaid = Voucher::where('student_id', $student->id)
-            ->sum('credit'); // Total Paid (Receipts)
+        $totalFees = (float) ($totals->total_fees ?? 0);
+        $totalPaid = (float) ($totals->total_paid ?? 0);
 
         $balance = $totalFees - $totalPaid;
 
@@ -231,18 +236,25 @@ class ParentController extends Controller
             ];
         }
 
-        // Get recent payments as confirmations
+        // Get recent payments as confirmations. Receipts store their amount
+        // in `debit` (canonical storage), not `credit` - filter by voucher
+        // type and read the displayed amount, not the raw column.
         $recentPayments = Voucher::where('student_id', $student->id)
-            ->where('credit', '>', 0)
+            ->whereIn('voucher_type', ['Receipt', 'Payment'])
             ->orderBy('date', 'desc')
             ->take(10)
             ->get();
 
         foreach ($recentPayments as $payment) {
+            $amount = $payment->displayAmounts()['credit'];
+            if ($amount <= 0) {
+                continue;
+            }
+
             $notifications[] = [
                 'type' => 'payment',
                 'title' => 'Payment Received',
-                'message' => "Payment of TSh " . number_format($payment->credit) . " received for " . ($payment->particular->name ?? 'fees'),
+                'message' => "Payment of TSh " . number_format($amount) . " received for " . ($payment->particular->name ?? 'fees'),
                 'date' => $payment->date,
                 'icon' => 'check-circle',
                 'color' => 'green'

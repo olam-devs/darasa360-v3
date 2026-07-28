@@ -99,13 +99,21 @@
             
             <div class="space-y-6 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
                 @forelse($recentTransactions as $transaction)
+                    @php
+                        // Canonical voucher storage keeps every amount in
+                        // `debit` (Sales AND Receipt alike) - use the mapped
+                        // display amounts, not the raw columns, or every
+                        // payment looks like an unpaid invoice.
+                        $displayAmounts = $transaction->displayAmounts();
+                        $isPayment = $displayAmounts['credit'] > 0;
+                    @endphp
                     <div class="relative pl-10">
-                        <div class="absolute left-1.5 top-1.5 w-5 h-5 rounded-full border-4 border-white shadow-sm {{ $transaction->credit > 0 ? 'bg-green-500' : 'bg-red-500' }}"></div>
+                        <div class="absolute left-1.5 top-1.5 w-5 h-5 rounded-full border-4 border-white shadow-sm {{ $isPayment ? 'bg-green-500' : 'bg-red-500' }}"></div>
                         <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition">
                             <div class="flex justify-between items-start mb-1">
                                 <h4 class="font-semibold text-gray-800">
-                                    <span data-translate="{{ $transaction->credit > 0 ? 'payment-received' : 'invoice-generated' }}">
-                                        {{ $transaction->credit > 0 ? 'Payment Received' : 'Invoice Generated' }}
+                                    <span data-translate="{{ $isPayment ? 'payment-received' : 'invoice-generated' }}">
+                                        {{ $isPayment ? 'Payment Received' : 'Invoice Generated' }}
                                     </span>
                                 </h4>
                                 <span class="text-xs font-medium text-gray-500">
@@ -119,11 +127,11 @@
                                         <span class="text-xs text-gray-400 block">Ref: {{ $transaction->ref_no }}</span>
                                     @endif
                                 </p>
-                                <span class="font-bold {{ $transaction->credit > 0 ? 'text-green-600' : 'text-gray-800' }}">
-                                    @if($transaction->credit > 0)
-                                        + TSh {{ number_format($transaction->credit) }}
+                                <span class="font-bold {{ $isPayment ? 'text-green-600' : 'text-gray-800' }}">
+                                    @if($isPayment)
+                                        + TSh {{ number_format($displayAmounts['credit']) }}
                                     @else
-                                        TSh {{ number_format($transaction->debit) }}
+                                        TSh {{ number_format($displayAmounts['debit']) }}
                                     @endif
                                 </span>
                             </div>

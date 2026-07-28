@@ -444,23 +444,13 @@ class LedgerController extends Controller
 
     /**
      * Debit/credit shown on accounts-receivable-style ledgers (student, class, particular).
-     * Canonical voucher storage keeps every voucher's amount in `debit` — Sales AND Receipt
-     * alike (see VoucherController::store()) — so a Receipt must be flipped to `credit` here,
-     * otherwise a payment would add to the student's outstanding balance instead of reducing it.
-     * Fee assignments (Sales) stay DR; Receipts/Payments become CR so balance = fees billed − receipts.
+     * Delegates to Voucher::displayAmounts() — the same mapping is also needed
+     * outside this controller (e.g. the parent portal), so it lives on the model.
      * Used by studentLedger/classLedger/particularLedger and their PDF/CSV exports.
      */
     private function ledgerDisplayAmounts(Voucher $voucher): array
     {
-        return match ($voucher->voucher_type) {
-            'Sales' => ['debit' => (float) $voucher->debit, 'credit' => 0.0],
-            'Receipt' => ['debit' => 0.0, 'credit' => (float) $voucher->debit],
-            'Payment' => [
-                'debit' => 0.0,
-                'credit' => (float) ($voucher->credit > 0 ? $voucher->credit : $voucher->debit),
-            ],
-            default => ['debit' => (float) $voucher->debit, 'credit' => (float) $voucher->credit],
-        };
+        return $voucher->displayAmounts();
     }
 
     /**

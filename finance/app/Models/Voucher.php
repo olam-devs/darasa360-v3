@@ -45,6 +45,28 @@ class Voucher extends BaseModel
         return ! is_null($this->voided_at);
     }
 
+    /**
+     * Debit/credit shown on accounts-receivable-style views (student ledgers,
+     * the parent portal, ...). Canonical storage keeps every voucher's amount
+     * in `debit` - Sales AND Receipt alike (see VoucherController::store()) -
+     * so a Receipt must be flipped to `credit` here, otherwise a payment would
+     * add to the student's balance / never show up as "paid" instead of
+     * reducing/crediting it. Mirrors LedgerController::ledgerDisplayAmounts(),
+     * which delegates here.
+     */
+    public function displayAmounts(): array
+    {
+        return match ($this->voucher_type) {
+            'Sales' => ['debit' => (float) $this->debit, 'credit' => 0.0],
+            'Receipt' => ['debit' => 0.0, 'credit' => (float) $this->debit],
+            'Payment' => [
+                'debit' => 0.0,
+                'credit' => (float) ($this->credit > 0 ? $this->credit : $this->debit),
+            ],
+            default => ['debit' => (float) $this->debit, 'credit' => (float) $this->credit],
+        };
+    }
+
     // Relationships
     public function student()
     {

@@ -76,6 +76,7 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @foreach($transactions as $txn)
+                        @php $txnAmounts = $txn->displayAmounts(); @endphp
                         <tr class="hover:bg-gray-50 transition">
                             <td class="px-6 py-4 text-sm text-gray-600">
                                 {{ \Carbon\Carbon::parse($txn->date)->format('d M Y') }}
@@ -90,15 +91,15 @@
                                 {{ $txn->book->name ?? '-' }}
                             </td>
                             <td class="px-6 py-4 text-right text-sm text-gray-600">
-                                @if($txn->debit > 0)
-                                    {{ number_format($txn->debit) }}
+                                @if($txnAmounts['debit'] > 0)
+                                    {{ number_format($txnAmounts['debit']) }}
                                 @else
                                     -
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-right text-sm text-green-600 font-medium">
-                                @if($txn->credit > 0)
-                                    {{ number_format($txn->credit) }}
+                                @if($txnAmounts['credit'] > 0)
+                                    {{ number_format($txnAmounts['credit']) }}
                                 @else
                                     -
                                 @endif
