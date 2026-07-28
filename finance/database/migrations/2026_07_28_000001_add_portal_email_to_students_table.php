@@ -17,7 +17,12 @@ return new class extends Migration
     {
         if (Schema::hasTable('students') && ! Schema::hasColumn('students', 'portal_email')) {
             Schema::table('students', function (Blueprint $table) {
-                $table->string('portal_email')->nullable()->unique()->after('student_reg_no');
+                // 191, not 255: this host's default_storage_engine is MyISAM
+                // (max key length 1000 bytes) and utf8mb4 uses up to 4 bytes/char,
+                // so a unique index on varchar(255) always exceeds it (255*4=1020).
+                // 191 is the same length Laravel itself historically defaulted
+                // string columns to for exactly this reason (191*4=764).
+                $table->string('portal_email', 191)->nullable()->unique()->after('student_reg_no');
             });
         }
     }
