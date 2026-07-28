@@ -178,7 +178,7 @@
                 </div>
               </td>
               <td class="text-center">
-                <small class="text-muted">{{ $reportCard->student->registration_number ?? 'N/A' }}</small>
+                <small class="text-muted">{{ $reportCard->student->registration_no ?? 'N/A' }}</small>
               </td>
               <td class="text-center">
                 <strong>{{ number_format($reportCard->total_marks, 1) }}</strong>

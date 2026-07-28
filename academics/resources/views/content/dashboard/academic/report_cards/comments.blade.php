@@ -32,7 +32,7 @@
           </div>
           <div>
             <h5 class="mb-0">{{ $student->first_name ?? '' }} {{ $student->last_name ?? '' }}</h5>
-            <small class="text-muted">Reg. No: {{ $student->registration_number ?? 'N/A' }}</small>
+            <small class="text-muted">Reg. No: {{ $student->registration_no ?? 'N/A' }}</small>
           </div>
         </div>
         <a href="{{ route('report-cards.show', $configuration->id) }}" class="btn btn-sm btn-secondary">
