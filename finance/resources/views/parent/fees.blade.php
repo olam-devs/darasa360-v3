@@ -10,7 +10,7 @@
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
             <h3 class="font-bold text-gray-800" data-translate="fee-structure">Fee Structure Breakdown</h3>
-            <span class="text-xs font-medium bg-white px-3 py-1 rounded-full border border-gray-200 text-gray-500" data-translate="academic-year">Academic Year 2024</span>
+            <span class="text-xs font-medium bg-white px-3 py-1 rounded-full border border-gray-200 text-gray-500">Academic Year {{ $currentAcademicYear->name ?? 'All Fees' }}</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left">

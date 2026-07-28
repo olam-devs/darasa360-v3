@@ -68,6 +68,7 @@ class ParentController extends Controller
     {
         $student = $this->getStudent();
         $school = SchoolSetting::getSettings();
+        $currentAcademicYear = AcademicYear::current();
 
         // Get all academic years ordered by start_date (oldest first)
         $academicYears = AcademicYear::orderBy('start_date', 'asc')->get();
@@ -96,7 +97,7 @@ class ParentController extends Controller
             ->orderBy('date', 'desc')
             ->paginate(20);
 
-        return view('parent.fees', compact('student', 'school', 'feeBreakdown', 'feesByYear', 'transactions', 'academicYears'));
+        return view('parent.fees', compact('student', 'school', 'feeBreakdown', 'feesByYear', 'transactions', 'academicYears', 'currentAcademicYear'));
     }
 
     public function invoices()
