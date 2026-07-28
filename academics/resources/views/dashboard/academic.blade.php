@@ -270,7 +270,7 @@
               <option value="">All Students</option>
               @foreach(\App\Models\Student::with('user')->orderBy('id')->get() as $std)
                 <option value="{{ $std->id }}" {{ request('student_filter') == $std->id ? 'selected' : '' }}>
-                  {{ $std->user->username ?? 'N/A' }} ({{ $std->classModel->name ?? 'N/A' }})
+                  {{ $std->user->username ?? 'N/A' }} ({{ $std->class->name ?? 'N/A' }})
                 </option>
               @endforeach
             </select>
@@ -336,7 +336,7 @@
           <div class="row mb-4">
             <div class="col-md-6">
               <h6><strong>Student:</strong> {{ $student->user->username ?? 'N/A' }}</h6>
-              <p class="text-muted mb-1"><strong>Class:</strong> {{ $student->classModel->name ?? 'N/A' }}</p>
+              <p class="text-muted mb-1"><strong>Class:</strong> {{ $student->class->name ?? 'N/A' }}</p>
               <p class="text-muted"><strong>Registration No:</strong> {{ $student->user->registration_no ?? 'N/A' }}</p>
             </div>
             <div class="col-md-6 text-end">

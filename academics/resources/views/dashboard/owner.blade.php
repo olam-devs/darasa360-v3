@@ -272,7 +272,7 @@
           try {
             $classDistribution = \App\Models\Student::select('class_id', \DB::raw('count(*) as count'))
               ->groupBy('class_id')
-              ->with('classModel')
+              ->with('class')
               ->orderBy('count', 'desc')
               ->get();
           } catch (\Exception $e) {
@@ -285,7 +285,7 @@
               <tbody>
                 @foreach($classDistribution as $dist)
                 <tr>
-                  <td>{{ $dist->classModel->name ?? 'N/A' }}</td>
+                  <td>{{ $dist->class->name ?? 'N/A' }}</td>
                   <td class="text-end">
                     <strong>{{ $dist->count }}</strong> students
                   </td>
