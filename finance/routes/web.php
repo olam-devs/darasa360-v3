@@ -434,7 +434,7 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
 });
 
 // Parent Portal Routes (using custom session-based auth) - OUTSIDE main auth middleware
-Route::prefix('parent')->name('parent.')->middleware('parent.auth')->group(function () {
+Route::prefix('parent')->name('parent.')->middleware(['parent.auth', 'parent.tenant.context'])->group(function () {
     Route::get('/dashboard', [ParentController::class, 'dashboard'])->name('dashboard');
     Route::get('/fees', [ParentController::class, 'fees'])->name('fees');
     Route::get('/invoices', [ParentController::class, 'invoices'])->name('invoices');

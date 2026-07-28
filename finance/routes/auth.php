@@ -60,11 +60,11 @@ Route::middleware('auth')->group(function () {
 });
 
 // Parent Portal Authentication Routes
-Route::prefix('parent')->name('parent.')->group(function () {
+Route::prefix('parent')->name('parent.')->middleware('parent.tenant.context')->group(function () {
     Route::middleware('guest')->group(function () {
         Route::get('login', [ParentAuthController::class, 'showLogin'])->name('login');
         Route::post('login', [ParentAuthController::class, 'login']);
     });
-    
+
     Route::post('logout', [ParentAuthController::class, 'logout'])->name('logout');
 });
