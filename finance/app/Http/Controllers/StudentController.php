@@ -68,9 +68,71 @@ class StudentController extends Controller
         $class = SchoolClass::find($validated['class_id']);
         $validated['class'] = $class->name;
 
+        $validated['portal_email'] = $this->generatePortalEmail($validated['name']);
+
         $student = Student::create($validated);
 
         return response()->json($student, 201);
+    }
+
+    /**
+     * Build a unique parent-portal login identifier for a student:
+     * {firstname}[N]@{school's configured domain}.com — first Jackson gets
+     * "jackson@...", a second "jackson1@...", and so on. Deliberately
+     * independent of student_reg_no (which an accountant can set to
+     * anything) so a parent can't use it to guess at another student's
+     * reg number. Returns null if the school hasn't set a domain yet —
+     * see regeneratePortalEmail() for backfilling those later.
+     */
+    private function generatePortalEmail(string $fullName): ?string
+    {
+        $domain = SchoolSetting::getSettings()->parent_portal_email_domain;
+        if (! $domain) {
+            return null;
+        }
+
+        $domain = strtolower(preg_replace('/[^a-z0-9-]/i', '', $domain));
+        if ($domain === '') {
+            return null;
+        }
+
+        $firstName = strtolower(trim(explode(' ', trim($fullName))[0] ?? ''));
+        $base = preg_replace('/[^a-z0-9]/', '', $firstName);
+        if ($base === '') {
+            $base = 'student';
+        }
+
+        $suffix = 0;
+        do {
+            $candidate = $suffix === 0 ? $base : $base.$suffix;
+            $email = "{$candidate}@{$domain}.com";
+            $suffix++;
+        } while (Student::where('portal_email', $email)->exists());
+
+        return $email;
+    }
+
+    /**
+     * Backfill a portal_email for a student who doesn't have one yet
+     * (created before the school set its domain, or before this feature
+     * existed). Never overwrites an existing one.
+     */
+    public function regeneratePortalEmail($studentId)
+    {
+        $student = Student::findOrFail($studentId);
+
+        if ($student->portal_email) {
+            return response()->json(['success' => false, 'message' => 'Portal email already set.'], 422);
+        }
+
+        $email = $this->generatePortalEmail($student->name);
+        if (! $email) {
+            return response()->json(['success' => false, 'message' => 'Set a Parent Portal Email Domain in Settings first.'], 422);
+        }
+
+        $student->update(['portal_email' => $email]);
+
+        return response()->json(['success' => true, 'portal_email' => $email]);
     }
 
     public function show($id)
@@ -242,9 +304,15 @@ class StudentController extends Controller
                     ]
                 );
 
-                // Auto-create parent portal access
-                // Parent can login using student registration number only
-                // No separate account needed - session-based authentication
+                // Auto-create parent portal access: generate this student's
+                // portal_email if they don't already have one (a re-imported
+                // existing student keeps theirs).
+                if (! $student->portal_email) {
+                    $email = $this->generatePortalEmail($student->name);
+                    if ($email) {
+                        $student->update(['portal_email' => $email]);
+                    }
+                }
                 $parentAccountsCreated++;
 
                 $imported++;
@@ -469,7 +537,7 @@ class StudentController extends Controller
         $q = trim($request->input('q', ''));
         $classId = $request->input('class_id');
 
-        $query = Student::select('id', 'name', 'student_reg_no', 'class_id', 'portal_password', 'portal_password_set_at', 'portal_password_set_by')
+        $query = Student::select('id', 'name', 'student_reg_no', 'portal_email', 'class_id', 'portal_password', 'portal_password_set_at', 'portal_password_set_by')
             ->with('schoolClass:id,name');
 
         if ($q !== '') {
@@ -487,6 +555,7 @@ class StudentController extends Controller
             'id'           => $s->id,
             'name'         => $s->name,
             'reg_no'       => $s->student_reg_no,
+            'portal_email' => $s->portal_email,
             'class'        => $s->schoolClass?->name ?? '—',
             'has_password' => !empty($s->portal_password),
             'set_at'       => $s->portal_password_set_at?->diffForHumans(),

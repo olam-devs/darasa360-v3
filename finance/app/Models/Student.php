@@ -17,6 +17,7 @@ class Student extends BaseModel
 
     protected $fillable = [
         'student_reg_no',
+        'portal_email',
         'name',
         'gender',
         'class_id',

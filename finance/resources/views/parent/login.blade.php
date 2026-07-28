@@ -123,10 +123,10 @@
                 @csrf
                 <input type="hidden" name="language" id="selected-lang" value="en">
                 <div class="field">
-                    <label id="lbl-regno">Student Registration Number</label>
-                    <input id="inp-regno" name="student_reg_no" type="text" required
-                        value="{{ old('student_reg_no') }}" placeholder="e.g. STD/2024/001" class="inp">
-                    <p class="help-text" id="help-text">Enter the student's registration number provided by the school</p>
+                    <label id="lbl-regno">Portal Login Email</label>
+                    <input id="inp-regno" name="portal_email" type="text" required
+                        value="{{ old('portal_email') }}" placeholder="e.g. jackson@school.com" class="inp">
+                    <p class="help-text" id="help-text">Enter the login email provided by the school</p>
                 </div>
                 <div class="field">
                     <label id="lbl-pwd">Portal Password</label>
@@ -160,16 +160,16 @@
 <script>
 const T = {
     en: { title:'Parent Portal', sub:"Access your child's academic and financial records",
-          lbl:'Student Registration Number', help:'Enter the student\'s registration number provided by the school',
+          lbl:'Portal Login Email', help:'Enter the login email provided by the school',
           lblPwd:'Portal Password', helpPwd:'Password is provided by the school accountant',
           btn:'Sign In to Portal', contact:'Need help? Contact school administration',
-          ph:'e.g. STD/2024/001', heroDesc:'Access fee statements, invoices, and school communications in one place.',
+          ph:'e.g. jackson@school.com', heroDesc:'Access fee statements, invoices, and school communications in one place.',
           f1:'Fee statements &amp; balances', f2:'Invoices &amp; payment history', f3:'School messages', f4:'Notifications &amp; alerts' },
     sw: { title:'Mlango wa Wazazi', sub:'Pata taarifa za elimu na fedha za mwanao kwa urahisi',
-          lbl:'Nambari ya Usajili wa Mwanafunzi', help:'Weka nambari ya usajili iliyotolewa na shule',
+          lbl:'Barua Pepe ya Mlango', help:'Weka barua pepe ya kuingia iliyotolewa na shule',
           lblPwd:'Nywila ya Mlango', helpPwd:'Nywila hutolewa na mhasibu wa shule',
           btn:'Ingia kwenye Mlango', contact:'Unahitaji msaada? Wasiliana na shule',
-          ph:'mfano: STD/2024/001', heroDesc:'Pata taarifa za ada, ankara, na mawasiliano ya shule mahali pamoja.',
+          ph:'mfano: jackson@shule.com', heroDesc:'Pata taarifa za ada, ankara, na mawasiliano ya shule mahali pamoja.',
           f1:'Taarifa za ada &amp; salio', f2:'Ankara &amp; historia ya malipo', f3:'Ujumbe wa shule', f4:'Arifa &amp; tahadhari' },
 };
 function switchLang(lang) {

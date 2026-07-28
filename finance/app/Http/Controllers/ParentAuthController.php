@@ -34,14 +34,14 @@ class ParentAuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'student_reg_no' => 'required|string',
+            'portal_email' => 'required|string',
             'portal_password' => 'required|string',
         ]);
 
-        $student = Student::where('student_reg_no', trim($request->student_reg_no))->first();
+        $student = Student::where('portal_email', trim(strtolower($request->portal_email)))->first();
 
         if (!$student) {
-            return back()->withInput()->with('error', 'Student registration number not found. Please check and try again.');
+            return back()->withInput()->with('error', 'Portal login not found. Please check and try again, or contact the school office.');
         }
 
         // If no portal password has been set yet, block access and prompt admin

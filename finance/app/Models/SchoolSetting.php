@@ -22,6 +22,7 @@ class SchoolSetting extends BaseModel
         'phone',
         'office_whatsapp_number',
         'parent_messenger_pin',
+        'parent_portal_email_domain',
         'email',
         'logo_path',
         'show_logo_on_pdfs',

@@ -5,7 +5,7 @@
 <style>
     .pwd-badge-set   { background:#dcfce7; color:#166534; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600; }
     .pwd-badge-unset { background:#fef3c7; color:#92400e; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600; }
-    .student-row { display:grid; grid-template-columns:2fr 1fr 1fr 1fr auto; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid #f1f5f9; font-size:13px; }
+    .student-row { display:grid; grid-template-columns:1.6fr 1.6fr 0.8fr 1fr 1fr auto; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid #f1f5f9; font-size:13px; }
     .student-row:hover { background:#f8fafc; }
     .student-row:last-child { border-bottom:none; }
     .btn-sm { padding:5px 12px; border-radius:7px; font-size:12px; font-weight:600; border:none; cursor:pointer; transition:all .15s; }
@@ -93,6 +93,7 @@
         <!-- Column headers -->
         <div class="student-row text-xs font-semibold text-slate-400 uppercase tracking-wider bg-slate-50" style="padding:8px 16px;">
             <span>Student</span>
+            <span>Portal Login Email</span>
             <span>Reg No.</span>
             <span>Class</span>
             <span>Status</span>
@@ -165,6 +166,11 @@ function renderStudents(students) {
             <div>
                 <div class="font-medium text-slate-800">${s.name}</div>
             </div>
+            <div>
+                ${s.portal_email
+                    ? `<span class="font-mono text-slate-700">${s.portal_email}</span>`
+                    : `<button class="btn-sm btn-blue" onclick="generatePortalEmail(${s.id})" id="gen-btn-${s.id}"><i class="fas fa-magic mr-1"></i>Generate</button>`}
+            </div>
             <div class="text-slate-500">${s.reg_no}</div>
             <div class="text-slate-500">${s.class}</div>
             <div>
@@ -211,6 +217,20 @@ function savePassword() {
     }).catch(e => {
         showToast(e.response?.data?.message || 'Failed to set password', 'error');
     }).finally(() => { btn.disabled = false; btn.textContent = 'Set Password'; });
+}
+
+function generatePortalEmail(studentId) {
+    const btn = document.getElementById(`gen-btn-${studentId}`);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Generating...'; }
+    axios.post(`{{ url('/accountant/api/students') }}/${studentId}/portal-email/generate`, {}, {
+        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+    }).then(r => {
+        showToast('Portal email generated', 'success');
+        doSearch();
+    }).catch(e => {
+        showToast(e.response?.data?.message || 'Could not generate portal email', 'error');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic mr-1"></i>Generate'; }
+    });
 }
 
 function doBulkPassword() {

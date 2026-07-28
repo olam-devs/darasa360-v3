@@ -71,50 +71,18 @@ class HandoffController extends Controller
         return redirect()->away($url);
     }
 
-    /**
-     * Parent portal: parent clicks "View Academics".
-     */
-    public function issueParentFromFinance(Request $request)
-    {
-        $school = $this->getCurrentSchool();
-        $platformSchool = $school?->platform_school_id
-            ? PlatformSchool::find($school->platform_school_id)
-            : null;
-
-        if (!$platformSchool) {
-            return back()->with('error', 'Platform not configured.');
-        }
-
-        // Parent session carries student_reg_no
-        $studentRegNo = session('student_reg_no');
-        if (!$studentRegNo) {
-            return back()->with('error', 'Parent session missing.');
-        }
-
-        if (!$this->handoff->canJump('parent', $studentRegNo, $platformSchool)) {
-            return back()->with('error', 'Cross-system access is not enabled for parents at this school.');
-        }
-
-        $token = $this->handoff->issueToken(
-            $platformSchool->id,
-            $studentRegNo,
-            'parent',
-            'finance',
-            'academics',
-            ['student_name' => session('student_name')]
-        );
-
-        $url = $this->handoff->consumeUrl('academics', $token);
-        return redirect()->away($url);
-    }
-
     // -------------------------------------------------------------------------
     // CONSUME — Finance receives users coming from Academics
     // -------------------------------------------------------------------------
 
     /**
-     * Academics sends a headmaster/owner/parent here. We validate the token
+     * Academics sends a headmaster/owner here. We validate the token
      * and establish a Finance session without re-login.
+     *
+     * Parents are not part of this handoff: Academics has no parent
+     * account concept at all, and Finance's own parent portal now logs
+     * parents in directly with their own portal_email + password rather
+     * than via any cross-system token.
      */
     public function consumeFromAcademics(Request $request)
     {
@@ -136,25 +104,6 @@ class HandoffController extends Controller
         // Set tenant context
         session(['current_school_slug' => $financeSchool->slug]);
 
-        if ($record->role === 'parent') {
-            // Establish parent session
-            $regNo = $record->user_ref;
-            $student = \App\Models\Student::where('student_reg_no', $regNo)->first();
-            if (!$student) {
-                return redirect()->route('parent.login')
-                    ->with('error', 'Student not found.');
-            }
-            session([
-                'student_id'       => $student->id,
-                'student_reg_no'   => $student->student_reg_no,
-                'student_name'     => $student->name,
-                'handoff_from'     => 'academics',
-            ]);
-            return redirect()->route('parent.dashboard')
-                ->with('success', 'Welcome — you arrived from Academics.');
-        }
-
-        // headmaster / owner
         $headmaster = Headmaster::where('registration_number', $record->user_ref)
             ->where('is_active', true)
             ->first();

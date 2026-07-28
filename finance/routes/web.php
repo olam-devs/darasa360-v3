@@ -178,6 +178,7 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::get('api/students/portal-password/search', [StudentController::class, 'searchStudentsForPassword'])->name('api.students.portal-password.search');
         Route::post('api/students/portal-password/bulk', [StudentController::class, 'bulkSetPortalPassword'])->name('api.students.portal-password.bulk');
         Route::post('api/students/{studentId}/portal-password', [StudentController::class, 'setPortalPassword'])->name('api.students.portal-password.set');
+        Route::post('api/students/{studentId}/portal-email/generate', [StudentController::class, 'regeneratePortalEmail'])->name('api.students.portal-email.generate');
     });
 
     Route::middleware(['finance.portal'])->group(function () {
@@ -442,7 +443,6 @@ Route::prefix('parent')->name('parent.')->middleware('parent.auth')->group(funct
     Route::get('/notifications', [ParentController::class, 'notifications'])->name('notifications');
     Route::get('/download-statement', [ParentController::class, 'downloadStatement'])->name('download-statement');
     Route::post('/change-language', [ParentController::class, 'changeLanguage'])->name('change-language');
-    Route::post('/jump-to-academics', [\App\Http\Controllers\HandoffController::class, 'issueParentFromFinance'])->name('jump-to-academics');
 });
 
 require __DIR__.'/auth.php';

@@ -80,6 +80,14 @@
                             <p class="mt-1 text-xs text-gray-500">Parents include this PIN when messaging the school number to receive fee balances by phone.</p>
                         </div>
 
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Parent Portal Email Domain</label>
+                            <input id="parent_portal_email_domain" type="text" name="parent_portal_email_domain" value="{{ old('parent_portal_email_domain', $settings->parent_portal_email_domain ?? '') }}"
+                                placeholder="e.g. olam" pattern="[a-zA-Z0-9-]*"
+                                class="w-full border-2 border-gray-300 rounded px-4 py-2 focus:border-slate-500 focus:outline-none">
+                            <p class="mt-1 text-xs text-gray-500">Used to auto-generate each new student's parent-portal login, e.g. <code class="text-xs">jackson@olam.com</code>. Set this before adding students so their portal email is created automatically.</p>
+                        </div>
+
                     </div>
 
                     <div class="mb-6">

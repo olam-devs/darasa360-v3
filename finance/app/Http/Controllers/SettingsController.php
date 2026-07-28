@@ -24,6 +24,7 @@ class SettingsController extends Controller
             'phone' => 'nullable|string|max:255',
             'office_whatsapp_number' => 'nullable|string|max:32',
             'parent_messenger_pin' => 'nullable|string|max:64',
+            'parent_portal_email_domain' => 'nullable|string|max:64|regex:/^[a-zA-Z0-9-]*$/',
             'email' => 'nullable|email|max:255',
             'logo' => 'nullable|image|max:2048',
             'show_logo_on_pdfs' => 'required|in:0,1',
@@ -37,6 +38,7 @@ class SettingsController extends Controller
         $settings->phone = $validated['phone'] ?? null;
         $settings->office_whatsapp_number = $validated['office_whatsapp_number'] ?? null;
         $settings->parent_messenger_pin = $validated['parent_messenger_pin'] ?? null;
+        $settings->parent_portal_email_domain = $validated['parent_portal_email_domain'] ?? null;
         $settings->email = $validated['email'] ?? null;
         $settings->show_logo_on_pdfs = $validated['show_logo_on_pdfs'] === '1';
 
