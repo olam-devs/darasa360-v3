@@ -427,7 +427,12 @@ class StudentController extends Controller
     // Student Promotion
     public function promotionPage()
     {
-        $classes = SchoolClass::where('is_active', true)->orderBy('display_order')->get();
+        $classes = SchoolClass::where('is_active', true)
+            ->withCount(['students as active_students_count' => function ($query) {
+                $query->where('status', 'active');
+            }])
+            ->orderBy('display_order')
+            ->get();
 
         return view('admin.accountant.modules.student-promotion', compact('classes'));
     }
