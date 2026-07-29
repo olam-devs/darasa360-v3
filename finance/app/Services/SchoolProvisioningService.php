@@ -341,6 +341,7 @@ class SchoolProvisioningService
             DB::connection('tenant')->table('books')->insert([
                 'name' => 'Cash Book',
                 'type' => 'cash',
+                'is_cash_book' => true,
                 'description' => 'Default cash book for the school',
                 'is_active' => true,
                 'created_at' => now(),

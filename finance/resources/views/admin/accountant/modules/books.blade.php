@@ -876,6 +876,7 @@ const API_BASE = '/api';
                     data.transactions.data.forEach(txn => {
                         const isDeposit = txn.transaction_type === 'deposit';
                         const isCancelled = !!txn.cancelled_at;
+                        const fee = txn.feeVoucher ? parseFloat(txn.feeVoucher.credit || 0) : 0;
                         html += `
                             <tr class="border-t hover:bg-slate-50 ${isCancelled ? 'opacity-60' : ''}">
                                 <td class="p-3">${txn.transaction_date}</td>
@@ -887,6 +888,7 @@ const API_BASE = '/api';
                                 </td>
                                 <td class="p-3 text-right font-bold ${isDeposit ? 'text-slate-700' : 'text-red-600'}">
                                     ${formatTSh(txn.amount)}
+                                    ${fee > 0 ? `<div class="text-xs font-normal text-amber-700">+ ${formatTSh(fee)} fee</div>` : ''}
                                 </td>
                                 <td class="p-3 font-mono text-sm">${txn.reference_number || '-'}</td>
                                 <td class="p-3 text-sm">${txn.short_notes || '-'}</td>
