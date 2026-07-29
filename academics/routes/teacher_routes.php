@@ -148,6 +148,8 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
     Route::get('/', [AssignmentController::class, 'notesHome'])->name('notes.home');
     Route::get('/class-subjects/{class}', [AssignmentController::class, 'getSubjectsForClass'])->name('notes.getSubjects');
     Route::post('/store', [AssignmentController::class, 'notesStore'])->name('notes.store');
+    Route::get('/{notes}/edit', [AssignmentController::class, 'notesEdit'])->name('notes.edit');
+    Route::put('/{notes}', [AssignmentController::class, 'notesUpdate'])->name('notes.update');
     Route::delete('/{notes}', [AssignmentController::class, 'notesDestroy'])->name('notes.destroy');
     Route::get('/download/{id}', [AssignmentController::class, 'notesDownload'])->name('notes.download');
   });

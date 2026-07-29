@@ -534,6 +534,45 @@ class AssignmentController extends Controller
     return redirect()->route('assignments.index')->with('success', 'Assignment deleted successfully.');
   }
 
+  public function notesEdit(Request $request, $id)
+  {
+    if (!(new HelperController)->isLoggedIn($request)) {
+      return redirect('/login');
+    }
+
+    $this->switchTenantDB();
+
+    $note = Notes::on('tenant')->findOrFail($id);
+    $classes = Classroom::on('tenant')->orderBy('name')->get();
+    $subjects = Subject::on('tenant')->orderBy('name')->get();
+
+    return view('content.dashboard.owner.notes.edit', compact('note', 'classes', 'subjects'));
+  }
+
+  public function notesUpdate(Request $request, $id)
+  {
+    if (!(new HelperController)->isLoggedIn($request)) {
+      return redirect('/login');
+    }
+
+    $this->switchTenantDB();
+
+    $request->validate([
+      'title' => 'required|string|max:255',
+      'class_id' => 'required|exists:tenant.classes,id',
+      'subject_id' => 'required|exists:tenant.subjects,id',
+    ]);
+
+    $note = Notes::on('tenant')->findOrFail($id);
+    $note->update([
+      'title' => $request->title,
+      'class_id' => $request->class_id,
+      'subject_id' => $request->subject_id,
+    ]);
+
+    return redirect()->route('notes.home')->with('success', 'Note updated successfully.');
+  }
+
   public function notesDestroy(Request $request, $id)
   {
     if (!(new HelperController)->isLoggedIn($request)) {

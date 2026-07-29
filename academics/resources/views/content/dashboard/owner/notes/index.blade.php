@@ -88,17 +88,9 @@
                       </a>
                     </td>
                     <td>
-                      {{-- <button
-                        class="btn btn-sm btn-outline-warning editNoteBtn"
-                        data-bs-toggle="modal"
-                        data-bs-target="#editNoteModal"
-                        data-id="{{ $note['id'] }}"
-                        data-title="{{ $note['title'] }}"
-                        data-class_id="{{ $note['class_id'] }}"
-                        data-subject_id="{{ $note['subject_id'] }}"
-                      >
+                      <a href="{{ route('notes.edit', $note['id']) }}" class="btn btn-sm btn-outline-warning me-1">
                         <i class="bx bx-edit"></i>
-                      </button> --}}
+                      </a>
                       <form action="{{ route('notes.destroy', $note['id']) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this note?');">
                         @csrf
                         @method('DELETE')
@@ -165,57 +157,10 @@
   </div>
 </div>
 
-<!-- Edit Note Modal -->
-<div class="modal fade" id="editNoteModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <form method="POST" id="editNoteForm" enctype="multipart/form-data">
-      @csrf
-      @method('PUT')
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Edit Note</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label>Title</label>
-            <input type="text" name="title" class="form-control" id="editTitle" required>
-          </div>
-          <div class="mb-3">
-            <label>Class</label>
-            <select name="class_id" id="editClassSelect" class="form-control" required>
-              <option value="">Select Class</option>
-              @foreach($classes as $class)
-                <option value="{{ $class->id }}">{{ $class->name }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="mb-3">
-            <label>Subject</label>
-            <select name="subject_id" id="editSubjectSelect" class="form-control" required>
-              <option value="">Select Subject</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label>File (leave empty to keep current)</label>
-            <input type="file" name="notes_file" class="form-control">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary" type="submit">Update</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const addClassSelect = document.getElementById('addClassSelect');
   const addSubjectSelect = document.getElementById('addSubjectSelect');
-  const editClassSelect = document.getElementById('editClassSelect');
-  const editSubjectSelect = document.getElementById('editSubjectSelect');
 
   function fetchSubjects(classId, selectEl, selectedId = null) {
     if(!classId) return;
@@ -234,17 +179,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   addClassSelect?.addEventListener('change', e => fetchSubjects(e.target.value, addSubjectSelect));
-
-  document.querySelectorAll('.editNoteBtn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const form = document.getElementById('editNoteForm');
-      const noteId = btn.dataset.id;
-      form.action = `/notes/${noteId}`;
-      document.getElementById('editTitle').value = btn.dataset.title;
-      editClassSelect.value = btn.dataset.class_id;
-      fetchSubjects(btn.dataset.class_id, editSubjectSelect, btn.dataset.subject_id);
-    });
-  });
 });
 </script>
 @endsection
