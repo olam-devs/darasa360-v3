@@ -248,14 +248,15 @@ class PayrollController extends Controller
 
             // Create voucher — net salary paid from book
             $voucher = Voucher::create([
-                'voucher_type'     => 'Payment',
-                'date'             => $validated['payment_date'],
-                'book_id'          => $validated['book_id'],
-                'debit'            => 0,
-                'credit'           => $netSalary,
-                'narration'        => 'Salary — ' . $staff->name . ' (' . $period . ')',
-                'reference_number' => $validated['reference_number'] ?? null,
-                'created_by'       => auth()->id(),
+                'voucher_type'          => 'Payment',
+                'date'                  => $validated['payment_date'],
+                'book_id'               => $validated['book_id'],
+                'debit'                 => 0,
+                'credit'                => $netSalary,
+                'payment_by_receipt_to' => $staff->name,
+                'notes'                 => 'Salary — ' . $staff->name . ' (' . $period . ')'
+                    . (! empty($validated['reference_number']) ? ' — Ref: ' . $validated['reference_number'] : ''),
+                'created_by'            => auth()->id(),
             ]);
 
             // Create payroll entry
@@ -307,6 +308,58 @@ class PayrollController extends Controller
     {
         $payroll = PayrollEntry::with(['staff', 'book', 'deductions.deductionType', 'voucher'])->findOrFail($id);
         return response()->json($payroll);
+    }
+
+    /**
+     * Update an existing payroll entry's payment details (routed as PUT
+     * /api/payroll/{id} but never implemented - editing a payroll entry
+     * 500'd with a missing-method error). Deductions are left as already
+     * recorded; adjust gross salary/notes/reference and keep the linked
+     * voucher's amount and description in sync.
+     */
+    public function updatePayroll(Request $request, $id)
+    {
+        $payroll = PayrollEntry::with('deductions')->findOrFail($id);
+
+        $validated = $request->validate([
+            'gross_salary'     => 'required|numeric|min:0',
+            'payment_date'     => 'required|date',
+            'payment_method'   => 'required|in:cash,bank_transfer,cheque,mobile_money',
+            'reference_number' => 'nullable|string|max:255',
+            'notes'            => 'nullable|string',
+        ]);
+
+        $totalDeductions = (float) $payroll->deductions->sum('amount');
+        $netSalary = max(0.0, (float) $validated['gross_salary'] - $totalDeductions);
+
+        DB::beginTransaction();
+        try {
+            $payroll->update([
+                'gross_salary'     => $validated['gross_salary'],
+                'net_salary'       => $netSalary,
+                'payment_date'     => $validated['payment_date'],
+                'payment_method'   => $validated['payment_method'],
+                'reference_number' => $validated['reference_number'] ?? null,
+                'notes'            => $validated['notes'] ?? null,
+            ]);
+
+            if ($payroll->voucher_id) {
+                Voucher::where('id', $payroll->voucher_id)->update([
+                    'date'   => $validated['payment_date'],
+                    'credit' => $netSalary,
+                    'notes'  => 'Salary — '.$payroll->staff->name.' ('.$payroll->period.')'
+                        .(! empty($validated['reference_number']) ? ' — Ref: '.$validated['reference_number'] : ''),
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json($payroll->fresh(['staff', 'book', 'deductions', 'voucher']));
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     public function destroyPayroll($id)
