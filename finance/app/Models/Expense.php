@@ -36,6 +36,19 @@ class Expense extends BaseModel
         'processed_at' => 'datetime',
     ];
 
+    // Auto-generate expense_number (unique, NOT NULL column the controller never set)
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($expense) {
+            if (! $expense->expense_number) {
+                $lastNumber = (int) substr((string) static::latest('id')->value('expense_number'), -6);
+                $expense->expense_number = 'EXP'.str_pad($lastNumber + 1, 6, '0', STR_PAD_LEFT);
+            }
+        });
+    }
+
     // Relationships
     public function book()
     {
