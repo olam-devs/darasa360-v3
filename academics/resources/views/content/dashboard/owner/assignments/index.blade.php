@@ -79,17 +79,9 @@
                     <i class="bx bx-download"></i>
                   </a>
 
-                  {{-- <button
-                    class="btn btn-sm btn-outline-warning me-1 edit-assignment-btn"
-                    data-bs-toggle="modal"
-                    data-bs-target="#editAssignmentModal"
-                    data-id="{{ $assignment->id }}"
-                    data-title="{{ $assignment->title }}"
-                    data-class_id="{{ $assignment->class_id }}"
-                    data-subject_id="{{ $assignment->subject_id }}"
-                  >
+                  <a href="{{ route('assignments.edit', $assignment->id) }}" class="btn btn-sm btn-outline-warning me-1">
                     <i class="bx bx-edit"></i>
-                  </button> --}}
+                  </a>
 
                   <form action="{{ route('assignments.destroy', $assignment->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this assignment?');">
                     @csrf @method('DELETE')
@@ -157,74 +149,13 @@
   </div>
 </div>
 
-<!-- Edit Modal -->
-<div class="modal fade" id="editAssignmentModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <form method="POST" id="editAssignmentForm" enctype="multipart/form-data">
-      @csrf
-      @method('PUT')
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Edit Assignment</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label>Title</label>
-            <input type="text" name="title" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label>Class</label>
-            <select name="class_id" id="editClassSelect" class="form-control" required>
-              <option value="">Select Class</option>
-              @foreach($classes as $class)
-                <option value="{{ $class->id }}">{{ $class->name }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="mb-3">
-            <label>Subject</label>
-            <select name="subject_id" id="editSubjectSelect" class="form-control" required>
-              <option value="">Select Subject</option>
-              @foreach($subjects as $subject)
-                <option value="{{ $subject->id }}">{{ $subject->name }}</option>
-              @endforeach
-            </select>
-          </div>
-          <div class="mb-3">
-            <label>File (leave empty to keep current)</label>
-            <input type="file" name="assignment_file" class="form-control">
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary" type="submit">Update</button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const role = "{{ $role ?? '' }}";
-
-  // Add modal
   const classSelect = document.getElementById('classSelect');
   const subjectSelect = document.getElementById('subjectSelect');
 
   classSelect?.addEventListener('change', function() {
-    const classId = this.value;
-    fetchSubjects(classId, subjectSelect);
-  });
-
-  // Edit modal
-  const editClassSelect = document.getElementById('editClassSelect');
-  const editSubjectSelect = document.getElementById('editSubjectSelect');
-
-  editClassSelect?.addEventListener('change', function() {
-    const classId = this.value;
-    fetchSubjects(classId, editSubjectSelect);
+    fetchSubjects(this.value, subjectSelect);
   });
 
   function fetchSubjects(classId, subjectElement) {
@@ -248,25 +179,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
   }
-
-  // Populate edit modal with existing values
-  document.querySelectorAll('.edit-assignment-btn').forEach(button => {
-    button.addEventListener('click', () => {
-      const form = document.getElementById('editAssignmentForm');
-      const id = button.dataset.id;
-
-      // ✅ Use the correct route helper
-      form.action = `{{ url('assignments') }}/${id}`;
-
-      form.querySelector('input[name="title"]').value = button.dataset.title;
-      editClassSelect.value = button.dataset.class_id;
-
-      fetchSubjects(button.dataset.class_id, editSubjectSelect)
-        .then(() => {
-          editSubjectSelect.value = button.dataset.subject_id;
-        });
-    });
-  });
 });
 </script>
 @endsection

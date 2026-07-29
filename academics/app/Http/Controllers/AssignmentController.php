@@ -554,6 +554,17 @@ class AssignmentController extends Controller
   }
 
 
+  public function edit(Request $request, Assignment $assignment)
+  {
+    if (!(new HelperController)->isLoggedIn($request)) return redirect('/login');
+    $this->switchTenantDB();
+
+    $classes = Classroom::on('tenant')->orderBy('name')->get();
+    $subjects = Subject::on('tenant')->orderBy('name')->get();
+
+    return view('content.dashboard.owner.assignments.edit', compact('assignment', 'classes', 'subjects'));
+  }
+
   public function update(Request $request, Assignment $assignment)
   {
 
