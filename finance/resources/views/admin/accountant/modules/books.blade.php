@@ -876,7 +876,7 @@ const API_BASE = '/api';
                     data.transactions.data.forEach(txn => {
                         const isDeposit = txn.transaction_type === 'deposit';
                         const isCancelled = !!txn.cancelled_at;
-                        const fee = txn.feeVoucher ? parseFloat(txn.feeVoucher.credit || 0) : 0;
+                        const fee = txn.fee_voucher ? parseFloat(txn.fee_voucher.credit || 0) : 0;
                         html += `
                             <tr class="border-t hover:bg-slate-50 ${isCancelled ? 'opacity-60' : ''}">
                                 <td class="p-3">${txn.transaction_date}</td>
