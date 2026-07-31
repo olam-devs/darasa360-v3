@@ -8,6 +8,8 @@ class SmsDeliveryIndex extends Model
 {
     protected $connection = 'central';
 
+    protected $table = 'sms_delivery_index';
+
     public $timestamps = false;
 
     protected $fillable = [
