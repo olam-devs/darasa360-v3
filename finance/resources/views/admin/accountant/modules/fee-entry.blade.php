@@ -486,7 +486,7 @@
             const particularSelect = document.getElementById('voucherParticular');
             const particularName = particularSelect?.selectedOptions?.[0]?.textContent?.trim() || 'fee';
             const bookSelect = document.getElementById('voucherBook');
-            const bookName = bookSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
+            const bookName = bookSelect?.value ? (bookSelect.selectedOptions?.[0]?.textContent?.trim() || '') : '';
 
             let text = '';
             if (voucherType === 'Sales') {
