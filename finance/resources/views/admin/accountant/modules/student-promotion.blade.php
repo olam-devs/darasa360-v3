@@ -6,12 +6,12 @@
 @section('content')
 <div class="w-full p-6">
         <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-3xl font-bold text-blue-600 mb-6">📚 Promote Students to Next Class</h2>
+            <h2 class="text-3xl font-bold text-blue-600 mb-6"> Promote Students to Next Class</h2>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Step 1: Select Source Class -->
                 <div class="border-2 border-blue-300 rounded-lg p-4">
-                    <h3 class="text-xl font-bold text-blue-600 mb-3">1️⃣ Select Source Class</h3>
+                    <h3 class="text-xl font-bold text-blue-600 mb-3">1⃣ Select Source Class</h3>
                     <select id="sourceClass"
                             onchange="loadStudentsForPromotion()"
                             class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
@@ -25,7 +25,7 @@
 
                 <!-- Step 2: Select Students -->
                 <div class="border-2 border-green-300 rounded-lg p-4">
-                    <h3 class="text-xl font-bold text-green-600 mb-3">2️⃣ Select Students</h3>
+                    <h3 class="text-xl font-bold text-green-600 mb-3">2⃣ Select Students</h3>
                     <div class="mb-2">
                         <input type="text" id="studentSearch"
                                placeholder="Search students..."
@@ -35,11 +35,11 @@
                     <div class="mb-2 flex gap-2">
                         <button onclick="selectAllStudents()"
                                 class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm">
-                            ✅ Select All
+                             Select All
                         </button>
                         <button onclick="deselectAllStudents()"
                                 class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm">
-                            ❌ Deselect All
+                             Deselect All
                         </button>
                     </div>
                     <div id="studentList" class="max-h-96 overflow-y-auto border-2 border-gray-200 rounded-lg p-2">
@@ -49,7 +49,7 @@
 
                 <!-- Step 3: Select Destination Class -->
                 <div class="border-2 border-purple-300 rounded-lg p-4">
-                    <h3 class="text-xl font-bold text-purple-600 mb-3">3️⃣ Destination Class</h3>
+                    <h3 class="text-xl font-bold text-purple-600 mb-3">3⃣ Destination Class</h3>
                     <select id="destinationClassSelect"
                             onchange="document.getElementById('destinationClassId').value = this.value; updatePromoteButton()"
                             class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 mb-4">
@@ -68,7 +68,7 @@
                             id="promoteBtn"
                             disabled
                             class="w-full bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        🎓 Promote Students
+                         Promote Students
                     </button>
                 </div>
             </div>
@@ -76,7 +76,7 @@
             <!-- Results Section -->
             <div id="resultsSection" class="mt-6 hidden">
                 <div class="bg-green-100 border-2 border-green-500 rounded-lg p-4">
-                    <h4 class="text-xl font-bold text-green-800 mb-2">✅ Promotion Results</h4>
+                    <h4 class="text-xl font-bold text-green-800 mb-2"> Promotion Results</h4>
                     <p id="resultsMessage" class="text-green-700"></p>
                 </div>
             </div>

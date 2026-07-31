@@ -8,9 +8,9 @@
     <div class="w-full p-6">
         <div>
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-blue-600">🎓 School Classes</h2>
+                <h2 class="text-3xl font-bold text-blue-600"> School Classes</h2>
                 <button onclick="showAddClassModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition">
-                    ➕ Add Class
+                     Add Class
                 </button>
             </div>
 
@@ -41,7 +41,7 @@
     <!-- Add/Edit Class Modal -->
     <div id="classModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 id="modalTitle" class="text-2xl font-bold text-blue-600 mb-4">➕ Add Class</h3>
+            <h3 id="modalTitle" class="text-2xl font-bold text-blue-600 mb-4"> Add Class</h3>
             <form id="classForm" onsubmit="submitClassForm(event)">
                 <input type="hidden" id="classId" value="">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -81,10 +81,10 @@
                 </div>
                 <div class="flex gap-3 mt-6">
                     <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition">
-                        ✅ Save Class
+                         Save Class
                     </button>
                     <button type="button" onclick="closeClassModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition">
-                        ❌ Cancel
+                         Cancel
                     </button>
                 </div>
             </form>
@@ -169,10 +169,10 @@ const API_BASE = '/api';
                             <td class="p-3 text-center">${statusBadge}</td>
                             <td class="p-3 text-center">
                                 <button onclick="editClass(${classItem.id})" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm mr-2">
-                                    ✏️ Edit
+                                     Edit
                                 </button>
                                 <button onclick="deleteClass(${classItem.id}, '${classItem.name}', ${studentCount})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
-                                    🗑️ Delete
+                                     Delete
                                 </button>
                             </td>
                         </tr>
@@ -189,7 +189,7 @@ const API_BASE = '/api';
         }
 
         function showAddClassModal() {
-            document.getElementById('modalTitle').textContent = '➕ Add Class';
+            document.getElementById('modalTitle').textContent = ' Add Class';
             document.getElementById('classId').value = '';
             document.getElementById('classForm').reset();
             document.getElementById('classIsActive').checked = true;
@@ -201,7 +201,7 @@ const API_BASE = '/api';
                 const response = await axios.get(`${API_BASE}/school-classes/${classId}`);
                 const classData = response.data.class;
 
-                document.getElementById('modalTitle').textContent = '✏️ Edit Class';
+                document.getElementById('modalTitle').textContent = ' Edit Class';
                 document.getElementById('classId').value = classData.id;
                 document.getElementById('className').value = classData.name;
                 document.getElementById('classLevel').value = classData.level || '';
@@ -238,11 +238,11 @@ const API_BASE = '/api';
                 if (classId) {
                     // Update existing class
                     await axios.put(`${API_BASE}/school-classes/${classId}`, formData);
-                    alert('✅ Class updated successfully');
+                    alert(' Class updated successfully');
                 } else {
                     // Create new class
                     await axios.post(`${API_BASE}/school-classes`, formData);
-                    alert('✅ Class created successfully');
+                    alert(' Class created successfully');
                 }
 
                 closeClassModal();
@@ -251,7 +251,7 @@ const API_BASE = '/api';
                 const errorMsg = error.response?.data?.message || error.message;
                 const errors = error.response?.data?.errors;
 
-                let message = '❌ Error: ' + errorMsg;
+                let message = ' Error: ' + errorMsg;
                 if (errors) {
                     message += '\n\nDetails:\n';
                     Object.entries(errors).forEach(([field, messages]) => {
@@ -265,7 +265,7 @@ const API_BASE = '/api';
 
         async function deleteClass(classId, className, studentCount) {
             if (studentCount > 0) {
-                alert(`⚠️ Cannot delete class "${className}" because it has ${studentCount} student(s) assigned.\n\nPlease reassign or remove students first.`);
+                alert(` Cannot delete class "${className}" because it has ${studentCount} student(s) assigned.\n\nPlease reassign or remove students first.`);
                 return;
             }
 
@@ -275,10 +275,10 @@ const API_BASE = '/api';
 
             try {
                 await axios.delete(`${API_BASE}/school-classes/${classId}`);
-                alert('✅ Class deleted successfully');
+                alert(' Class deleted successfully');
                 loadClasses();
             } catch (error) {
-                alert('❌ Error deleting class: ' + (error.response?.data?.message || error.message));
+                alert(' Error deleting class: ' + (error.response?.data?.message || error.message));
             }
         }
     </script>

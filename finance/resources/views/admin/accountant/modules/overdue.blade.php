@@ -402,14 +402,14 @@ Darasa Finance`
                         const particularsDetails = (student.overdue_particulars || []).map(p => {
                             let detail = `${p.particular_name}: ${formatTSh(p.amount_due)} (${Math.abs(Math.round(p.days_overdue))} days)`;
                             if (p.has_scholarship) {
-                                detail += ` <span class="bg-amber-200 text-amber-800 text-xs px-1 rounded">🎓 Scholarship</span>`;
+                                detail += ` <span class="bg-amber-200 text-amber-800 text-xs px-1 rounded"> Scholarship</span>`;
                             }
                             return detail;
                         }).join('<br>');
 
                         const hasScholarship = student.student?.has_scholarship;
                         const scholarshipBadge = hasScholarship
-                            ? `<span class="ml-2 bg-amber-200 text-amber-800 text-xs px-2 py-0.5 rounded">🎓 Scholarship: ${formatTSh(student.student?.total_scholarship_amount || 0)}</span>`
+                            ? `<span class="ml-2 bg-amber-200 text-amber-800 text-xs px-2 py-0.5 rounded"> Scholarship: ${formatTSh(student.student?.total_scholarship_amount || 0)}</span>`
                             : '';
 
                         html += `

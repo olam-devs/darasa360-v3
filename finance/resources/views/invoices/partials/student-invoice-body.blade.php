@@ -6,13 +6,13 @@
     <strong>Class:</strong> {{ $student->schoolClass->name ?? 'N/A' }}<br>
     <strong>Date:</strong> {{ date('d/m/Y') }}
     @if(isset($invoiceData['has_scholarships']) && $invoiceData['has_scholarships'])
-        <br><span class="scholarship-badge" style="font-size: 9px; padding: 2px 6px;">🎓 SCHOLARSHIP RECIPIENT</span>
+        <br><span class="scholarship-badge" style="font-size: 9px; padding: 2px 6px;"> SCHOLARSHIP RECIPIENT</span>
     @endif
 </div>
 
 @if(isset($invoiceData['has_scholarships']) && $invoiceData['has_scholarships'])
 <div class="scholarship-summary">
-    <div style="font-weight: bold; font-size: 10px; color: #856404; margin-bottom: 4px;">🎓 SCHOLARSHIP SUMMARY</div>
+    <div style="font-weight: bold; font-size: 10px; color: #856404; margin-bottom: 4px;"> SCHOLARSHIP SUMMARY</div>
     <table style="width: 100%; font-size: 9px;">
         <tr>
             <td>Original Fee Total:</td>
@@ -56,7 +56,7 @@
                     <td>
                         {{ $item['name'] }}
                         @if(isset($item['has_scholarship']) && $item['has_scholarship'])
-                            <span class="scholarship-badge">🎓 {{ $item['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
+                            <span class="scholarship-badge"> {{ $item['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
                             @if($item['scholarship_name'])
                                 <br><small style="color: #856404; font-size: 7px;">{{ $item['scholarship_name'] }}</small>
                             @endif
@@ -154,7 +154,7 @@
 
         @if(isset($bankAccounts) && $bankAccounts->count() > 0)
         <div class="bank-section">
-            <div style="font-size: 10px; font-weight: bold; color: #333; margin-bottom: 4px;">🏦 PAYMENT DETAILS:</div>
+            <div style="font-size: 10px; font-weight: bold; color: #333; margin-bottom: 4px;"> PAYMENT DETAILS:</div>
             @foreach($bankAccounts as $index => $bankAccount)
             <div class="bank-option">
                 <strong>{{ $index + 1 }}.</strong> {{ $bankAccount->bank_name }}: {{ $bankAccount->account_number }}
@@ -163,7 +163,7 @@
         </div>
         @endif
     @else
-        <div style="font-size: 14px; color: #155724; font-weight: bold;">✅ ALL FEES PAID IN FULL</div>
+        <div style="font-size: 14px; color: #155724; font-weight: bold;"> ALL FEES PAID IN FULL</div>
         <div style="margin-top: 3px; font-size: 10px; color: #155724;">
             Thank you for your prompt payment!
         </div>

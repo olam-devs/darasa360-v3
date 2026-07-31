@@ -130,7 +130,7 @@
                 let html = `
                     <!-- Date Range Filter -->
                     <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
-                        <h4 class="text-md font-bold text-blue-800 mb-3">📅 Filter by Date Range</h4>
+                        <h4 class="text-md font-bold text-blue-800 mb-3"> Filter by Date Range</h4>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                             <div>
                                 <label class="text-sm font-bold text-gray-700 block mb-1">From:</label>
@@ -381,7 +381,7 @@
                             <div id="amountSection" class="hidden">
                                 <!-- Payment Info Display -->
                                 <div id="paymentInfoDisplay" class="bg-green-50 border-2 border-green-300 rounded p-2 mb-2 hidden">
-                                    <h4 class="text-xs font-bold text-green-700 mb-2">💰 Payment Information</h4>
+                                    <h4 class="text-xs font-bold text-green-700 mb-2"> Payment Information</h4>
                                     <div class="grid grid-cols-4 gap-2">
                                         <div class="bg-white p-2 rounded border">
                                             <p class="text-xs text-gray-600">Supposed Amount:</p>
@@ -445,10 +445,10 @@
 
                             <div class="flex gap-3 pt-3 border-t-2">
                                 <button type="submit" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-bold transition text-sm">
-                                    💾 Save Entry
+                                     Save Entry
                                 </button>
                                 <button type="button" onclick="closeVoucherForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
-                                    ✖️ Cancel
+                                     Cancel
                                 </button>
                             </div>
                         </form>
@@ -832,7 +832,7 @@
                     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-2">
                         <div class="bg-white rounded-lg p-4 max-w-6xl w-full shadow-2xl my-2 max-h-[95vh] overflow-y-auto">
                             <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-xl font-bold text-amber-600">🎓 Scholarship Management</h3>
+                                <h3 class="text-xl font-bold text-amber-600"> Scholarship Management</h3>
                                 <button onclick="closeScholarshipManager()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                             </div>
 
@@ -851,7 +851,7 @@
                             <!-- Add New Scholarship Button -->
                             <div class="mb-4">
                                 <button onclick="showAddScholarshipForm()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg shadow transition">
-                                    ➕ Assign Scholarship to Student
+                                     Assign Scholarship to Student
                                 </button>
                             </div>
 
@@ -913,14 +913,14 @@
 
                                 <div class="flex gap-3 pt-3">
                                     <button type="button" onclick="hideAddScholarshipForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
-                                        ✖️ Cancel
+                                         Cancel
                                     </button>
                                 </div>
                             </div>
 
                             <!-- Scholarships List Grouped by Student -->
                             <div class="overflow-x-auto">
-                                <h4 class="text-md font-bold text-gray-700 mb-2">📋 Students with Scholarships</h4>
+                                <h4 class="text-md font-bold text-gray-700 mb-2"> Students with Scholarships</h4>
                                 <div id="scholarshipsGroupedList">
                 `;
 
@@ -969,7 +969,7 @@
                             html += `
                                 <div class="mb-3">
                                     <div class="bg-blue-100 px-3 py-2 rounded-t font-bold text-blue-800 text-sm">
-                                        📅 ${year.name}
+                                         ${year.name}
                                     </div>
                                     <table class="w-full text-sm border">
                                         <thead class="bg-gray-50">
@@ -1149,7 +1149,7 @@
                 html += `
                     <div class="bg-white border-2 border-blue-200 rounded-lg overflow-hidden">
                         <div class="bg-blue-100 px-4 py-2 flex justify-between items-center">
-                            <span class="font-bold text-blue-800">📅 ${yearData.year_name}</span>
+                            <span class="font-bold text-blue-800"> ${yearData.year_name}</span>
                             <span class="text-sm text-blue-600">${yearData.particulars.length} Fee Items</span>
                         </div>
                         <table class="w-full text-sm">
@@ -1181,13 +1181,13 @@
                                 <td class="p-2 border text-right font-bold ${balance > 0 ? 'text-red-600' : 'text-green-600'}">${formatTSh(balance)}</td>
                                 <td class="p-2 border text-center">
                                     <span class="px-2 py-1 rounded text-xs font-bold bg-amber-200 text-amber-800">
-                                        🎓 ${existingScholarship.scholarship_type === 'full' ? 'Full' : 'Partial'}: ${formatTSh(existingScholarship.forgiven_amount)}
+                                         ${existingScholarship.scholarship_type === 'full' ? 'Full' : 'Partial'}: ${formatTSh(existingScholarship.forgiven_amount)}
                                     </span>
                                 </td>
                                 <td class="p-2 border text-center">
                                     <button onclick="removeScholarshipFromParticular(${existingScholarship.id}, '${p.particular_name}')"
                                         class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs">
-                                        ❌ Unassign
+                                         Unassign
                                     </button>
                                 </td>
                             </tr>
@@ -1236,7 +1236,7 @@
                         ${yearOptions}
                     </select>
                     <button onclick="loadFeesForYear()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
-                        ➕ Load Fees for Year
+                         Load Fees for Year
                     </button>
                 </div>
             `;

@@ -144,7 +144,7 @@
                                 </div>
                             @else
                                 <div class="text-center py-8">
-                                    <div class="text-gray-400 text-lg">📄</div>
+                                    <div class="text-gray-400 text-lg"></div>
                                     <p class="text-gray-500 mt-2">No invoices yet</p>
                                 </div>
                             @endif
@@ -165,11 +165,11 @@
                                                 </a>
                                                 <p class="text-sm text-gray-600">
                                                     {{ $payment->payment_date->format('d M, Y') }} •
-                                                    @if($payment->payment_method === 'cash') 💵
-                                                    @elseif($payment->payment_method === 'bank_transfer') 🏦
-                                                    @elseif($payment->payment_method === 'mobile_money') 📱
-                                                    @elseif($payment->payment_method === 'cheque') 📝
-                                                    @else 💳
+                                                    @if($payment->payment_method === 'cash')
+                                                    @elseif($payment->payment_method === 'bank_transfer')
+                                                    @elseif($payment->payment_method === 'mobile_money')
+                                                    @elseif($payment->payment_method === 'cheque')
+                                                    @else
                                                     @endif
                                                     {{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }}
                                                 </p>
@@ -188,7 +188,7 @@
                                 </div>
                             @else
                                 <div class="text-center py-8">
-                                    <div class="text-gray-400 text-lg">💰</div>
+                                    <div class="text-gray-400 text-lg"></div>
                                     <p class="text-gray-500 mt-2">No payments yet</p>
                                 </div>
                             @endif

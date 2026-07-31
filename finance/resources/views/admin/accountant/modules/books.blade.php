@@ -9,7 +9,7 @@
             <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <h2 class="text-xl font-semibold text-slate-900 md:text-2xl">Books</h2>
                 <button type="button" onclick="showCreateBookForm()" class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                    Create book
+                    <i class="fas fa-plus mr-1.5"></i> Create book
                 </button>
             </div>
             <div id="booksList" class="mt-4"></div>
@@ -35,7 +35,7 @@ const API_BASE = '/api';
                     <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-from" value="${t.amount_from ?? ''}" placeholder="From"></td>
                     <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-to" value="${t.amount_to ?? ''}" placeholder="To (empty = no max)"></td>
                     <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-fee" value="${t.fee_amount ?? ''}" placeholder="Fee"></td>
-                    <td class="p-2"><button type="button" class="text-red-600 text-sm font-bold" onclick="this.closest('tr').remove()">✕</button></td>
+                    <td class="p-2"><button type="button" class="text-red-600 text-sm font-bold" onclick="this.closest('tr').remove()"></button></td>
                 </tr>`).join('');
         }
 
@@ -66,7 +66,7 @@ const API_BASE = '/api';
                 <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-from" placeholder="From"></td>
                 <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-to" placeholder="To (empty = no max)"></td>
                 <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-fee" placeholder="Fee"></td>
-                <td class="p-2"><button type="button" class="text-red-600 text-sm font-bold" onclick="this.closest('tr').remove()">✕</button></td>
+                <td class="p-2"><button type="button" class="text-red-600 text-sm font-bold" onclick="this.closest('tr').remove()"></button></td>
             `;
             tbody.appendChild(tr);
         }
@@ -95,9 +95,8 @@ const API_BASE = '/api';
                                     <h3 class="font-bold text-lg">${book.name}</h3>
                                     <p class="text-sm text-gray-600">${book.bank_account_number || 'No Account Number'}</p>
                                     <p class="text-xs font-semibold mt-2 ${book.is_cash_book ? 'text-slate-700' : 'text-slate-800'}">
-                                        ${book.is_cash_book ? '💵 Cash Book' : '🏦 Bank Account'}
+                                        ${book.is_cash_book ? '<i class="fas fa-money-bill-wave mr-1"></i>Cash Book' : '<i class="fas fa-building-columns mr-1"></i>Bank Account'}
                                     </p>
-                                    
                                 </div>
                                 ${!book.is_cash_book ? `
                                     <div class="flex gap-2">
@@ -105,10 +104,10 @@ const API_BASE = '/api';
                                             Fees/Cuts
                                         </button>
                                         <button onclick='showEditBookForm(${JSON.stringify(book)})' class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition">
-                                            Edit
+                                            <i class="fas fa-pen"></i> Edit
                                         </button>
                                         <button onclick="deleteBook(${book.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition">
-                                            Delete
+                                            <i class="fas fa-trash"></i> Delete
                                         </button>
                                     </div>
                                 ` : '<span class="text-xs text-slate-700 font-bold">Protected</span>'}
@@ -117,13 +116,13 @@ const API_BASE = '/api';
                             <!-- Deposit/Withdrawal Buttons -->
                             <div class="border-t pt-3 mt-3 flex gap-2 flex-wrap">
                                 <button onclick="showDepositForm(${book.id}, '${book.name}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-bold transition flex-1">
-                                    ➕ Deposit
+                                    <i class="fas fa-plus"></i> Deposit
                                 </button>
                                 <button onclick="showWithdrawForm(${book.id}, '${book.name}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm font-bold transition flex-1">
-                                    ➖ Withdraw
+                                    <i class="fas fa-minus"></i> Withdraw
                                 </button>
                                 <button onclick="showTransactionHistory(${book.id}, '${book.name}')" class="bg-blue-700 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm font-bold transition flex-1">
-                                    📜 History
+                                    <i class="fas fa-clock-rotate-left"></i> History
                                 </button>
                             </div>
                         </div>
@@ -157,10 +156,10 @@ const API_BASE = '/api';
                             </div>
                             <div class="flex gap-3 pt-4">
                                 <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">
-                                    💾 Save Book
+                                     Save Book
                                 </button>
                                 <button type="button" onclick="closeBookForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                    ✖️ Cancel
+                                     Cancel
                                 </button>
                             </div>
                         </form>
@@ -184,7 +183,7 @@ const API_BASE = '/api';
                     name: name,
                     bank_account_number: accountNumber,
                 });
-                alert('✅ Book created successfully!');
+                alert(' Book created successfully!');
                 closeBookForm();
                 loadBooks();
             } catch (error) {
@@ -192,7 +191,7 @@ const API_BASE = '/api';
                 const msg = (error.response?.data?.message)
                     || (error.response?.data?.errors ? JSON.stringify(error.response.data.errors) : null)
                     || error.message;
-                alert('❌ Error: ' + msg);
+                alert(' Error: ' + msg);
             }
         }
 
@@ -289,7 +288,7 @@ const API_BASE = '/api';
                     <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-from" value="${t.amount_from ?? ''}" placeholder="From"></td>
                     <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-to" value="${t.amount_to ?? ''}" placeholder="To (blank=open)"></td>
                     <td class="p-2"><input type="number" step="0.01" min="0" class="w-full border rounded px-2 py-1 tier-fee" value="${t.fee_amount ?? ''}" placeholder="Fee"></td>
-                    <td class="p-2"><button type="button" class="text-red-600 text-sm font-bold" onclick="this.closest('tr').remove()">✕</button></td>
+                    <td class="p-2"><button type="button" class="text-red-600 text-sm font-bold" onclick="this.closest('tr').remove()"></button></td>
                 </tr>`).join('');
         }
 
@@ -344,7 +343,7 @@ const API_BASE = '/api';
                 is_active: true,
                 tiers,
             });
-            alert('✅ Fee category saved');
+            alert(' Fee category saved');
             closeBookForm();
             loadBooks();
         }
@@ -406,7 +405,7 @@ const API_BASE = '/api';
                 is_active: document.getElementById('fc_active').checked,
                 tiers,
             });
-            alert('✅ Fee category updated');
+            alert(' Fee category updated');
             closeBookForm();
             loadBooks();
         }
@@ -414,7 +413,7 @@ const API_BASE = '/api';
         async function deleteFeeCategory(bookId, categoryId) {
             if (!confirm('Delete this fee category?')) return;
             await axios.delete(`${API_BASE}/books/${bookId}/fee-categories/${categoryId}`);
-            alert('✅ Deleted');
+            alert(' Deleted');
             closeBookForm();
             loadBooks();
         }
@@ -463,7 +462,7 @@ const API_BASE = '/api';
                 amount: parseFloat(document.getElementById('mc_amount').value),
                 notes: document.getElementById('mc_notes').value || null,
             });
-            alert('✅ Monthly cut saved');
+            alert(' Monthly cut saved');
             closeBookForm();
             loadBooks();
         }
@@ -518,7 +517,7 @@ const API_BASE = '/api';
                 amount: parseFloat(document.getElementById('mc_amount').value),
                 notes: document.getElementById('mc_notes').value || null,
             });
-            alert('✅ Monthly cut updated');
+            alert(' Monthly cut updated');
             closeBookForm();
             loadBooks();
         }
@@ -526,7 +525,7 @@ const API_BASE = '/api';
         async function deleteMonthlyCut(bookId, cutId) {
             if (!confirm('Delete this monthly cut?')) return;
             await axios.delete(`${API_BASE}/books/${bookId}/monthly-cuts/${cutId}`);
-            alert('✅ Deleted');
+            alert(' Deleted');
             closeBookForm();
             loadBooks();
         }
@@ -536,7 +535,7 @@ const API_BASE = '/api';
             await axios.post(`${API_BASE}/books/${bookId}/monthly-cuts/${cutId}/apply`, {
                 date: date || null
             });
-            alert('✅ Cut applied (check book ledger)');
+            alert(' Cut applied (check book ledger)');
             closeBookForm();
             loadBooks();
         }
@@ -577,10 +576,10 @@ const API_BASE = '/api';
                             </div>
                             <div class="flex gap-3 pt-4">
                                 <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">
-                                    💾 Update Book
+                                     Update Book
                                 </button>
                                 <button type="button" onclick="closeBookForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                    ✖️ Cancel
+                                     Cancel
                                 </button>
                             </div>
                         </form>
@@ -600,25 +599,25 @@ const API_BASE = '/api';
                     name: name,
                     bank_account_number: accountNumber,
                 });
-                alert('✅ Book updated successfully!');
+                alert(' Book updated successfully!');
                 closeBookForm();
                 loadBooks();
             } catch (error) {
                 const msg = error.response?.data?.message || (error.response?.data?.errors
                     ? JSON.stringify(error.response.data.errors)
                     : error.message);
-                alert('❌ Error: ' + msg);
+                alert(' Error: ' + msg);
             }
         }
 
         async function deleteBook(id) {
-            if (confirm('⚠️ Are you sure you want to delete this book?')) {
+            if (confirm(' Are you sure you want to delete this book?')) {
                 try {
                     await axios.delete(`${API_BASE}/books/${id}`);
-                    alert('✅ Book deleted successfully!');
+                    alert(' Book deleted successfully!');
                     loadBooks();
                 } catch (error) {
-                    alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                    alert(' Error: ' + (error.response?.data?.message || error.message));
                 }
             }
         }
@@ -656,7 +655,7 @@ const API_BASE = '/api';
             const formHtml = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-8 max-w-lg w-full shadow-2xl">
-                        <h3 class="text-2xl font-bold mb-2 text-slate-700">➕ Bank Deposit</h3>
+                        <h3 class="text-2xl font-bold mb-2 text-slate-700"> Bank Deposit</h3>
                         <p class="text-gray-600 mb-4">Book: <strong>${bookName}</strong></p>
                         <form onsubmit="submitDeposit(event, ${bookId})" class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
@@ -693,10 +692,10 @@ const API_BASE = '/api';
                             </div>
                             <div class="flex gap-3 pt-4">
                                 <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition">
-                                    💾 Record Deposit
+                                     Record Deposit
                                 </button>
                                 <button type="button" onclick="closeBookForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                    ✖️ Cancel
+                                     Cancel
                                 </button>
                             </div>
                         </form>
@@ -718,10 +717,10 @@ const API_BASE = '/api';
                     short_notes: document.getElementById('depositShortNotes').value || null,
                     full_details: document.getElementById('depositFullDetails').value || null
                 });
-                alert('✅ Deposit recorded successfully!');
+                alert(' Deposit recorded successfully!');
                 closeBookForm();
             } catch (error) {
-                alert('❌ Error: ' + (error.response?.data?.error || error.message));
+                alert(' Error: ' + (error.response?.data?.error || error.message));
             }
         }
 
@@ -729,7 +728,7 @@ const API_BASE = '/api';
             const formHtml = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-8 max-w-lg w-full shadow-2xl">
-                        <h3 class="text-2xl font-bold mb-2 text-red-600">➖ Bank Withdrawal</h3>
+                        <h3 class="text-2xl font-bold mb-2 text-red-600"> Bank Withdrawal</h3>
                         <p class="text-gray-600 mb-4">Book: <strong>${bookName}</strong></p>
                         <form onsubmit="submitWithdrawal(event, ${bookId})" class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
@@ -773,10 +772,10 @@ const API_BASE = '/api';
                             </div>
                             <div class="flex gap-3 pt-4">
                                 <button type="submit" class="flex-1 bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg font-bold transition">
-                                    💾 Record Withdrawal
+                                     Record Withdrawal
                                 </button>
                                 <button type="button" onclick="closeBookForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                    ✖️ Cancel
+                                     Cancel
                                 </button>
                             </div>
                         </form>
@@ -814,10 +813,10 @@ const API_BASE = '/api';
                     short_notes: document.getElementById('withdrawShortNotes').value || null,
                     full_details: document.getElementById('withdrawFullDetails').value || null
                 });
-                alert('✅ Withdrawal recorded successfully!');
+                alert(' Withdrawal recorded successfully!');
                 closeBookForm();
             } catch (error) {
-                alert('❌ Error: ' + (error.response?.data?.error || error.message));
+                alert(' Error: ' + (error.response?.data?.error || error.message));
             }
         }
 
@@ -831,7 +830,7 @@ const API_BASE = '/api';
                         <div class="bg-white rounded-lg p-8 max-w-4xl w-full shadow-2xl my-8 max-h-[90vh] overflow-y-auto">
                             <div class="flex justify-between items-center mb-6">
                                 <div>
-                                    <h3 class="text-2xl font-bold text-slate-800">📜 Transaction History</h3>
+                                    <h3 class="text-2xl font-bold text-slate-800"> Transaction History</h3>
                                     <p class="text-gray-600">Book: <strong>${bookName}</strong></p>
                                 </div>
                                 <button onclick="closeBookForm()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -926,18 +925,18 @@ const API_BASE = '/api';
 
                 document.getElementById('bookFormContainer').innerHTML = html;
             } catch (error) {
-                alert('❌ Error loading history: ' + (error.response?.data?.error || error.message));
+                alert(' Error loading history: ' + (error.response?.data?.error || error.message));
             }
         }
 
         async function deleteTransaction(txnId, bookId, bookName) {
-            if (confirm('⚠️ Are you sure you want to delete this transaction? This will also remove the associated ledger entry.')) {
+            if (confirm(' Are you sure you want to delete this transaction? This will also remove the associated ledger entry.')) {
                 try {
                     await axios.delete(`${API_BASE}/book-transactions/${txnId}`);
-                    alert('✅ Transaction deleted successfully!');
+                    alert(' Transaction deleted successfully!');
                     showTransactionHistory(bookId, bookName); // Refresh history
                 } catch (error) {
-                    alert('❌ Error: ' + (error.response?.data?.error || error.message));
+                    alert(' Error: ' + (error.response?.data?.error || error.message));
                 }
             }
         }
@@ -947,10 +946,10 @@ const API_BASE = '/api';
             if (!reason) return;
             try {
                 await axios.post(`${API_BASE}/book-transactions/${txnId}/cancel`, { reason });
-                alert('✅ Transaction cancelled (ledger voucher(s) removed). Now record the correct transaction.');
+                alert(' Transaction cancelled (ledger voucher(s) removed). Now record the correct transaction.');
                 showTransactionHistory(bookId, bookName);
             } catch (error) {
-                alert('❌ Error: ' + (error.response?.data?.error || error.message));
+                alert(' Error: ' + (error.response?.data?.error || error.message));
             }
         }
     </script>

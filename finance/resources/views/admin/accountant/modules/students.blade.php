@@ -52,7 +52,7 @@
     <!-- Add/Edit Student Modal -->
     <div id="studentModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 id="studentModalTitle" class="text-2xl font-bold text-blue-600 mb-4">➕ Add Student</h3>
+            <h3 id="studentModalTitle" class="text-2xl font-bold text-blue-600 mb-4"> Add Student</h3>
             <form id="studentForm" onsubmit="submitStudentForm(event)">
                 <input type="hidden" id="studentId" value="">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -102,10 +102,10 @@
                 </div>
                 <div class="flex gap-3 mt-6">
                     <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition">
-                        ✅ Save Student
+                         Save Student
                     </button>
                     <button type="button" onclick="closeStudentModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition">
-                        ❌ Cancel
+                         Cancel
                     </button>
                 </div>
             </form>
@@ -115,7 +115,7 @@
     <!-- Upload CSV Modal -->
     <div id="uploadCsvModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg p-6 max-w-2xl w-full">
-            <h3 class="text-2xl font-bold text-blue-600 mb-4">📤 Upload Student CSV</h3>
+            <h3 class="text-2xl font-bold text-blue-600 mb-4"> Upload Student CSV</h3>
             <form id="uploadCsvForm" onsubmit="submitUploadCsvForm(event)">
                 <div class="mb-4">
                     <label class="block font-bold mb-2">Select CSV File <span class="text-red-500">*</span></label>
@@ -137,10 +137,10 @@
                 <div id="uploadResults" class="hidden mb-4"></div>
                 <div class="flex gap-3">
                     <button type="submit" id="uploadBtn" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition">
-                        ✅ Upload CSV
+                         Upload CSV
                     </button>
                     <button type="button" onclick="closeUploadCsvModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition">
-                        ❌ Cancel
+                         Cancel
                     </button>
                 </div>
             </form>
@@ -206,7 +206,7 @@ const API_BASE = '/api';
                 console.error('Error loading students:', error);
                 document.getElementById('studentsTable').innerHTML = `
                     <div class="p-6 text-center text-red-500">
-                        <p class="mb-2">❌ Failed to load students</p>
+                        <p class="mb-2"> Failed to load students</p>
                         <p class="text-sm">${error.message}</p>
                     </div>
                 `;
@@ -219,7 +219,7 @@ const API_BASE = '/api';
             if (students.length === 0) {
                 tableContainer.innerHTML = `
                     <div class="p-6 text-center text-gray-500">
-                        <p class="mb-2">📭 No students found</p>
+                        <p class="mb-2"> No students found</p>
                         <p class="text-sm">Try adjusting your filters or add new students using the buttons above.</p>
                     </div>
                 `;
@@ -260,10 +260,10 @@ const API_BASE = '/api';
                         <td class="p-3 ${statusColor} font-semibold capitalize">${student.status}</td>
                         <td class="p-3 text-center">
                             <button onclick="editStudent(${student.id})" class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm mr-2">
-                                ✏️ Edit
+                                 Edit
                             </button>
                             <button onclick="deleteStudent(${student.id}, '${student.name}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
-                                🗑️ Delete
+                                 Delete
                             </button>
                         </td>
                     </tr>
@@ -280,7 +280,7 @@ const API_BASE = '/api';
         }
 
         function showAddStudentModal() {
-            document.getElementById('studentModalTitle').textContent = '➕ Add Student';
+            document.getElementById('studentModalTitle').textContent = ' Add Student';
             document.getElementById('studentId').value = '';
             document.getElementById('studentForm').reset();
             document.getElementById('studentModal').classList.remove('hidden');
@@ -303,7 +303,7 @@ const API_BASE = '/api';
                 }
 
                 // Populate form
-                document.getElementById('studentModalTitle').textContent = '✏️ Edit Student';
+                document.getElementById('studentModalTitle').textContent = ' Edit Student';
                 document.getElementById('studentId').value = student.id;
                 document.getElementById('studentRegNo').value = student.student_reg_no;
                 document.getElementById('studentName').value = student.name;
@@ -317,22 +317,22 @@ const API_BASE = '/api';
                 document.getElementById('studentModal').classList.remove('hidden');
             } catch (error) {
                 console.error('Error loading student:', error);
-                alert('❌ Failed to load student details');
+                alert(' Failed to load student details');
             }
         }
 
         async function deleteStudent(studentId, studentName) {
-            if (!confirm(`⚠️ Are you sure you want to delete ${studentName}?\n\nThis will remove their phone numbers but preserve all transaction records.`)) {
+            if (!confirm(` Are you sure you want to delete ${studentName}?\n\nThis will remove their phone numbers but preserve all transaction records.`)) {
                 return;
             }
 
             try {
                 await axios.delete(`/students/${studentId}`);
-                alert('✅ Student deleted successfully');
+                alert(' Student deleted successfully');
                 loadStudents();
             } catch (error) {
                 const errorMsg = error.response?.data?.message || error.message;
-                alert('❌ Failed to delete student: ' + errorMsg);
+                alert(' Failed to delete student: ' + errorMsg);
             }
         }
 
@@ -360,11 +360,11 @@ const API_BASE = '/api';
                 if (studentId) {
                     // Update existing student
                     await axios.put(`/students/${studentId}`, formData);
-                    alert('✅ Student updated successfully');
+                    alert(' Student updated successfully');
                 } else {
                     // Create new student
                     await axios.post('/students', formData);
-                    alert('✅ Student created successfully');
+                    alert(' Student created successfully');
                 }
 
                 closeStudentModal();
@@ -373,7 +373,7 @@ const API_BASE = '/api';
                 const errorMsg = error.response?.data?.message || error.message;
                 const errors = error.response?.data?.errors;
 
-                let message = '❌ Error: ' + errorMsg;
+                let message = ' Error: ' + errorMsg;
                 if (errors) {
                     message += '\n\nDetails:\n';
                     Object.entries(errors).forEach(([field, messages]) => {
@@ -403,7 +403,7 @@ const API_BASE = '/api';
             const file = fileInput.files[0];
 
             if (!file) {
-                alert('⚠️ Please select a CSV file');
+                alert(' Please select a CSV file');
                 return;
             }
 
@@ -427,14 +427,14 @@ const API_BASE = '/api';
                 // Show results
                 let resultsHtml = `
                     <div class="bg-green-100 border-2 border-green-500 rounded-lg p-4">
-                        <h4 class="font-bold text-green-800 text-lg mb-2">✅ ${data.message}</h4>
+                        <h4 class="font-bold text-green-800 text-lg mb-2"> ${data.message}</h4>
                         <p class="text-green-700">Successfully imported: ${data.success_count} student(s)</p>
                 `;
 
                 if (data.skipped && data.skipped.length > 0) {
                     resultsHtml += `
                         <div class="mt-3 p-3 bg-yellow-50 border border-yellow-400 rounded">
-                            <p class="font-semibold text-yellow-800">⚠️ Skipped (${data.skipped.length}):</p>
+                            <p class="font-semibold text-yellow-800"> Skipped (${data.skipped.length}):</p>
                             <ul class="text-xs text-yellow-700 mt-2 max-h-32 overflow-y-auto">
                                 ${data.skipped.map(msg => `<li>• ${msg}</li>`).join('')}
                             </ul>
@@ -445,7 +445,7 @@ const API_BASE = '/api';
                 if (data.errors && data.errors.length > 0) {
                     resultsHtml += `
                         <div class="mt-3 p-3 bg-red-50 border border-red-400 rounded">
-                            <p class="font-semibold text-red-800">❌ Errors (${data.errors.length}):</p>
+                            <p class="font-semibold text-red-800"> Errors (${data.errors.length}):</p>
                             <ul class="text-xs text-red-700 mt-2 max-h-32 overflow-y-auto">
                                 ${data.errors.map(msg => `<li>• ${msg}</li>`).join('')}
                             </ul>
@@ -480,7 +480,7 @@ const API_BASE = '/api';
 
                 document.getElementById('uploadResults').innerHTML = `
                     <div class="bg-red-100 border-2 border-red-500 rounded-lg p-4">
-                        <h4 class="font-bold text-red-800 text-lg mb-2">❌ Upload Failed</h4>
+                        <h4 class="font-bold text-red-800 text-lg mb-2"> Upload Failed</h4>
                         <p class="text-red-700">${errorMsg}</p>
                         ${errorDetails}
                     </div>
@@ -488,7 +488,7 @@ const API_BASE = '/api';
                 document.getElementById('uploadResults').classList.remove('hidden');
             } finally {
                 document.getElementById('uploadBtn').disabled = false;
-                document.getElementById('uploadBtn').textContent = '✅ Upload CSV';
+                document.getElementById('uploadBtn').textContent = ' Upload CSV';
             }
         }
     </script>

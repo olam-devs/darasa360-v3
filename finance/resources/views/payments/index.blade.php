@@ -6,7 +6,7 @@
             </h2>
             @if(auth()->user()->role !== 'parent')
                 <a href="{{ route('payments.create') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium shadow">
-                    💰 Record Payment
+                     Record Payment
                 </a>
             @endif
         </div>
@@ -49,11 +49,11 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
-                                                @if($payment->payment_method === 'cash') 💵
-                                                @elseif($payment->payment_method === 'bank_transfer') 🏦
-                                                @elseif($payment->payment_method === 'mobile_money') 📱
-                                                @elseif($payment->payment_method === 'cheque') 📝
-                                                @else 💳
+                                                @if($payment->payment_method === 'cash')
+                                                @elseif($payment->payment_method === 'bank_transfer')
+                                                @elseif($payment->payment_method === 'mobile_money')
+                                                @elseif($payment->payment_method === 'cheque')
+                                                @else
                                                 @endif
                                                 {{ ucfirst(str_replace('_', ' ', $payment->payment_method)) }}
                                             </span>
@@ -78,7 +78,7 @@
                                 @empty
                                     <tr>
                                         <td colspan="8" class="px-6 py-12 text-center">
-                                            <div class="text-gray-400 text-lg">💸</div>
+                                            <div class="text-gray-400 text-lg"></div>
                                             <p class="text-gray-500 mt-2">No payments found</p>
                                         </td>
                                     </tr>

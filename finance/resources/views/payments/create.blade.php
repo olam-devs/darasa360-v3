@@ -108,35 +108,35 @@
                                 <label class="relative">
                                     <input type="radio" name="payment_method" value="cash" required class="peer sr-only">
                                     <div class="border-2 border-gray-300 rounded-lg p-4 text-center cursor-pointer peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-green-300">
-                                        <div class="text-2xl mb-1">💵</div>
+                                        <div class="text-2xl mb-1"></div>
                                         <div class="text-sm font-medium">Cash</div>
                                     </div>
                                 </label>
                                 <label class="relative">
                                     <input type="radio" name="payment_method" value="bank_transfer" required class="peer sr-only">
                                     <div class="border-2 border-gray-300 rounded-lg p-4 text-center cursor-pointer peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-green-300">
-                                        <div class="text-2xl mb-1">🏦</div>
+                                        <div class="text-2xl mb-1"></div>
                                         <div class="text-sm font-medium">Bank Transfer</div>
                                     </div>
                                 </label>
                                 <label class="relative">
                                     <input type="radio" name="payment_method" value="mobile_money" required class="peer sr-only">
                                     <div class="border-2 border-gray-300 rounded-lg p-4 text-center cursor-pointer peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-green-300">
-                                        <div class="text-2xl mb-1">📱</div>
+                                        <div class="text-2xl mb-1"></div>
                                         <div class="text-sm font-medium">Mobile Money</div>
                                     </div>
                                 </label>
                                 <label class="relative">
                                     <input type="radio" name="payment_method" value="cheque" required class="peer sr-only">
                                     <div class="border-2 border-gray-300 rounded-lg p-4 text-center cursor-pointer peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-green-300">
-                                        <div class="text-2xl mb-1">📝</div>
+                                        <div class="text-2xl mb-1"></div>
                                         <div class="text-sm font-medium">Cheque</div>
                                     </div>
                                 </label>
                                 <label class="relative">
                                     <input type="radio" name="payment_method" value="card" required class="peer sr-only">
                                     <div class="border-2 border-gray-300 rounded-lg p-4 text-center cursor-pointer peer-checked:border-green-500 peer-checked:bg-green-50 hover:border-green-300">
-                                        <div class="text-2xl mb-1">💳</div>
+                                        <div class="text-2xl mb-1"></div>
                                         <div class="text-sm font-medium">Card</div>
                                     </div>
                                 </label>
@@ -177,7 +177,7 @@
                             </a>
                             <button type="submit"
                                 class="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium shadow-lg">
-                                💰 Record Payment
+                                 Record Payment
                             </button>
                         </div>
                     </form>

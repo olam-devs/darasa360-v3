@@ -156,7 +156,7 @@
                             </a>
                             <button type="submit"
                                 class="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-lg">
-                                👨‍🎓 Add Student
+                                ‍ Add Student
                             </button>
                         </div>
                     </form>

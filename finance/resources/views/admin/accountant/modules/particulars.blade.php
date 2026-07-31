@@ -104,17 +104,17 @@ const API_BASE = '/api';
                             <div class="flex justify-between items-start">
                                 <div class="flex-1">
                                     <h3 class="font-bold text-xl text-green-700">${particular.name}</h3>
-                                    <p class="text-sm text-gray-600 mt-2">📚 Books: ${particular.book_ids?.length || 0} assigned</p>
-                                    <p class="text-sm text-gray-600">👥 Students: ${particular.students?.length || 0} assigned</p>
+                                    <p class="text-sm text-gray-600 mt-2"> Books: ${particular.book_ids?.length || 0} assigned</p>
+                                    <p class="text-sm text-gray-600"> Students: ${particular.students?.length || 0} assigned</p>
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick='showEditParticularForm(${JSON.stringify(particular)})'
                                         class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition">
-                                        ✏️ Edit
+                                         Edit
                                     </button>
                                     <button onclick="showAssignStudentsForm(${particular.id}, '${particular.name}')"
                                         class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition">
-                                        👥 Manage Assignments
+                                         Manage Assignments
                                     </button>
                                 </div>
                             </div>
@@ -133,7 +133,7 @@ const API_BASE = '/api';
                 `<label class="flex items-center gap-2 p-3 bg-gray-50 hover:bg-blue-50 rounded border-2 border-gray-300 hover:border-blue-400 cursor-pointer transition">
                     <input type="checkbox" class="book-checkbox w-5 h-5 rounded border-gray-300" value="${book.id}">
                     <span class="font-semibold">${book.name}</span>
-                    ${book.is_cash_book ? '<span class="text-xs text-green-600 font-bold ml-auto">💵 Cash Book</span>' : '<span class="text-xs text-blue-600 font-bold ml-auto">🏦 Bank</span>'}
+                    ${book.is_cash_book ? '<span class="text-xs text-green-600 font-bold ml-auto"> Cash Book</span>' : '<span class="text-xs text-blue-600 font-bold ml-auto"> Bank</span>'}
                 </label>`
             ).join('');
 
@@ -157,10 +157,10 @@ const API_BASE = '/api';
                             </div>
                             <div class="flex gap-3 pt-4">
                                 <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold transition">
-                                    💾 Save Particular
+                                     Save Particular
                                 </button>
                                 <button type="button" onclick="closeParticularForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                    ✖️ Cancel
+                                     Cancel
                                 </button>
                             </div>
                         </form>
@@ -181,7 +181,7 @@ const API_BASE = '/api';
             const bookIds = Array.from(bookCheckboxes).map(cb => parseInt(cb.value));
 
             if (bookIds.length === 0) {
-                alert('⚠️ Please select at least one book');
+                alert(' Please select at least one book');
                 return;
             }
 
@@ -191,11 +191,11 @@ const API_BASE = '/api';
                     book_ids: bookIds,
                     class_names: []
                 });
-                alert('✅ Particular created successfully!');
+                alert(' Particular created successfully!');
                 closeParticularForm();
                 loadParticulars();
             } catch (error) {
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -205,14 +205,14 @@ const API_BASE = '/api';
                 return `<label class="flex items-center gap-2 p-3 bg-gray-50 hover:bg-blue-50 rounded border-2 border-gray-300 hover:border-blue-400 cursor-pointer transition">
                     <input type="checkbox" class="book-checkbox w-5 h-5 rounded border-gray-300" value="${book.id}" ${isChecked}>
                     <span class="font-semibold">${book.name}</span>
-                    ${book.is_cash_book ? '<span class="text-xs text-green-600 font-bold ml-auto">💵 Cash Book</span>' : '<span class="text-xs text-blue-600 font-bold ml-auto">🏦 Bank</span>'}
+                    ${book.is_cash_book ? '<span class="text-xs text-green-600 font-bold ml-auto"> Cash Book</span>' : '<span class="text-xs text-blue-600 font-bold ml-auto"> Bank</span>'}
                 </label>`;
             }).join('');
 
             const formHtml = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
                     <div class="bg-white rounded-lg p-8 max-w-2xl w-full shadow-2xl m-4">
-                        <h3 class="text-2xl font-bold mb-6 text-yellow-600">✏️ Edit Particular</h3>
+                        <h3 class="text-2xl font-bold mb-6 text-yellow-600"> Edit Particular</h3>
                         <form onsubmit="updateParticular(event, ${particular.id})" class="space-y-4">
                             <div>
                                 <label class="block text-sm font-bold mb-2">Particular Name *</label>
@@ -227,14 +227,14 @@ const API_BASE = '/api';
                                     ${booksCheckboxes}
                                 </div>
                                 <p class="text-xs text-gray-500 mt-2">Select one or more books where this fee can be paid</p>
-                                <p class="text-xs text-orange-600 font-semibold mt-2">⚠️ Note: Unchecking a book will not delete existing entries but will prevent future entries to that book.</p>
+                                <p class="text-xs text-orange-600 font-semibold mt-2"> Note: Unchecking a book will not delete existing entries but will prevent future entries to that book.</p>
                             </div>
                             <div class="flex gap-3 pt-4">
                                 <button type="submit" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-bold transition">
-                                    💾 Update Particular
+                                     Update Particular
                                 </button>
                                 <button type="button" onclick="closeParticularForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                    ✖️ Cancel
+                                     Cancel
                                 </button>
                             </div>
                         </form>
@@ -251,7 +251,7 @@ const API_BASE = '/api';
             const bookIds = Array.from(bookCheckboxes).map(cb => parseInt(cb.value));
 
             if (bookIds.length === 0) {
-                alert('⚠️ Please select at least one book');
+                alert(' Please select at least one book');
                 return;
             }
 
@@ -260,11 +260,11 @@ const API_BASE = '/api';
                     name: name,
                     book_ids: bookIds
                 });
-                alert('✅ Particular updated successfully!');
+                alert(' Particular updated successfully!');
                 closeParticularForm();
                 loadParticulars();
             } catch (error) {
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -314,11 +314,11 @@ const API_BASE = '/api';
             const formHtml = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
                     <div class="bg-white rounded-lg p-8 max-w-6xl w-full shadow-2xl m-4 max-h-[90vh] overflow-y-auto">
-                        <h3 class="text-2xl font-bold mb-4 text-green-600">📋 Manage Assignments: ${particularName}</h3>
+                        <h3 class="text-2xl font-bold mb-4 text-green-600"> Manage Assignments: ${particularName}</h3>
 
                         <!-- Academic Year Selection (Required) -->
                         <div class="mb-6 p-6 bg-yellow-50 rounded-lg border-2 border-yellow-400">
-                            <label class="block text-lg font-bold mb-3 text-center text-yellow-700">📅 Step 1: Select Academic Year (Required)</label>
+                            <label class="block text-lg font-bold mb-3 text-center text-yellow-700"> Step 1: Select Academic Year (Required)</label>
                             <div class="flex justify-center">
                                 <select id="academicYearSelect" class="w-64 border-2 border-yellow-400 rounded-lg px-4 py-3 text-lg font-semibold bg-white focus:border-yellow-600 focus:outline-none" onchange="onAcademicYearChange(this.value)">
                                     ${academicYearOptions.length > 0 ? academicYearOptions : '<option value="">No Academic Years Available</option>'}
@@ -337,7 +337,7 @@ const API_BASE = '/api';
                         </div>
 
                         <div class="mb-6 p-6 bg-blue-50 rounded-lg border-2 border-blue-300">
-                            <label class="block text-lg font-bold mb-4 text-center">📚 Step 2: Select Class to View Students:</label>
+                            <label class="block text-lg font-bold mb-4 text-center"> Step 2: Select Class to View Students:</label>
                             <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                                 ${classButtons}
                             </div>
@@ -348,7 +348,7 @@ const API_BASE = '/api';
                         <div class="flex gap-3 pt-4 border-t-2">
                             <button type="button" onclick="closeAssignForm()"
                                 class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                ✖️ Close
+                                 Close
                             </button>
                         </div>
                     </div>
@@ -381,7 +381,7 @@ const API_BASE = '/api';
             const bulkAmount = document.getElementById('bulkAmountInput')?.value;
             const amount = parseMoneyInput(bulkAmount);
             if (!amount || amount <= 0) {
-                alert('⚠️ Enter a valid bulk amount');
+                alert(' Enter a valid bulk amount');
                 return;
             }
             applyBulkValueToSelected('.student-amount', amount);
@@ -391,7 +391,7 @@ const API_BASE = '/api';
         function applyBulkDeadlineForClassStudents() {
             const bulkDeadline = document.getElementById('bulkDeadlineInput')?.value;
             if (!bulkDeadline) {
-                alert('⚠️ Select a bulk deadline date');
+                alert(' Select a bulk deadline date');
                 return;
             }
             applyBulkValueToSelected('.student-deadline', bulkDeadline);
@@ -405,7 +405,7 @@ const API_BASE = '/api';
 
             // Check if academic year is selected
             if (!selectedAcademicYearId) {
-                alert('⚠️ Please select an Academic Year first');
+                alert(' Please select an Academic Year first');
                 return;
             }
 
@@ -454,7 +454,7 @@ const API_BASE = '/api';
 
                 classStudents.forEach(student => {
                     const bgClass = student.has_assignment ? 'bg-green-50 border-green-400' : 'bg-white';
-                    const checkmark = student.has_assignment ? '✅ ' : '';
+                    const checkmark = student.has_assignment ? ' ' : '';
 
                     html += `
                         <div class="flex items-center gap-2 p-3 ${bgClass} rounded border-2 hover:border-blue-500">
@@ -482,12 +482,12 @@ const API_BASE = '/api';
                             ${student.has_assignment ? `
                             <button onclick="saveStudentEdit(${particularId}, ${student.student_id})"
                                 class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-bold">
-                                ✏️ Update
+                                 Update
                             </button>
                             ` : `
                             <button onclick="assignSingleStudent(${particularId}, ${student.student_id})"
                                 class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">
-                                ➕ Assign
+                                 Assign
                             </button>
                             `}
                         </div>
@@ -502,7 +502,7 @@ const API_BASE = '/api';
             } catch (error) {
                 console.error('Error loading students:', error);
                 document.getElementById('studentsListContainer').innerHTML =
-                    '<p class="text-center text-red-500 p-4">❌ Error loading students</p>';
+                    '<p class="text-center text-red-500 p-4"> Error loading students</p>';
             }
         }
 
@@ -527,13 +527,13 @@ const API_BASE = '/api';
 
         async function bulkAssignSelected(particularId) {
             if (!selectedAcademicYearId) {
-                alert('⚠️ Please select an Academic Year first');
+                alert(' Please select an Academic Year first');
                 return;
             }
 
             const selected = getSelectedRowsForBulk();
             if (selected.length === 0) {
-                alert('⚠️ Select at least one student');
+                alert(' Select at least one student');
                 return;
             }
 
@@ -546,7 +546,7 @@ const API_BASE = '/api';
                 }));
 
             if (assignments.length === 0) {
-                alert('⚠️ Enter amount(s) for selected students');
+                alert(' Enter amount(s) for selected students');
                 return;
             }
 
@@ -557,23 +557,23 @@ const API_BASE = '/api';
                     academic_year_id: selectedAcademicYearId,
                     use_advance: useAdvance,
                 });
-                alert(`✅ Bulk assign complete for ${assignments.length} student(s)`);
+                alert(` Bulk assign complete for ${assignments.length} student(s)`);
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error bulk assigning:', error);
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
         async function bulkUpdateSelected(particularId) {
             if (!selectedAcademicYearId) {
-                alert('⚠️ Please select an Academic Year first');
+                alert(' Please select an Academic Year first');
                 return;
             }
 
             const selected = getSelectedRowsForBulk();
             if (selected.length === 0) {
-                alert('⚠️ Select at least one student');
+                alert(' Select at least one student');
                 return;
             }
 
@@ -587,7 +587,7 @@ const API_BASE = '/api';
                 .filter(r => r.sales > 0);
 
             if (updates.length === 0) {
-                alert('⚠️ Selected students need a fee amount (from the row or saved assignment). Enter amounts or choose students who are already assigned.');
+                alert(' Selected students need a fee amount (from the row or saved assignment). Enter amounts or choose students who are already assigned.');
                 return;
             }
 
@@ -596,18 +596,18 @@ const API_BASE = '/api';
                     updates,
                     academic_year_id: selectedAcademicYearId,
                 });
-                alert(`✅ Bulk update complete for ${updates.length} student(s)`);
+                alert(` Bulk update complete for ${updates.length} student(s)`);
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error bulk updating:', error);
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
         async function assignSingleStudent(particularId, studentId) {
             // Check if academic year is selected
             if (!selectedAcademicYearId) {
-                alert('⚠️ Please select an Academic Year first');
+                alert(' Please select an Academic Year first');
                 return;
             }
 
@@ -618,7 +618,7 @@ const API_BASE = '/api';
             const deadline = deadlineInput.value;
 
             if (!amount || amount <= 0) {
-                alert('⚠️ Please enter a valid amount');
+                alert(' Please enter a valid amount');
                 return;
             }
 
@@ -630,12 +630,12 @@ const API_BASE = '/api';
                     academic_year_id: selectedAcademicYearId
                 });
 
-                alert('✅ Student assigned successfully!');
+                alert(' Student assigned successfully!');
                 // Reload the class view
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error assigning student:', error);
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -648,7 +648,7 @@ const API_BASE = '/api';
             const deadline = deadlineInput.value;
 
             if (!newAmount || newAmount <= 0) {
-                alert('⚠️ Please enter a valid amount');
+                alert(' Please enter a valid amount');
                 return;
             }
 
@@ -656,7 +656,7 @@ const API_BASE = '/api';
             const amountChanged = Math.abs(newAmount - originalAmount) > 0.001;
 
             if (!amountChanged && !deadline) {
-                alert('⚠️ No changes detected');
+                alert(' No changes detected');
                 return;
             }
 
@@ -668,16 +668,16 @@ const API_BASE = '/api';
                 });
 
                 if (amountChanged) {
-                    alert(`✅ Updated successfully! Ledger entry created for amount change (${originalAmount} → ${newAmount})`);
+                    alert(` Updated successfully! Ledger entry created for amount change (${originalAmount} → ${newAmount})`);
                 } else {
-                    alert('✅ Deadline updated successfully!');
+                    alert(' Deadline updated successfully!');
                 }
 
                 // Reload the class view
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error updating assignment:', error);
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -685,7 +685,7 @@ const API_BASE = '/api';
             const formHtml = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-8 max-w-md w-full shadow-2xl m-4">
-                        <h3 class="text-xl font-bold mb-4 text-green-600">➕ Assign to: ${studentName}</h3>
+                        <h3 class="text-xl font-bold mb-4 text-green-600"> Assign to: ${studentName}</h3>
                         <div class="space-y-4">
                             <div>
                                 <label class="block font-bold mb-2">Amount (TSH):</label>
@@ -701,7 +701,7 @@ const API_BASE = '/api';
                             </label>
                             <div class="flex gap-3 pt-4 border-t-2">
                                 <button onclick="closeNewAssignmentForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-bold">Cancel</button>
-                                <button onclick="saveNewAssignment(${particularId}, ${studentId})" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold">✅ Assign</button>
+                                <button onclick="saveNewAssignment(${particularId}, ${studentId})" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-bold"> Assign</button>
                             </div>
                         </div>
                     </div>
@@ -718,7 +718,7 @@ const API_BASE = '/api';
         async function saveNewAssignment(particularId, studentId) {
             // Check if academic year is selected
             if (!selectedAcademicYearId) {
-                alert('⚠️ Please select an Academic Year first');
+                alert(' Please select an Academic Year first');
                 return;
             }
 
@@ -726,7 +726,7 @@ const API_BASE = '/api';
             const deadline = document.getElementById('newAssignDeadline').value;
 
             if (!amount || amount <= 0) {
-                alert('⚠️ Please enter a valid amount');
+                alert(' Please enter a valid amount');
                 return;
             }
 
@@ -739,12 +739,12 @@ const API_BASE = '/api';
                     use_advance: document.getElementById('newAssignUseAdvance')?.checked || false,
                 });
 
-                alert('✅ Student assigned successfully!');
+                alert(' Student assigned successfully!');
                 closeNewAssignmentForm();
                 showAssignStudentsForm(particularId, currentParticularForExisting?.name || 'Particular');
             } catch (error) {
                 console.error('Error assigning student:', error);
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -752,7 +752,7 @@ const API_BASE = '/api';
             const formHtml = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-8 max-w-md w-full shadow-2xl m-4">
-                        <h3 class="text-xl font-bold mb-4 text-yellow-600">✏️ Edit Assignment: ${studentName}</h3>
+                        <h3 class="text-xl font-bold mb-4 text-yellow-600"> Edit Assignment: ${studentName}</h3>
                         <div class="space-y-4">
                             <div>
                                 <label class="block font-bold mb-2">Current Amount: TSH ${currentAmount.toLocaleString()}</label>
@@ -766,7 +766,7 @@ const API_BASE = '/api';
                             </div>
                             <div class="flex gap-3 pt-4 border-t-2">
                                 <button onclick="closeEditAssignmentForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-bold">Cancel</button>
-                                <button onclick="saveEditAssignment(${particularId}, ${studentId})" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-bold">💾 Save</button>
+                                <button onclick="saveEditAssignment(${particularId}, ${studentId})" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-bold"> Save</button>
                             </div>
                         </div>
                     </div>
@@ -785,7 +785,7 @@ const API_BASE = '/api';
             const deadline = document.getElementById('editAssignDeadline').value;
 
             if (!amount || amount <= 0) {
-                alert('⚠️ Please enter a valid amount');
+                alert(' Please enter a valid amount');
                 return;
             }
 
@@ -795,27 +795,27 @@ const API_BASE = '/api';
                     deadline: deadline || null
                 });
 
-                alert('✅ Assignment updated successfully! Ledger entry created for amount change.');
+                alert(' Assignment updated successfully! Ledger entry created for amount change.');
                 closeEditAssignmentForm();
                 showAssignStudentsForm(particularId, currentParticularForExisting?.name || 'Particular');
             } catch (error) {
                 console.error('Error updating assignment:', error);
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
         async function deleteAssignment(particularId, studentId, studentName) {
-            if (!confirm(`⚠️ Are you sure you want to remove this particular from ${studentName}?`)) {
+            if (!confirm(` Are you sure you want to remove this particular from ${studentName}?`)) {
                 return;
             }
 
             try {
                 await axios.delete(`${API_BASE}/particulars/${particularId}/assignments/${studentId}`);
-                alert('✅ Assignment deleted successfully!');
+                alert(' Assignment deleted successfully!');
                 showAssignStudentsForm(particularId, currentParticularForExisting?.name || 'Particular');
             } catch (error) {
                 console.error('Error deleting assignment:', error);
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -873,7 +873,7 @@ const API_BASE = '/api';
                 const checkedAttr = isAssigned ? 'checked' : '';
                 const bgClass = isAssigned ? 'bg-green-50 border-green-400' : 'bg-white';
                 const deadlineValue = existingAssignments[student.id]?.deadline || '';
-                const checkmark = isAssigned ? '✅ ' : '';
+                const checkmark = isAssigned ? ' ' : '';
 
                 html += `
                     <div class="flex items-center gap-2 p-3 ${bgClass} rounded border hover:border-green-500">
@@ -933,11 +933,11 @@ const API_BASE = '/api';
                     <div class="flex gap-3">
                         <button onclick="assignSelectedStudents(${particularId})"
                             class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold transition">
-                            💾 Save & Exit
+                             Save & Exit
                         </button>
                         <button onclick="assignAndSelectAnother(${particularId})"
                             class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-bold transition">
-                            💾 Save & Select Another Class
+                             Save & Select Another Class
                         </button>
                     </div>
                 </div>
@@ -955,7 +955,7 @@ const API_BASE = '/api';
         function applyBulkSales() {
             const bulkAmount = document.getElementById('bulkSalesAmount').value;
             if (!bulkAmount) {
-                alert('⚠️ Please enter a sales amount');
+                alert(' Please enter a sales amount');
                 return;
             }
 
@@ -966,14 +966,14 @@ const API_BASE = '/api';
                     input.value = bulkAmount;
                 }
             });
-            alert('✅ Sales amount applied to selected students');
+            alert(' Sales amount applied to selected students');
         }
 
         /** Bulk deadline on the older checkbox list form (uses #bulkDeadlineDate, .deadline-date) */
         function applyBulkDeadlineForCheckboxForm() {
             const bulkDeadline = document.getElementById('bulkDeadlineDate')?.value;
             if (!bulkDeadline) {
-                alert('⚠️ Please select a deadline date');
+                alert(' Please select a deadline date');
                 return;
             }
 
@@ -984,7 +984,7 @@ const API_BASE = '/api';
                     input.value = bulkDeadline;
                 }
             });
-            alert('✅ Deadline applied to selected students');
+            alert(' Deadline applied to selected students');
         }
 
         async function assignSelectedStudents(particularId, selectAnother = false) {
@@ -1004,7 +1004,7 @@ const API_BASE = '/api';
             });
 
             if (selectedStudents.length === 0) {
-                alert('⚠️ Please select at least one student');
+                alert(' Please select at least one student');
                 return;
             }
 
@@ -1012,7 +1012,7 @@ const API_BASE = '/api';
                 await axios.post(`${API_BASE}/particulars/${particularId}/assign-students`, {
                     students: selectedStudents
                 });
-                alert(`✅ ${selectedStudents.length} student(s) assigned successfully!`);
+                alert(` ${selectedStudents.length} student(s) assigned successfully!`);
 
                 if (selectAnother) {
                     // Clear selections and reset form
@@ -1023,7 +1023,7 @@ const API_BASE = '/api';
                     loadParticulars();
                 }
             } catch (error) {
-                alert('❌ Error: ' + (error.response?.data?.message || error.message));
+                alert(' Error: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -1064,10 +1064,10 @@ const API_BASE = '/api';
             const formHtml = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
                     <div class="bg-white rounded-lg p-8 max-w-6xl w-full shadow-2xl m-4 max-h-[90vh] overflow-y-auto">
-                        <h3 class="text-2xl font-bold mb-4 text-blue-600">📋 Existing Assignments for: ${particularName}</h3>
+                        <h3 class="text-2xl font-bold mb-4 text-blue-600"> Existing Assignments for: ${particularName}</h3>
 
                         <div class="mb-6 p-6 bg-blue-50 rounded-lg border-2 border-blue-300">
-                            <label class="block text-lg font-bold mb-4 text-center">📚 Select Class to View Assignments:</label>
+                            <label class="block text-lg font-bold mb-4 text-center"> Select Class to View Assignments:</label>
                             <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                                 ${classButtons}
                             </div>
@@ -1078,7 +1078,7 @@ const API_BASE = '/api';
                         <div class="flex gap-3 pt-4 border-t-2">
                             <button type="button" onclick="closeExistingAssignmentsForm()"
                                 class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                ✖️ Close
+                                 Close
                             </button>
                         </div>
                     </div>
@@ -1138,11 +1138,11 @@ const API_BASE = '/api';
                             <div class="flex gap-2">
                                 <button onclick="showEditAssignmentModal(${particularId}, ${assignment.student_id}, '${assignment.student_name}', ${assignment.sales}, '${assignment.deadline || ''}')"
                                     class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded transition text-sm">
-                                    ✏️ Edit
+                                     Edit
                                 </button>
                                 <button onclick="deleteAssignment(${particularId}, ${assignment.student_id}, '${assignment.student_name}')"
                                     class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded transition text-sm">
-                                    🗑️ Delete
+                                     Delete
                                 </button>
                             </div>
                         </div>
@@ -1165,7 +1165,7 @@ const API_BASE = '/api';
             const editModalHtml = `
                 <div id="editAssignmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-2xl m-4">
-                        <h3 class="text-xl font-bold mb-4 text-yellow-600">✏️ Edit Assignment</h3>
+                        <h3 class="text-xl font-bold mb-4 text-yellow-600"> Edit Assignment</h3>
                         <p class="mb-4"><strong>Student:</strong> ${studentName}</p>
 
                         <form onsubmit="updateAssignment(event, ${particularId}, ${studentId})" class="space-y-4">
@@ -1182,10 +1182,10 @@ const API_BASE = '/api';
                             </div>
                             <div class="flex gap-3">
                                 <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold transition">
-                                    💾 Save Changes
+                                     Save Changes
                                 </button>
                                 <button type="button" onclick="closeEditAssignmentModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-3 rounded-lg font-bold transition">
-                                    ✖️ Cancel
+                                     Cancel
                                 </button>
                             </div>
                         </form>
@@ -1214,7 +1214,7 @@ const API_BASE = '/api';
             const deadline = document.getElementById('edit_deadline').value || null;
 
             if (!sales || sales <= 0) {
-                alert('⚠️ Please enter a valid amount');
+                alert(' Please enter a valid amount');
                 return;
             }
 
@@ -1224,7 +1224,7 @@ const API_BASE = '/api';
                     deadline: deadline
                 });
 
-                alert('✅ Assignment updated successfully!');
+                alert(' Assignment updated successfully!');
                 closeEditAssignmentModal();
 
                 // Reload the existing assignments for the current class
@@ -1232,7 +1232,7 @@ const API_BASE = '/api';
                     await loadExistingAssignmentsByClass(particularId, currentClassForExisting.id, currentClassForExisting.name);
                 }
             } catch (error) {
-                alert('❌ Error updating assignment: ' + (error.response?.data?.message || error.message));
+                alert(' Error updating assignment: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -1243,14 +1243,14 @@ const API_BASE = '/api';
 
             try {
                 await axios.delete(`${API_BASE}/particulars/${particularId}/assignments/${studentId}`);
-                alert('✅ Assignment deleted successfully!');
+                alert(' Assignment deleted successfully!');
 
                 // Reload the existing assignments for the current class
                 if (currentParticularForExisting && currentClassForExisting) {
                     await loadExistingAssignmentsByClass(particularId, currentClassForExisting.id, currentClassForExisting.name);
                 }
             } catch (error) {
-                alert('❌ Error deleting assignment: ' + (error.response?.data?.message || error.message));
+                alert(' Error deleting assignment: ' + (error.response?.data?.message || error.message));
             }
         }
 

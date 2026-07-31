@@ -89,14 +89,14 @@
                             <td class="px-4 py-3 text-gray-500">{{ $class->stream ?: '—' }}</td>
                             <td class="px-4 py-3 text-center">
                                 @if($class->synced_finance)
-                                    <span class="text-green-600 font-bold">✓</span>
+                                    <span class="text-green-600 font-bold"></span>
                                 @else
                                     <span class="text-gray-300">—</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @if($class->synced_academics)
-                                    <span class="text-green-600 font-bold">✓</span>
+                                    <span class="text-green-600 font-bold"></span>
                                 @else
                                     <span class="text-gray-300">—</span>
                                 @endif

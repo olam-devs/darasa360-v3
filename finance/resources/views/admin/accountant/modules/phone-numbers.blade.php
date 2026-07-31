@@ -54,7 +54,7 @@
 
             <!-- Instructions -->
             <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-                <h3 class="font-bold text-blue-700 mb-2">💡 Instructions</h3>
+                <h3 class="font-bold text-blue-700 mb-2"> Instructions</h3>
                 <ul class="text-sm text-blue-700 space-y-1">
                     <li>• Phone numbers must be in international format: <strong>255XXXXXXXXX</strong></li>
                     <li>• Phone 1 is required for SMS sending, Phone 2 is optional</li>
@@ -139,7 +139,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <button onclick="updatePhone({{ $student->id }})"
                                             class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition text-xs">
-                                        💾 Save
+                                         Save
                                     </button>
                                 </td>
                             </tr>
@@ -167,9 +167,9 @@ axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[nam
                     parent_phone_2: phone2
                 });
 
-                showMessage('✅ Phone numbers updated successfully!', 'success');
+                showMessage(' Phone numbers updated successfully!', 'success');
             } catch (error) {
-                showMessage('❌ ' + (error.response?.data?.message || error.message), 'error');
+                showMessage(' ' + (error.response?.data?.message || error.message), 'error');
             }
         }
 
@@ -188,7 +188,7 @@ axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[nam
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
 
-                showMessage(`✅ ${response.data.message}`, 'success');
+                showMessage(` ${response.data.message}`, 'success');
 
                 if (response.data.errors && response.data.errors.length > 0) {
                     console.log('Errors:', response.data.errors);
@@ -196,7 +196,7 @@ axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[nam
 
                 setTimeout(() => location.reload(), 2000);
             } catch (error) {
-                showMessage('❌ ' + (error.response?.data?.message || error.message), 'error');
+                showMessage(' ' + (error.response?.data?.message || error.message), 'error');
             }
 
             fileInput.value = '';

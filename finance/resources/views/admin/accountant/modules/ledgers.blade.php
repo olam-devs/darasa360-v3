@@ -9,18 +9,18 @@
     <div class="container mx-auto p-6">
         <div id="moduleContent">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-3xl font-bold text-orange-600">📊 Ledgers</h2>
+                <h2 class="text-3xl font-bold text-orange-600"> Ledgers</h2>
                 <div class="flex gap-3">
                     <a href="/api/ledgers/all-students/pdf" target="_blank"
                         class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded inline-flex items-center transition">
-                        📑 Download All Students Ledgers (PDF)
+                         Download All Students Ledgers (PDF)
                     </a>
                 </div>
             </div>
 
             <!-- Date Range Filter Section -->
             <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-6">
-                <h4 class="text-lg font-bold text-blue-800 mb-3">📅 Date Range Filter (Optional)</h4>
+                <h4 class="text-lg font-bold text-blue-800 mb-3"> Date Range Filter (Optional)</h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="text-sm font-bold text-gray-700 block mb-1">From Date:</label>
@@ -36,12 +36,12 @@
                         </button>
                     </div>
                 </div>
-                <p class="text-xs text-gray-600 mt-2">💡 Leave empty to view all records, or select dates to filter transactions within a specific period.</p>
+                <p class="text-xs text-gray-600 mt-2"> Leave empty to view all records, or select dates to filter transactions within a specific period.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div class="bg-orange-50 border-2 border-orange-300 rounded-lg p-6">
-                    <h3 class="text-xl font-bold mb-4">👤 Student Ledger</h3>
+                    <h3 class="text-xl font-bold mb-4"> Student Ledger</h3>
                     <input type="text" id="studentLedgerSearch" onkeyup="searchStudentsForLedger()"
                         class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 mb-2"
                         placeholder="Type student name...">
@@ -55,7 +55,7 @@
                 </div>
 
                 <div class="bg-orange-100 border-2 border-orange-400 rounded-lg p-6">
-                    <h3 class="text-xl font-bold mb-4">👥 Class Ledger</h3>
+                    <h3 class="text-xl font-bold mb-4"> Class Ledger</h3>
                     <select id="classLedgerSelect"
                         class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 mb-4">
                         <option value="">-- Select Class --</option>
@@ -67,18 +67,18 @@
                 </div>
 
                 <div class="bg-orange-200 border-2 border-orange-500 rounded-lg p-6">
-                    <h3 class="text-xl font-bold mb-4">🏦 Book Ledger</h3>
+                    <h3 class="text-xl font-bold mb-4"> Book Ledger</h3>
                     <select id="bookLedgerSelect"
                         class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 mb-4">
                         <option value="">-- Select Book --</option>
                     </select>
                     <button onclick="viewBookLedger('bank')"
                         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg w-full mb-2 transition">
-                        🏦 Bank View Book Ledger
+                         Bank View Book Ledger
                     </button>
                     <button onclick="viewBookLedger('cash')"
                         class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full transition">
-                        💵 Cash View Book Ledger
+                         Cash View Book Ledger
                     </button>
                 </div>
             </div>
@@ -223,10 +223,10 @@ const API_BASE = '/api';
                             <p class="text-sm font-bold text-blue-600 mt-1">${dateRangeText}</p>
                             <div class="mt-4 flex justify-center gap-3">
                                 <a href="${API_BASE}/ledgers/student/${studentId}/pdf${dateParams}" target="_blank" download class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded inline-flex items-center transition">
-                                    📄 Download PDF
+                                     Download PDF
                                 </a>
                                 <a href="${API_BASE}/ledgers/student/${studentId}/csv${dateParams}" target="_blank" download class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-flex items-center transition">
-                                    📊 Download CSV
+                                     Download CSV
                                 </a>
                             </div>
                         </div>
@@ -376,10 +376,10 @@ const API_BASE = '/api';
                             <p class="text-sm font-bold text-blue-600 mt-1">${dateRangeText}</p>
                             <div class="mt-4 flex justify-center gap-3">
                                 <a href="${API_BASE}/ledgers/class/${classId}/pdf${dateParams}" target="_blank" download class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded inline-flex items-center transition">
-                                    📄 Download PDF
+                                     Download PDF
                                 </a>
                                 <a href="${API_BASE}/ledgers/class/${classId}/csv${dateParams}" target="_blank" download class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-flex items-center transition">
-                                    📊 Download CSV
+                                     Download CSV
                                 </a>
                             </div>
                         </div>
@@ -555,7 +555,7 @@ const API_BASE = '/api';
 
                 // Determine view type labels
                 const isCashView = viewType === 'cash';
-                const viewLabel = isCashView ? '📒 ACCOUNTANT VIEW' : '🏦 BANK VIEW';
+                const viewLabel = isCashView ? ' ACCOUNTANT VIEW' : ' BANK VIEW';
                 const drLabel = isCashView ? 'DR (Rec/In)' : 'DR (Pay/Out)';
                 const crLabel = isCashView ? 'CR (Pay/Out)' : 'CR (Rec/In)';
                 const drColor = isCashView ? 'text-green-600' : 'text-red-600';
@@ -570,10 +570,10 @@ const API_BASE = '/api';
                             <p class="text-sm font-bold text-blue-600 mt-1">${dateRangeText}</p>
                             <div class="mt-4 flex justify-center gap-3">
                                 <a href="${API_BASE}/ledgers/book/${bookId}/pdf${dateParams}${separator}view_type=${viewType}" target="_blank" download class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded inline-flex items-center transition">
-                                    📄 Download PDF
+                                     Download PDF
                                 </a>
                                 <a href="${API_BASE}/ledgers/book/${bookId}/csv${dateParams}${separator}view_type=${viewType}" target="_blank" download class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-flex items-center transition">
-                                    📊 Download CSV
+                                     Download CSV
                                 </a>
                             </div>
                         </div>
@@ -607,7 +607,7 @@ const API_BASE = '/api';
                         html += `
                             <tr class="bg-green-100 border-2 border-green-500">
                                 <td colspan="7" class="p-3 font-bold text-green-800">
-                                    📅 ${entry.month} - OPENING BALANCE
+                                     ${entry.month} - OPENING BALANCE
                                 </td>
                                 <td class="p-3 text-right font-bold text-xl text-green-800">${formatTSh(entry.opening_balance)}</td>
                                 <td></td>
@@ -621,7 +621,7 @@ const API_BASE = '/api';
                         html += `
                             <tr class="bg-amber-100 border-2 border-amber-500">
                                 <td colspan="5" class="p-3 font-bold text-amber-800">
-                                    📅 ${entry.month} - CLOSING BALANCE
+                                     ${entry.month} - CLOSING BALANCE
                                 </td>
                                 <td class="p-3 text-right font-bold text-amber-800">${formatTSh(entry.monthly_debit)}</td>
                                 <td class="p-3 text-right font-bold text-amber-800">${formatTSh(entry.monthly_credit)}</td>
@@ -747,7 +747,7 @@ const API_BASE = '/api';
                                     </table>
                                 </div>
                                 <p class="text-xs text-gray-600 mt-2">
-                                    💡 Suspense accounts hold unallocated payments until they can be assigned to students.
+                                     Suspense accounts hold unallocated payments until they can be assigned to students.
                                     <a href="/accountant/suspense" class="text-blue-600 underline">Manage Suspense Accounts</a>
                                 </p>
                             </div>

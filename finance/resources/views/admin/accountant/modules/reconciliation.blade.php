@@ -398,12 +398,12 @@ const API_BASE = '/api';
                 } else {
                     return;
                 }
-                alert('✅ Entry recorded.');
+                alert(' Entry recorded.');
                 document.getElementById('adjEntryCategory').value = '';
                 document.getElementById('adjFormHost').innerHTML = 'Choose a book above, then pick a category.';
                 await loadAll();
             } catch (e) {
-                alert('❌ ' + (e.response?.data?.error || e.response?.data?.message || e.message));
+                alert(' ' + (e.response?.data?.error || e.response?.data?.message || e.message));
             }
         }
 
@@ -600,7 +600,7 @@ const API_BASE = '/api';
                 await loadRecentAdvanceApplications();
             } catch (e) {
                 console.error(e);
-                alert('❌ ' + (e.response?.data?.error || e.response?.data?.message || e.message));
+                alert(' ' + (e.response?.data?.error || e.response?.data?.message || e.message));
             }
         }
 
@@ -661,11 +661,11 @@ const API_BASE = '/api';
                     credit: parseMoneyInput(document.getElementById('evCredit').value),
                     notes_append: document.getElementById('evNote').value.trim() || null,
                 });
-                alert('✅ Voucher updated.');
+                alert(' Voucher updated.');
                 closeEdit();
                 await loadAll();
             } catch (e) {
-                alert('❌ ' + (e.response?.data?.error || e.response?.data?.message || e.message));
+                alert(' ' + (e.response?.data?.error || e.response?.data?.message || e.message));
             }
         }
 

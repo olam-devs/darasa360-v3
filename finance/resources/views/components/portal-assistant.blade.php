@@ -51,7 +51,7 @@
         <div class="flex-shrink-0 border-t border-slate-100 bg-amber-50 px-3 py-2" id="da-report-bar">
             <button type="button" id="da-report-btn"
                     class="w-full text-[10px] text-amber-700 hover:text-amber-900 font-semibold transition underline-offset-2 hover:underline">
-                📩 <span id="da-report-label">Report an issue / Ask admin a question</span>
+                 <span id="da-report-label">Report an issue / Ask admin a question</span>
             </button>
         </div>
 
@@ -103,53 +103,53 @@
 
 <script>
 (function () {
-    var panel       = document.getElementById('da-panel');
-    var toggle      = document.getElementById('da-toggle');
-    var closeBtn    = document.getElementById('da-close');
-    var messagesEl  = document.getElementById('da-messages');
-    var intentsEl   = document.getElementById('da-intents');
-    var input       = document.getElementById('da-input');
-    var sendBtn     = document.getElementById('da-send');
-    var dot         = document.getElementById('da-dot');
-    var expandBtn   = document.getElementById('da-expand-btn');
-    var langBtn     = document.getElementById('da-lang-btn');
-    var reportBtn   = document.getElementById('da-report-btn');
-    var reportForm  = document.getElementById('da-report-form');
-    var reportText  = document.getElementById('da-report-text');
-    var reportSub   = document.getElementById('da-report-submit');
-    var reportCan   = document.getElementById('da-report-cancel');
-    var root        = document.getElementById('da-root');
+    var panel = document.getElementById('da-panel');
+    var toggle = document.getElementById('da-toggle');
+    var closeBtn = document.getElementById('da-close');
+    var messagesEl = document.getElementById('da-messages');
+    var intentsEl = document.getElementById('da-intents');
+    var input = document.getElementById('da-input');
+    var sendBtn = document.getElementById('da-send');
+    var dot = document.getElementById('da-dot');
+    var expandBtn = document.getElementById('da-expand-btn');
+    var langBtn = document.getElementById('da-lang-btn');
+    var reportBtn = document.getElementById('da-report-btn');
+    var reportForm = document.getElementById('da-report-form');
+    var reportText = document.getElementById('da-report-text');
+    var reportSub = document.getElementById('da-report-submit');
+    var reportCan = document.getElementById('da-report-cancel');
+    var root = document.getElementById('da-root');
 
-    var loaded      = false;
-    var busy        = false;
-    var open        = false;
-    var expanded    = false;
-    var lang        = 'en'; // 'en' | 'sw'
+    var loaded = false;
+    var busy = false;
+    var open = false;
+    var expanded = false;
+    var lang = 'en'; // 'en' | 'sw'
 
     // ── translations ────────────────────────────────────────────────────────
 
     var T = {
         en: {
-            title:        'FAQ & Guidance',
-            subtitle:     'Quick answers · Majibu ya haraka',
-            quickLabel:   'Quick questions',
-            placeholder:  'Type a question…',
-            langHint:     'English & Kiswahili supported',
-            reportLabel:  'Report an issue / Ask admin a question',
+            title: 'FAQ & Guidance',
+            subtitle: 'Quick answers · Majibu ya haraka',
+            quickLabel: 'Quick questions',
+            placeholder: 'Type a question…',
+            langHint: 'English & Kiswahili supported',
+            reportLabel: 'Report an issue / Ask admin a question',
             reportPrompt: 'Describe your question or issue:',
-            reportSend:   'Send to Admin',
+            reportSend: 'Send to Admin',
             reportCancel: 'Cancel',
             reportThanks: 'Your message has been sent to the admin. Thank you!',
         },
         sw: {
-            title:        'Maswali ya Kawaida',
-            subtitle:     'Majibu ya haraka · Quick answers',
-            quickLabel:   'Maswali ya haraka',
-            placeholder:  'Andika swali lako…',
-            langHint:     'Kiswahili & English inasaidiwa',
-            reportLabel:  'Ripoti tatizo / Uliza swali kwa admin',
+            title: 'Maswali ya Kawaida',
+            subtitle: 'Majibu ya haraka · Quick answers',
+            quickLabel: 'Maswali ya haraka',
+            placeholder: 'Andika swali lako…',
+            langHint: 'Kiswahili & English inasaidiwa',
+            reportLabel: 'Ripoti tatizo / Uliza swali kwa admin',
             reportPrompt: 'Eleza swali au tatizo lako:',
-            reportSend:   'Tuma kwa Admin',
+            reportSend: 'Tuma kwa Admin',
             reportCancel: 'Ghairi',
             reportThanks: 'Ujumbe wako umetumwa kwa admin. Asante!',
         },
@@ -159,15 +159,15 @@
 
     function applyLang() {
         langBtn.textContent = lang === 'en' ? 'SW' : 'EN';
-        document.getElementById('da-title').textContent      = t('title');
-        document.getElementById('da-subtitle').textContent   = t('subtitle');
+        document.getElementById('da-title').textContent = t('title');
+        document.getElementById('da-subtitle').textContent = t('subtitle');
         document.getElementById('da-quick-label').textContent = t('quickLabel');
-        input.placeholder                                    = t('placeholder');
-        document.getElementById('da-lang-hint').textContent  = t('langHint');
+        input.placeholder = t('placeholder');
+        document.getElementById('da-lang-hint').textContent = t('langHint');
         document.getElementById('da-report-label').textContent = t('reportLabel');
         document.getElementById('da-report-prompt').textContent = t('reportPrompt');
-        reportSub.textContent  = t('reportSend');
-        reportCan.textContent  = t('reportCancel');
+        reportSub.textContent = t('reportSend');
+        reportCan.textContent = t('reportCancel');
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────

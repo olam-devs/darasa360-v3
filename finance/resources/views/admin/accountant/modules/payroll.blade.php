@@ -8,22 +8,22 @@
 
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-        <h2 class="text-3xl font-bold text-violet-600">👥 Payroll Management</h2>
+        <h2 class="text-3xl font-bold text-violet-600"> Payroll Management</h2>
         <div class="flex gap-3">
             <a href="/api/staff/csv/template" download class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded transition text-sm">
-                📥 CSV Template
+                 CSV Template
             </a>
             <button onclick="showUploadCsvModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition text-sm">
-                📤 Upload CSV
+                 Upload CSV
             </button>
             <button onclick="showAddStaffModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition text-sm">
-                ➕ Add Staff
+                 Add Staff
             </button>
             <button onclick="showDeductionTypesModal()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded transition text-sm">
-                ✂️ Deduction Types
+                 Deduction Types
             </button>
             <button onclick="showProcessPayrollModal()" class="bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded transition text-sm">
-                💰 Process Payroll
+                 Process Payroll
             </button>
         </div>
     </div>
@@ -32,15 +32,15 @@
     <div class="flex border-b border-gray-300 mb-6 gap-1">
         <button onclick="switchTab('staff')" id="tab-staff"
             class="tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-violet-600 text-white border-violet-600">
-            👥 Staff
+             Staff
         </button>
         <button onclick="switchTab('payroll')" id="tab-payroll"
             class="tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-white text-gray-600 border-gray-300 hover:bg-violet-50">
-            💰 Payroll Entries
+             Payroll Entries
         </button>
         <button onclick="switchTab('deductions')" id="tab-deductions"
             class="tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-white text-gray-600 border-gray-300 hover:bg-violet-50">
-            ✂️ Deductions Ledger
+             Deductions Ledger
         </button>
     </div>
 
@@ -121,7 +121,7 @@
 ────────────────────────────────────────── --}}
 <div id="addStaffModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <h3 class="text-2xl font-bold text-blue-600 mb-4">➕ Add Staff Member</h3>
+        <h3 class="text-2xl font-bold text-blue-600 mb-4"> Add Staff Member</h3>
         <form id="addStaffForm" onsubmit="submitAddStaffForm(event)">
             <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -170,8 +170,8 @@
                 <textarea id="staff_notes" rows="2" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2"></textarea>
             </div>
             <div class="flex gap-3 mt-6">
-                <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition">✅ Add Staff</button>
-                <button type="button" onclick="closeAddStaffModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition">❌ Cancel</button>
+                <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition"> Add Staff</button>
+                <button type="button" onclick="closeAddStaffModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition"> Cancel</button>
             </div>
         </form>
     </div>
@@ -182,7 +182,7 @@
 ────────────────────────────────────────── --}}
 <div id="processPayrollModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <h3 class="text-2xl font-bold text-violet-600 mb-4">💰 Process Payroll</h3>
+        <h3 class="text-2xl font-bold text-violet-600 mb-4"> Process Payroll</h3>
         <form id="processPayrollForm" onsubmit="submitProcessPayrollForm(event)">
 
             <!-- Staff search -->
@@ -245,7 +245,7 @@
             <!-- Deductions Section -->
             <div class="mt-5 border-2 border-orange-200 rounded-lg p-4 bg-orange-50">
                 <div class="flex justify-between items-center mb-3">
-                    <h4 class="font-bold text-orange-700">✂️ Deductions (optional)</h4>
+                    <h4 class="font-bold text-orange-700"> Deductions (optional)</h4>
                     <div class="flex gap-2">
                         <select id="quick-deduction-type" class="border border-orange-300 rounded px-2 py-1 text-xs">
                             <option value="">— Add from template —</option>
@@ -270,8 +270,8 @@
             </div>
 
             <div class="flex gap-3 mt-6">
-                <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition">✅ Process Payroll</button>
-                <button type="button" onclick="closeProcessPayrollModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition">❌ Cancel</button>
+                <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition"> Process Payroll</button>
+                <button type="button" onclick="closeProcessPayrollModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition"> Cancel</button>
             </div>
         </form>
     </div>
@@ -283,7 +283,7 @@
 <div id="deductionTypesModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-2xl font-bold text-orange-600">✂️ Deduction Types</h3>
+            <h3 class="text-2xl font-bold text-orange-600"> Deduction Types</h3>
             <button onclick="closeDeductionTypesModal()" class="text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">×</button>
         </div>
 
@@ -319,7 +319,7 @@
                 </div>
             </div>
             <button onclick="submitDeductionType()" class="mt-3 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded font-bold transition text-sm">
-                ➕ Add Deduction Type
+                 Add Deduction Type
             </button>
         </div>
 
@@ -335,7 +335,7 @@
 ────────────────────────────────────────── --}}
 <div id="uploadCsvModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-lg p-6 max-w-md w-full">
-        <h3 class="text-2xl font-bold text-blue-600 mb-4">📤 Upload Staff CSV</h3>
+        <h3 class="text-2xl font-bold text-blue-600 mb-4"> Upload Staff CSV</h3>
         <form id="uploadCsvForm" onsubmit="submitUploadCsvForm(event)">
             <div class="mb-4">
                 <label class="block font-bold mb-2 text-sm">Select CSV File <span class="text-red-500">*</span></label>
@@ -343,8 +343,8 @@
                 <p class="text-xs text-gray-500 mt-2">Columns: staff_id, name, position, department, monthly_salary, phone, email, bank_name, bank_account, date_joined</p>
             </div>
             <div class="flex gap-3">
-                <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition">✅ Upload</button>
-                <button type="button" onclick="closeUploadCsvModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition">❌ Cancel</button>
+                <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition"> Upload</button>
+                <button type="button" onclick="closeUploadCsvModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition"> Cancel</button>
             </div>
         </form>
     </div>
@@ -394,7 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set default month/year for payroll modal
     const now = new Date();
     document.getElementById('payroll_month').value = now.getMonth() + 1;
-    document.getElementById('payroll_year').value  = now.getFullYear();
+    document.getElementById('payroll_year').value = now.getFullYear();
     document.getElementById('payroll_payment_date').valueAsDate = now;
 });
 
@@ -473,17 +473,17 @@ async function submitAddStaffForm(event) {
     btn.disabled = true; btn.textContent = '⏳ Saving…';
     try {
         await axios.post(`${API_BASE}/staff`, {
-            name:           document.getElementById('staff_name').value,
-            staff_id:       document.getElementById('staff_id').value,
-            position:       document.getElementById('staff_position').value,
-            department:     document.getElementById('staff_department').value,
+            name: document.getElementById('staff_name').value,
+            staff_id: document.getElementById('staff_id').value,
+            position: document.getElementById('staff_position').value,
+            department: document.getElementById('staff_department').value,
             monthly_salary: parseFloat(document.getElementById('staff_salary').value),
-            date_joined:    document.getElementById('staff_date_joined').value || null,
-            phone:          document.getElementById('staff_phone').value || null,
-            email:          document.getElementById('staff_email').value || null,
-            bank_name:      document.getElementById('staff_bank_name').value || null,
-            bank_account:   document.getElementById('staff_bank_account').value || null,
-            notes:          document.getElementById('staff_notes').value || null,
+            date_joined: document.getElementById('staff_date_joined').value || null,
+            phone: document.getElementById('staff_phone').value || null,
+            email: document.getElementById('staff_email').value || null,
+            bank_name: document.getElementById('staff_bank_name').value || null,
+            bank_account: document.getElementById('staff_bank_account').value || null,
+            notes: document.getElementById('staff_notes').value || null,
         });
         closeAddStaffModal();
         loadStaff();
@@ -491,9 +491,9 @@ async function submitAddStaffForm(event) {
         const msg = e.response?.data?.errors
             ? Object.values(e.response.data.errors).flat().join('\n')
             : (e.response?.data?.message || e.message);
-        alert('❌ ' + msg);
+        alert(' ' + msg);
     } finally {
-        btn.disabled = false; btn.textContent = '✅ Add Staff';
+        btn.disabled = false; btn.textContent = ' Add Staff';
     }
 }
 
@@ -502,14 +502,14 @@ async function submitAddStaffForm(event) {
 async function loadPayrollEntries() {
     document.getElementById('payrollTable').innerHTML = '<p class="text-gray-400 text-center py-6">Loading…</p>';
     const month = document.getElementById('filter-month').value;
-    const year  = document.getElementById('filter-year').value;
+    const year = document.getElementById('filter-year').value;
     try {
         const r = await axios.get(`${API_BASE}/payroll`, { params: { month, year } });
         const { payrolls, total_gross, total_deductions, total_net } = r.data;
 
-        document.getElementById('summary-gross').textContent      = fmt(total_gross);
+        document.getElementById('summary-gross').textContent = fmt(total_gross);
         document.getElementById('summary-deductions').textContent = fmt(total_deductions);
-        document.getElementById('summary-net').textContent        = fmt(total_net);
+        document.getElementById('summary-net').textContent = fmt(total_net);
 
         if (!payrolls || payrolls.length === 0) {
             document.getElementById('payrollTable').innerHTML = '<p class="text-gray-400 text-center py-6">No payroll entries for this period.</p>';
@@ -571,7 +571,7 @@ async function showPayrollDetail(id) {
         if (e.deductions && e.deductions.length > 0) {
             msg += '\nDeductions:\n';
             e.deductions.forEach(d => {
-                msg += `  • ${d.name} (${d.type}): ${fmt(d.amount)}`;
+                msg += ` • ${d.name} (${d.type}): ${fmt(d.amount)}`;
                 if (d.note) msg += ` — ${d.note}`;
                 msg += '\n';
             });
@@ -597,8 +597,8 @@ async function showProcessPayrollModal() {
             axios.get(`${API_BASE}/books`),
             axios.get(`${API_BASE}/payroll/deduction-types`),
         ]);
-        allStaff          = staffR.data.staff?.data || staffR.data.staff || [];
-        allBooks          = booksR.data || [];
+        allStaff = staffR.data.staff?.data || staffR.data.staff || [];
+        allBooks = booksR.data || [];
         allDeductionTypes = typesR.data || [];
     } catch (e) {
         console.error('Error loading modal data:', e);
@@ -628,7 +628,7 @@ async function showProcessPayrollModal() {
     // Defaults
     const now = new Date();
     document.getElementById('payroll_month').value = now.getMonth() + 1;
-    document.getElementById('payroll_year').value  = now.getFullYear();
+    document.getElementById('payroll_year').value = now.getFullYear();
     document.getElementById('payroll_payment_date').valueAsDate = now;
 
     // Reset deductions
@@ -648,7 +648,7 @@ function closeProcessPayrollModal() {
 }
 
 function filterPayrollStaffList() {
-    const q   = document.getElementById('payroll_staff_search').value.toLowerCase();
+    const q = document.getElementById('payroll_staff_search').value.toLowerCase();
     const sel = document.getElementById('payroll_staff_id');
     Array.from(sel.options).forEach(opt => {
         opt.style.display = (opt.value === '' || opt.text.toLowerCase().includes(q)) ? '' : 'none';
@@ -656,9 +656,9 @@ function filterPayrollStaffList() {
 }
 
 function onStaffSelected() {
-    const sel  = document.getElementById('payroll_staff_id');
-    const opt  = sel.options[sel.selectedIndex];
-    const sal  = opt?.getAttribute('data-salary');
+    const sel = document.getElementById('payroll_staff_id');
+    const opt = sel.options[sel.selectedIndex];
+    const sal = opt?.getAttribute('data-salary');
     if (sal) {
         document.getElementById('payroll_gross').value = parseFloat(sal);
         recalcNet();
@@ -673,8 +673,8 @@ function addDeductionFromTemplate() {
     const isPct = opt.getAttribute('data-pct') === '1';
     addDeductionRow({
         deduction_type_id: opt.value,
-        name:  opt.getAttribute('data-name'),
-        type:  opt.getAttribute('data-type'),
+        name: opt.getAttribute('data-name'),
+        type: opt.getAttribute('data-type'),
         amount: opt.getAttribute('data-value'),
         is_pct: isPct,
     });
@@ -733,7 +733,7 @@ function recalcNet() {
     let totalDed = 0;
 
     document.querySelectorAll('#deductionRows > div').forEach(row => {
-        const type   = row.querySelector('[name$="[type]"]')?.value || 'fixed';
+        const type = row.querySelector('[name$="[type]"]')?.value || 'fixed';
         const amount = parseFloat(row.querySelector('[name$="[amount]"]')?.value) || 0;
         if (type === 'percentage') {
             totalDed += gross * (amount / 100);
@@ -757,29 +757,29 @@ async function submitProcessPayrollForm(event) {
     document.querySelectorAll('#deductionRows > div').forEach(row => {
         deductions.push({
             deduction_type_id: row.querySelector('[name$="[deduction_type_id]"]')?.value || null,
-            name:   row.querySelector('[name$="[name]"]')?.value,
-            type:   row.querySelector('[name$="[type]"]')?.value,
+            name: row.querySelector('[name$="[name]"]')?.value,
+            type: row.querySelector('[name$="[type]"]')?.value,
             amount: parseFloat(row.querySelector('[name$="[amount]"]')?.value) || 0,
-            note:   row.querySelector('[name$="[note]"]')?.value || null,
+            note: row.querySelector('[name$="[note]"]')?.value || null,
         });
     });
 
     const payload = {
-        staff_id:         parseInt(document.getElementById('payroll_staff_id').value),
-        book_id:          parseInt(document.getElementById('payroll_book_id').value),
-        month:            parseInt(document.getElementById('payroll_month').value),
-        year:             parseInt(document.getElementById('payroll_year').value),
-        gross_salary:     parseFloat(document.getElementById('payroll_gross').value),
-        payment_date:     document.getElementById('payroll_payment_date').value,
-        payment_method:   document.getElementById('payroll_payment_method').value,
+        staff_id: parseInt(document.getElementById('payroll_staff_id').value),
+        book_id: parseInt(document.getElementById('payroll_book_id').value),
+        month: parseInt(document.getElementById('payroll_month').value),
+        year: parseInt(document.getElementById('payroll_year').value),
+        gross_salary: parseFloat(document.getElementById('payroll_gross').value),
+        payment_date: document.getElementById('payroll_payment_date').value,
+        payment_method: document.getElementById('payroll_payment_method').value,
         reference_number: document.getElementById('payroll_reference').value || null,
-        notes:            document.getElementById('payroll_notes').value || null,
+        notes: document.getElementById('payroll_notes').value || null,
         deductions,
     };
 
     try {
         const r = await axios.post(`${API_BASE}/payroll`, payload);
-        alert('✅ ' + r.data.message);
+        alert(' ' + r.data.message);
         closeProcessPayrollModal();
         if (document.getElementById('panel-payroll').classList.contains('hidden')) {
             switchTab('payroll');
@@ -790,9 +790,9 @@ async function submitProcessPayrollForm(event) {
         const msg = e.response?.data?.errors
             ? Object.values(e.response.data.errors).flat().join('\n')
             : (e.response?.data?.error || e.message);
-        alert('❌ ' + msg);
+        alert(' ' + msg);
     } finally {
-        btn.disabled = false; btn.textContent = '✅ Process Payroll';
+        btn.disabled = false; btn.textContent = ' Process Payroll';
     }
 }
 
@@ -807,7 +807,7 @@ function closeDeductionTypesModal() {
 }
 
 function onDtTypeChange() {
-    const t    = document.getElementById('dt_type').value;
+    const t = document.getElementById('dt_type').value;
     const unit = document.getElementById('dt_unit');
     unit.textContent = (t === 'percentage') ? '%' : 'TSh';
 }
@@ -842,10 +842,10 @@ async function loadDeductionTypesList() {
 }
 
 async function submitDeductionType() {
-    const name    = document.getElementById('dt_name').value.trim();
-    const type    = document.getElementById('dt_type').value;
-    const defVal  = parseFloat(document.getElementById('dt_default').value);
-    const notes   = document.getElementById('dt_notes').value.trim();
+    const name = document.getElementById('dt_name').value.trim();
+    const type = document.getElementById('dt_type').value;
+    const defVal = parseFloat(document.getElementById('dt_default').value);
+    const notes = document.getElementById('dt_notes').value.trim();
 
     if (!name || isNaN(defVal)) { alert('Name and default value are required.'); return; }
 
@@ -855,12 +855,12 @@ async function submitDeductionType() {
             is_percentage: type === 'percentage',
             notes: notes || null,
         });
-        document.getElementById('dt_name').value    = '';
+        document.getElementById('dt_name').value = '';
         document.getElementById('dt_default').value = '';
-        document.getElementById('dt_notes').value   = '';
+        document.getElementById('dt_notes').value = '';
         loadDeductionTypesList();
     } catch (e) {
-        alert('❌ ' + (e.response?.data?.message || e.message));
+        alert(' ' + (e.response?.data?.message || e.message));
     }
 }
 
@@ -871,7 +871,7 @@ async function deleteDeductionType(id) {
         alert(r.data.message);
         loadDeductionTypesList();
     } catch (e) {
-        alert('❌ ' + (e.response?.data?.message || e.message));
+        alert(' ' + (e.response?.data?.message || e.message));
     }
 }
 
@@ -880,7 +880,7 @@ async function deleteDeductionType(id) {
 async function loadDeductionsLedger() {
     document.getElementById('deductions-table').innerHTML = '<p class="text-gray-400 text-center py-6">Loading…</p>';
     const month = document.getElementById('dl-month').value;
-    const year  = document.getElementById('dl-year').value;
+    const year = document.getElementById('dl-year').value;
 
     try {
         const r = await axios.get(`${API_BASE}/payroll/deductions-ledger`, { params: { month, year } });
@@ -965,11 +965,11 @@ async function submitUploadCsvForm(event) {
         const r = await axios.post(`${API_BASE}/staff/csv/upload`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
-        alert('✅ ' + r.data.message + (r.data.errors?.length ? '\nErrors:\n' + r.data.errors.join('\n') : ''));
+        alert(' ' + r.data.message + (r.data.errors?.length ? '\nErrors:\n' + r.data.errors.join('\n') : ''));
         closeUploadCsvModal();
         loadStaff();
     } catch (e) {
-        alert('❌ ' + (e.response?.data?.message || e.message));
+        alert(' ' + (e.response?.data?.message || e.message));
     }
 }
 </script>

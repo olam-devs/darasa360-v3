@@ -9,20 +9,20 @@
         <!-- Tab Navigation -->
         <div class="flex gap-4 mb-6">
             <button onclick="showTab('simulation')" id="tab-simulation" class="px-6 py-3 font-bold rounded-lg transition bg-gradient-to-r from-green-500 to-blue-500 text-white">
-                🎮 Payment Simulation
+                 Payment Simulation
             </button>
             <button onclick="showTab('transactions')" id="tab-transactions" class="px-6 py-3 font-bold rounded-lg transition bg-gray-300 text-gray-700 hover:bg-gray-400">
-                📋 Transactions
+                 Transactions
             </button>
             <button onclick="showTab('settings')" id="tab-settings" class="px-6 py-3 font-bold rounded-lg transition bg-gray-300 text-gray-700 hover:bg-gray-400">
-                ⚙️ API Settings
+                 API Settings
             </button>
         </div>
 
         <!-- Simulation Tab -->
         <div id="content-simulation">
             <div class="bg-white rounded-lg shadow-xl p-8">
-                <h2 class="text-3xl font-bold text-green-600 mb-4">🎮 Bank Payment Simulator</h2>
+                <h2 class="text-3xl font-bold text-green-600 mb-4"> Bank Payment Simulator</h2>
                 <p class="text-gray-600 mb-6">Test the bank payment integration without a real bank API. Simulate payments and see instant results!</p>
 
                 <!-- Simulation Form -->
@@ -40,7 +40,7 @@
                     <div>
                         <label class="block font-bold mb-2">Payer Name <span class="text-red-500">*</span></label>
                         <input type="text" id="sim_payer_name" required placeholder="Enter student name" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
-                        <p class="text-xs text-gray-500 mt-1">💡 Tip: Use exact student name from database for automatic matching</p>
+                        <p class="text-xs text-gray-500 mt-1"> Tip: Use exact student name from database for automatic matching</p>
                     </div>
 
                     <div>
@@ -77,7 +77,7 @@
 
                     <div class="col-span-2">
                         <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-4 rounded-lg font-bold text-lg shadow-lg transition transform hover:scale-105">
-                            🚀 Simulate Bank Payment
+                             Simulate Bank Payment
                         </button>
                     </div>
                 </form>
@@ -91,14 +91,14 @@
         <div id="content-transactions" class="hidden">
             <div class="bg-white rounded-lg shadow-xl p-8">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-3xl font-bold text-green-600">📋 Bank Transactions</h2>
+                    <h2 class="text-3xl font-bold text-green-600"> Bank Transactions</h2>
                     <div class="flex gap-3">
                         <select id="filter_status" onchange="loadTransactions()" class="border-2 border-gray-300 rounded-lg px-4 py-2">
                             <option value="">All Status</option>
-                            <option value="matched">✅ Matched</option>
-                            <option value="suspense">⚠️ Suspense</option>
+                            <option value="matched"> Matched</option>
+                            <option value="suspense"> Suspense</option>
                             <option value="pending">⏳ Pending</option>
-                            <option value="failed">❌ Failed</option>
+                            <option value="failed"> Failed</option>
                         </select>
                         <input type="text" id="filter_search" onkeyup="loadTransactions()" placeholder="Search..." class="border-2 border-gray-300 rounded-lg px-4 py-2">
                     </div>
@@ -115,7 +115,7 @@
         <!-- Settings Tab -->
         <div id="content-settings" class="hidden">
             <div class="bg-white rounded-lg shadow-xl p-8">
-                <h2 class="text-3xl font-bold text-green-600 mb-4">⚙️ Bank API Settings</h2>
+                <h2 class="text-3xl font-bold text-green-600 mb-4"> Bank API Settings</h2>
                 <p class="text-gray-600 mb-6">Configure your bank API integration and webhook settings.</p>
 
                 <form id="settingsForm" onsubmit="saveSettings(event)" class="max-w-2xl">
@@ -145,7 +145,7 @@
                     </div>
 
                     <div class="mb-4 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
-                        <p class="font-bold text-blue-800 mb-2">📌 Webhook URL (provide this to your bank):</p>
+                        <p class="font-bold text-blue-800 mb-2"> Webhook URL (provide this to your bank):</p>
                         <code class="block bg-white p-3 rounded border border-blue-200 text-sm">
                             {{ url('/api/bank-webhook') }}
                         </code>
@@ -166,7 +166,7 @@
                     </div>
 
                     <button type="submit" class="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition">
-                        💾 Save Settings
+                         Save Settings
                     </button>
                 </form>
             </div>
@@ -246,7 +246,7 @@ const API_BASE = '/api';
                 if (result.data.status === 'matched') {
                     resultHtml = `
                         <div class="bg-green-50 border-2 border-green-400 rounded-lg p-6">
-                            <h3 class="text-2xl font-bold text-green-700 mb-4">✅ Payment Successfully Matched!</h3>
+                            <h3 class="text-2xl font-bold text-green-700 mb-4"> Payment Successfully Matched!</h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <p class="font-bold text-gray-700">Student</p>
@@ -267,14 +267,14 @@ const API_BASE = '/api';
                                 </div>
                             </div>
                             <div class="mt-4 p-3 bg-white rounded border border-green-200">
-                                <p class="font-bold text-sm text-green-800">📱 SMS Confirmation sent to parent!</p>
+                                <p class="font-bold text-sm text-green-800"> SMS Confirmation sent to parent!</p>
                             </div>
                         </div>
                     `;
                 } else if (result.data.status === 'suspense') {
                     resultHtml = `
                         <div class="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6">
-                            <h3 class="text-2xl font-bold text-yellow-700 mb-4">⚠️ Payment Moved to Suspense</h3>
+                            <h3 class="text-2xl font-bold text-yellow-700 mb-4"> Payment Moved to Suspense</h3>
                             <p class="mb-4">Student name "${formData.payer_name}" not found in database.</p>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -287,7 +287,7 @@ const API_BASE = '/api';
                                 </div>
                             </div>
                             <div class="mt-4 p-3 bg-white rounded border border-yellow-200">
-                                <p class="font-bold text-sm text-yellow-800">💡 You can resolve this from Suspense Accounts module</p>
+                                <p class="font-bold text-sm text-yellow-800"> You can resolve this from Suspense Accounts module</p>
                             </div>
                         </div>
                     `;
@@ -309,7 +309,7 @@ const API_BASE = '/api';
 
                 document.getElementById('simulationResult').innerHTML = `
                     <div class="bg-red-50 border-2 border-red-400 rounded-lg p-6">
-                        <h3 class="text-2xl font-bold text-red-700 mb-4">❌ Error Processing Payment</h3>
+                        <h3 class="text-2xl font-bold text-red-700 mb-4"> Error Processing Payment</h3>
                         <p class="text-red-600">${errorMsg}</p>
                     </div>
                 `;
@@ -338,11 +338,11 @@ const API_BASE = '/api';
                         <p class="text-2xl font-bold text-blue-600">${data.summary.total_transactions}</p>
                     </div>
                     <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4 text-center">
-                        <p class="text-sm font-semibold text-green-700">✅ Matched</p>
+                        <p class="text-sm font-semibold text-green-700"> Matched</p>
                         <p class="text-2xl font-bold text-green-600">${data.summary.matched_count}</p>
                     </div>
                     <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 text-center">
-                        <p class="text-sm font-semibold text-yellow-700">⚠️ Suspense</p>
+                        <p class="text-sm font-semibold text-yellow-700"> Suspense</p>
                         <p class="text-2xl font-bold text-yellow-600">${data.summary.suspense_count}</p>
                     </div>
                     <div class="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 text-center">
@@ -379,18 +379,18 @@ const API_BASE = '/api';
                     transactions.forEach(txn => {
                         let statusBadge = '';
                         if (txn.processing_status === 'matched') {
-                            statusBadge = '<span class="px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-bold">✅ Matched</span>';
+                            statusBadge = '<span class="px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-bold"> Matched</span>';
                         } else if (txn.processing_status === 'suspense') {
-                            statusBadge = '<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">⚠️ Suspense</span>';
+                            statusBadge = '<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-bold"> Suspense</span>';
                         } else if (txn.processing_status === 'pending') {
                             statusBadge = '<span class="px-2 py-1 bg-blue-200 text-blue-800 rounded text-xs font-bold">⏳ Pending</span>';
                         } else if (txn.processing_status === 'failed') {
-                            statusBadge = '<span class="px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold">❌ Failed</span>';
+                            statusBadge = '<span class="px-2 py-1 bg-red-200 text-red-800 rounded text-xs font-bold"> Failed</span>';
                         }
 
                         const smsBadge = txn.sms_sent
-                            ? '<span class="text-green-600">📱 ✅</span>'
-                            : '<span class="text-gray-400">📱 ❌</span>';
+                            ? '<span class="text-green-600"> </span>'
+                            : '<span class="text-gray-400"> </span>';
 
                         const studentInfo = txn.student
                             ? `${txn.student.name}<br><span class="text-xs text-gray-500">${txn.student.student_reg_no}</span>`
@@ -455,9 +455,9 @@ const API_BASE = '/api';
 
             try {
                 await axios.put(`${API_BASE}/bank-api-settings`, formData);
-                alert('✅ Settings saved successfully!');
+                alert(' Settings saved successfully!');
             } catch (error) {
-                alert('❌ Failed to save settings: ' + (error.response?.data?.message || error.message));
+                alert(' Failed to save settings: ' + (error.response?.data?.message || error.message));
             }
         }
     </script>

@@ -159,26 +159,26 @@
                         <div class="flex flex-wrap gap-3">
                             <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank"
                                 class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">
-                                📄 Download PDF
+                                 Download PDF
                             </a>
                             @if($invoice->balance > 0)
                                 <a href="{{ route('payments.create', ['invoice_id' => $invoice->id]) }}"
                                     class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium">
-                                    💰 Record Payment
+                                     Record Payment
                                 </a>
                             @endif
                             @if($invoice->status === 'draft')
                                 <form action="{{ route('invoices.send', $invoice) }}" method="POST" class="inline">
                                     @csrf
                                     <button type="submit" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium">
-                                        📧 Send to Parent
+                                         Send to Parent
                                     </button>
                                 </form>
                             @endif
                             @if(in_array($invoice->status, ['draft', 'sent']) && $invoice->paid_amount == 0)
                                 <a href="{{ route('invoices.edit', $invoice) }}"
                                     class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-lg font-medium">
-                                    ✏️ Edit Invoice
+                                     Edit Invoice
                                 </a>
                             @endif
                         </div>

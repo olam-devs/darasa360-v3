@@ -12,13 +12,13 @@
             </div>
             <div class="flex gap-3">
                 <button onclick="loadAdvancePayments()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-bold transition">
-                    🔍 Search
+                     Search
                 </button>
                 <a id="pdfLink" href="/api/advance-payments/pdf" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-bold transition">
-                    📄 Download PDF
+                     Download PDF
                 </a>
                 <a id="csvLink" href="/api/advance-payments/csv" class="bg-slate-600 hover:bg-slate-700 text-white px-6 py-3 rounded-lg font-bold transition">
-                    📥 Download CSV
+                     Download CSV
                 </a>
             </div>
         </div>

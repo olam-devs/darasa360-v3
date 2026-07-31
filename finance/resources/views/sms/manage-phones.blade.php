@@ -15,7 +15,7 @@
             <div class="container mx-auto">
                 <!-- Breadcrumb Navigation -->
                 <div class="mb-2 text-sm">
-                    <a href="{{ url('/accountant-dashboard') }}" class="hover:text-green-200 transition">🏠 Home</a>
+                    <a href="{{ url('/accountant-dashboard') }}" class="hover:text-green-200 transition"> Home</a>
                     <span class="mx-2">›</span>
                     <a href="{{ route('sms.index') }}" class="hover:text-green-200 transition">SMS Notification</a>
                     <span class="mx-2">›</span>
@@ -24,14 +24,14 @@
 
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-4">
-                        <h1 class="text-2xl font-bold">📞 Manage Parent Phone Numbers</h1>
+                        <h1 class="text-2xl font-bold"> Manage Parent Phone Numbers</h1>
                     </div>
                     <div class="flex gap-3">
                         <a href="{{ route('sms.download-template') }}" class="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded transition">
-                            📥 Download CSV Template
+                             Download CSV Template
                         </a>
                         <button onclick="document.getElementById('csv-upload').click()" class="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded transition">
-                            📤 Upload CSV
+                             Upload CSV
                         </button>
                     </div>
                 </div>
@@ -88,7 +88,7 @@
 
             <!-- Instructions -->
             <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-                <h3 class="font-bold text-blue-700 mb-2">💡 Instructions</h3>
+                <h3 class="font-bold text-blue-700 mb-2"> Instructions</h3>
                 <ul class="text-sm text-blue-700 space-y-1">
                     <li>• Phone numbers must be in international format: <strong>255XXXXXXXXX</strong></li>
                     <li>• Phone 1 is required for SMS sending, Phone 2 is optional</li>
@@ -173,7 +173,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                                     <button onclick="updatePhone({{ $student->id }})"
                                             class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded transition text-xs">
-                                        💾 Save
+                                         Save
                                     </button>
                                 </td>
                             </tr>
@@ -199,9 +199,9 @@
                     parent_phone_2: phone2
                 });
 
-                showMessage('✅ Phone numbers updated successfully!', 'success');
+                showMessage(' Phone numbers updated successfully!', 'success');
             } catch (error) {
-                showMessage('❌ ' + (error.response?.data?.message || error.message), 'error');
+                showMessage(' ' + (error.response?.data?.message || error.message), 'error');
             }
         }
 
@@ -220,7 +220,7 @@
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
 
-                showMessage(`✅ ${response.data.message}`, 'success');
+                showMessage(` ${response.data.message}`, 'success');
 
                 if (response.data.errors && response.data.errors.length > 0) {
                     console.log('Errors:', response.data.errors);
@@ -228,7 +228,7 @@
 
                 setTimeout(() => location.reload(), 2000);
             } catch (error) {
-                showMessage('❌ ' + (error.response?.data?.message || error.message), 'error');
+                showMessage(' ' + (error.response?.data?.message || error.message), 'error');
             }
 
             fileInput.value = '';

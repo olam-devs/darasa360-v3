@@ -7,7 +7,7 @@
 <!-- Module Content -->
     <div class="w-full p-6">
         <div>
-            <h2 class="text-3xl font-bold text-blue-600 mb-6">📋 Particular Ledger</h2>
+            <h2 class="text-3xl font-bold text-blue-600 mb-6"> Particular Ledger</h2>
             <p class="text-gray-600 mb-6">Select a particular/fee type to view all related transactions across all students.</p>
 
             <div id="particularsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"></div>
@@ -305,7 +305,7 @@ const API_BASE = '/api';
                     html += `
                         <div class="mt-6 bg-amber-50 border-2 border-amber-400 rounded-lg p-4">
                             <div class="flex justify-between items-center mb-4">
-                                <h4 class="text-lg font-bold text-amber-800">🎓 Scholarships for this Particular</h4>
+                                <h4 class="text-lg font-bold text-amber-800"> Scholarships for this Particular</h4>
                                 <div class="flex gap-4">
                                     <span class="bg-amber-200 text-amber-900 px-3 py-1 rounded-full text-sm font-bold">
                                         ${data.scholarships.student_count} Students
@@ -368,11 +368,11 @@ const API_BASE = '/api';
 
                 // Add date params to PDF URL if filter is applied
                 let pdfUrl = `${API_BASE}/ledgers/particular/${particularId}/pdf`;
-                let pdfButtonText = '📄 Download PDF (All Data)';
+                let pdfButtonText = ' Download PDF (All Data)';
 
                 if (fromDate && toDate) {
                     pdfUrl += `?from_date=${fromDate}&to_date=${toDate}`;
-                    pdfButtonText = '📄 Download Filtered PDF';
+                    pdfButtonText = ' Download Filtered PDF';
                 }
 
                 html += `

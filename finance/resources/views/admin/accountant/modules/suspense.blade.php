@@ -10,7 +10,7 @@
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-3xl font-bold text-amber-600">⏳ Suspense Accounts</h2>
                 <button onclick="showCreateSuspenseForm()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded transition">
-                    ➕ Add Suspense Entry
+                     Add Suspense Entry
                 </button>
             </div>
 
@@ -19,7 +19,7 @@
             <!-- Create Suspense Account Modal -->
             <div id="createSuspenseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
                 <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                    <h3 class="text-2xl font-bold text-amber-600 mb-4">➕ Create Suspense Entry</h3>
+                    <h3 class="text-2xl font-bold text-amber-600 mb-4"> Create Suspense Entry</h3>
 
                     <form id="createSuspenseForm" onsubmit="submitSuspenseForm(event)">
                         <div class="mb-4">
@@ -51,10 +51,10 @@
 
                         <div class="flex gap-3">
                             <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition">
-                                ✅ Create Entry
+                                 Create Entry
                             </button>
                             <button type="button" onclick="closeCreateSuspenseModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition">
-                                ❌ Cancel
+                                 Cancel
                             </button>
                         </div>
                     </form>
@@ -63,7 +63,7 @@
 
             <!-- Filter Section -->
             <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-                <h3 class="text-lg font-bold text-gray-700 mb-3">📅 Filter Suspense Accounts</h3>
+                <h3 class="text-lg font-bold text-gray-700 mb-3"> Filter Suspense Accounts</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div>
                         <label class="block font-bold mb-2 text-sm">From Date</label>
@@ -100,7 +100,7 @@
     <!-- Resolve Suspense Modal (Full Entry Form) -->
     <div id="resolveSuspenseModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 class="text-2xl font-bold text-green-600 mb-4">✅ Resolve Suspense Account - Record Fee Entry</h3>
+            <h3 class="text-2xl font-bold text-green-600 mb-4"> Resolve Suspense Account - Record Fee Entry</h3>
 
             <!-- Suspense Info Display -->
             <div class="mb-4 bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
@@ -128,7 +128,7 @@
 
                 <!-- Step 1: Search Student (Direct Search OR Filter by Class) -->
                 <div class="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
-                    <h4 class="font-bold mb-3">1️⃣ Search & Select Student</h4>
+                    <h4 class="font-bold mb-3">1⃣ Search & Select Student</h4>
 
                     <!-- Optional Class Filter -->
                     <div class="mb-3">
@@ -161,14 +161,14 @@
                     </div>
 
                     <div id="selectedStudentDisplay" class="mt-3 p-3 bg-white rounded border-2 border-green-500 hidden">
-                        <p class="text-xs font-bold text-green-600">✓ Selected Student:</p>
+                        <p class="text-xs font-bold text-green-600"> Selected Student:</p>
                         <p id="resolve_student_name_display" class="font-bold text-lg"></p>
                     </div>
                 </div>
 
                 <!-- Step 2: Entry Form (shown after student selection) -->
                 <div id="entryFormSection" style="display: none;" class="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
-                    <h4 class="font-bold mb-3">2️⃣ Complete Entry Details</h4>
+                    <h4 class="font-bold mb-3">2⃣ Complete Entry Details</h4>
 
                     <div class="grid grid-cols-2 gap-4">
                         <!-- Date -->
@@ -188,7 +188,7 @@
 
                     <!-- Particular Details (shown when particular is selected) -->
                     <div id="particularDetailsSection" style="display: none;" class="mt-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                        <h5 class="font-bold text-blue-800 mb-3">📊 Selected Fee Particular Details for This Student</h5>
+                        <h5 class="font-bold text-blue-800 mb-3"> Selected Fee Particular Details for This Student</h5>
                         <div class="grid grid-cols-3 gap-3">
                             <div class="bg-white p-3 rounded border border-blue-300">
                                 <p class="text-xs text-gray-600 mb-1">Amount Required</p>
@@ -235,10 +235,10 @@
 
                 <div class="flex gap-3 pt-4 border-t-2">
                     <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded font-bold transition">
-                        ✅ Resolve & Record Entry
+                         Resolve & Record Entry
                     </button>
                     <button type="button" onclick="closeResolveSuspenseModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition">
-                        ❌ Cancel
+                         Cancel
                     </button>
                 </div>
             </form>
@@ -439,7 +439,7 @@ const API_BASE = '/api';
 
             const bookId = document.getElementById('suspense_book').value;
             if (!bookId) {
-                alert('⚠️ Please select a book');
+                alert(' Please select a book');
                 return;
             }
 
@@ -453,11 +453,11 @@ const API_BASE = '/api';
 
             try {
                 await axios.post(`${API_BASE}/suspense-accounts`, formData);
-                alert('✅ Suspense entry created successfully');
+                alert(' Suspense entry created successfully');
                 closeCreateSuspenseModal();
                 loadSuspenseAccounts(); // Reload the list
             } catch (error) {
-                alert('❌ Error creating suspense entry: ' + (error.response?.data?.message || error.message));
+                alert(' Error creating suspense entry: ' + (error.response?.data?.message || error.message));
             }
         }
 
@@ -471,7 +471,7 @@ const API_BASE = '/api';
 
             // Check if there's anything left to resolve
             if (remainingBalance <= 0.01) {
-                alert('⚠️ This suspense account is fully resolved. No remaining balance to allocate.');
+                alert(' This suspense account is fully resolved. No remaining balance to allocate.');
                 return;
             }
 
@@ -784,19 +784,19 @@ const API_BASE = '/api';
             });
 
             if (!studentId || !particularId) {
-                alert('⚠️ Please select both student and fee particular');
+                alert(' Please select both student and fee particular');
                 return;
             }
 
             if (!amount || amount <= 0) {
-                alert('⚠️ Please enter a valid amount');
+                alert(' Please enter a valid amount');
                 return;
             }
 
             // Validate amount doesn't exceed suspense amount
             const maxAmount = parseFloat(document.getElementById('resolve_amount').getAttribute('max'));
             if (amount > maxAmount) {
-                alert(`⚠️ Amount cannot exceed suspense amount of ${formatTSh(maxAmount)}`);
+                alert(` Amount cannot exceed suspense amount of ${formatTSh(maxAmount)}`);
                 return;
             }
 
@@ -817,10 +817,10 @@ const API_BASE = '/api';
 
                 // Show success message with details
                 const data = response.data;
-                let message = data.message || '✅ Suspense account resolved successfully';
+                let message = data.message || ' Suspense account resolved successfully';
 
                 if (data.remaining_amount && data.remaining_amount > 0) {
-                    message += `\n\n💰 Remaining to resolve: ${formatTSh(data.remaining_amount)}`;
+                    message += `\n\n Remaining to resolve: ${formatTSh(data.remaining_amount)}`;
                 }
 
                 alert(message);
@@ -849,7 +849,7 @@ const API_BASE = '/api';
                     errorMessage = error.message;
                 }
 
-                alert('❌ Error resolving suspense account: ' + errorMessage);
+                alert(' Error resolving suspense account: ' + errorMessage);
             }
         }
     </script>

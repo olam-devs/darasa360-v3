@@ -16,14 +16,14 @@
         <div class="mb-6">
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800">📊 Expense Summary</h2>
+                    <h2 class="text-xl font-bold text-gray-800"> Expense Summary</h2>
                     <div class="flex gap-3 items-center">
                         <label class="text-sm font-medium text-gray-700">From:</label>
                         <input type="date" id="summary-from-date" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
                         <label class="text-sm font-medium text-gray-700">To:</label>
                         <input type="date" id="summary-to-date" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
                         <button onclick="updateSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold text-sm">
-                            📅 Filter
+                             Filter
                         </button>
                         <button onclick="clearSummaryFilter()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 transition font-semibold text-sm">
                             Clear

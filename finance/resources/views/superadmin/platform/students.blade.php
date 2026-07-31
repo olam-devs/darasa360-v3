@@ -179,14 +179,14 @@
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     @if($student->synced_finance)
-                                        <span class="text-green-600 font-bold">✓</span>
+                                        <span class="text-green-600 font-bold"></span>
                                     @else
                                         <span class="text-gray-300">—</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     @if($student->synced_academics)
-                                        <span class="text-green-600 font-bold">✓</span>
+                                        <span class="text-green-600 font-bold"></span>
                                     @else
                                         <span class="text-gray-300">—</span>
                                     @endif

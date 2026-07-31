@@ -58,11 +58,11 @@
                                 <div>
                                     <p class="text-xs text-gray-500">Payment Method</p>
                                     <p class="font-semibold text-gray-900">
-                                        @if($payment->payment_method === 'cash') 💵 Cash
-                                        @elseif($payment->payment_method === 'bank_transfer') 🏦 Bank Transfer
-                                        @elseif($payment->payment_method === 'mobile_money') 📱 Mobile Money
-                                        @elseif($payment->payment_method === 'cheque') 📝 Cheque
-                                        @else 💳 Card
+                                        @if($payment->payment_method === 'cash') Cash
+                                        @elseif($payment->payment_method === 'bank_transfer') Bank Transfer
+                                        @elseif($payment->payment_method === 'mobile_money') Mobile Money
+                                        @elseif($payment->payment_method === 'cheque') Cheque
+                                        @else Card
                                         @endif
                                     </p>
                                 </div>

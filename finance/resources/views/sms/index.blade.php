@@ -15,14 +15,14 @@
             <div class="container mx-auto">
                 <!-- Breadcrumb Navigation -->
                 <div class="mb-2 text-sm">
-                    <a href="{{ url('/accountant-dashboard') }}" class="hover:text-purple-200 transition">🏠 Home</a>
+                    <a href="{{ url('/accountant-dashboard') }}" class="hover:text-purple-200 transition"> Home</a>
                     <span class="mx-2">›</span>
                     <span class="text-purple-200">SMS Notification</span>
                 </div>
 
                 <div class="flex justify-between items-center">
                     <div class="flex items-center gap-4">
-                        <h1 class="text-2xl font-bold">📱 SMS Notification System</h1>
+                        <h1 class="text-2xl font-bold"> SMS Notification System</h1>
                     </div>
                     <div class="flex gap-3 items-center">
                         <span id="balance-display" class="bg-purple-700 px-4 py-2 rounded-lg shadow">
@@ -30,10 +30,10 @@
                             <span class="font-bold" id="sms-balance">Loading...</span>
                         </span>
                         <a href="{{ route('sms.logs') }}" class="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded transition">
-                            📋 SMS Logs
+                             SMS Logs
                         </a>
                         <a href="{{ route('sms.manage-phones') }}" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded transition">
-                            📞 Manage Phones
+                             Manage Phones
                         </a>
                     </div>
                 </div>
@@ -48,7 +48,7 @@
                 <!-- Left Panel - Student Selection -->
                 <div class="lg:col-span-1">
                     <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h2 class="text-xl font-bold mb-4 text-purple-600">👥 Select Recipients</h2>
+                        <h2 class="text-xl font-bold mb-4 text-purple-600"> Select Recipients</h2>
 
                         <!-- Selection Method Tabs -->
                         <div class="flex gap-2 mb-4">
@@ -83,7 +83,7 @@
                                 <input type="text" id="search-input" placeholder="Name or Registration Number..." class="w-full border-gray-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-purple-500 p-2 border">
                             </div>
                             <button onclick="searchStudents()" class="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded transition">
-                                🔍 Search
+                                 Search
                             </button>
                         </div>
 
@@ -112,7 +112,7 @@
                 <!-- Right Panel - Message Composition -->
                 <div class="lg:col-span-2">
                     <div class="bg-white rounded-lg shadow-lg p-6">
-                        <h2 class="text-xl font-bold mb-4 text-purple-600">✉️ Compose Message</h2>
+                        <h2 class="text-xl font-bold mb-4 text-purple-600"> Compose Message</h2>
 
                         <!-- Phone Number Selection -->
                         <div class="mb-4">
@@ -173,7 +173,7 @@
                             <div class="flex justify-between items-center mb-2">
                                 <label class="block text-sm font-medium text-gray-700">Message</label>
                                 <button onclick="openSaveTemplateModal()" class="text-sm text-purple-600 hover:text-purple-700 font-medium">
-                                    💾 Save as Template
+                                     Save as Template
                                 </button>
                             </div>
                             <textarea id="message-text" rows="8" maxlength="1000" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-purple-500 focus:ring-purple-500 p-3 border" placeholder="Type your message here..."></textarea>
@@ -190,42 +190,42 @@
                             <h3 class="font-semibold text-gray-700 mb-2 text-sm">Click to Insert Placeholder:</h3>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
                                 <button onclick="insertPlaceholder('{student_name}')" class="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded text-xs transition text-left">
-                                    📝 {student_name}
+                                     {student_name}
                                 </button>
                                 <button onclick="insertPlaceholder('{student_reg}')" class="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded text-xs transition text-left">
-                                    🔢 {student_reg}
+                                     {student_reg}
                                 </button>
                                 <button onclick="insertPlaceholder('{class}')" class="bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded text-xs transition text-left">
-                                    🏫 {class}
+                                     {class}
                                 </button>
                                 <button onclick="insertPlaceholder('{total_sales}')" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded text-xs transition text-left">
-                                    💰 {total_sales}
+                                     {total_sales}
                                 </button>
                                 <button onclick="insertPlaceholder('{total_paid}')" class="bg-green-100 hover:bg-green-200 text-green-700 px-3 py-2 rounded text-xs transition text-left">
-                                    ✅ {total_paid}
+                                     {total_paid}
                                 </button>
                                 <button onclick="insertPlaceholder('{balance}')" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded text-xs transition text-left">
-                                    ⚠️ {balance}
+                                     {balance}
                                 </button>
                                 <button onclick="insertPlaceholder('{particulars_breakdown}')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded text-xs transition text-left col-span-2">
-                                    📋 {particulars_breakdown}
+                                     {particulars_breakdown}
                                 </button>
                             </div>
                         </div>
 
                         <!-- Preview -->
                         <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <h3 class="font-semibold text-gray-700 mb-2">📱 Message Preview</h3>
+                            <h3 class="font-semibold text-gray-700 mb-2"> Message Preview</h3>
                             <p id="message-preview" class="text-sm text-gray-600 whitespace-pre-wrap">Your message will appear here...</p>
                         </div>
 
                         <!-- Send Button -->
                         <div class="flex gap-3">
                             <button onclick="sendSMS()" id="send-btn" class="flex-1 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold transition transform hover:scale-105 shadow-lg">
-                                📤 Send SMS
+                                 Send SMS
                             </button>
                             <button onclick="clearForm()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold transition">
-                                🔄 Clear
+                                 Clear
                             </button>
                         </div>
                     </div>
@@ -237,7 +237,7 @@
     <!-- Save Template Modal -->
     <div id="save-template-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 class="text-xl font-bold mb-4 text-purple-600">💾 Save as Template</h3>
+            <h3 class="text-xl font-bold mb-4 text-purple-600"> Save as Template</h3>
 
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Template Name</label>
@@ -379,7 +379,7 @@
                         <div class="font-semibold text-gray-800">${student.name}</div>
                         <div class="text-xs text-gray-600">${student.student_reg_no} | ${student.school_class?.name || 'N/A'}</div>
                         <div class="text-xs text-gray-500">
-                            📞 ${student.parent_phone_1}${student.parent_phone_2 ? ' | ' + student.parent_phone_2 : ''}
+                             ${student.parent_phone_1}${student.parent_phone_2 ? ' | ' + student.parent_phone_2 : ''}
                         </div>
                     </div>
                 </label>
@@ -498,14 +498,14 @@
                     phone_number: phoneNumber
                 });
 
-                showMessage(`✅ ${response.data.message}`, 'success');
+                showMessage(` ${response.data.message}`, 'success');
                 clearForm();
                 loadSmsBalance();
             } catch (error) {
-                showMessage('❌ ' + (error.response?.data?.message || error.message), 'error');
+                showMessage(' ' + (error.response?.data?.message || error.message), 'error');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '📤 Send SMS';
+                btn.innerHTML = ' Send SMS';
             }
         }
 
@@ -556,13 +556,13 @@
                     message_sw: messageSw
                 });
 
-                showMessage('✅ Template saved successfully!', 'success');
+                showMessage(' Template saved successfully!', 'success');
                 closeSaveTemplateModal();
 
                 // Reload templates
                 location.reload();
             } catch (error) {
-                showMessage('❌ Failed to save template: ' + (error.response?.data?.message || error.message), 'error');
+                showMessage(' Failed to save template: ' + (error.response?.data?.message || error.message), 'error');
             }
         }
 

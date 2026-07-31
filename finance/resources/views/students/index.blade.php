@@ -131,7 +131,7 @@
                                 @empty
                                     <tr>
                                         <td colspan="7" class="px-6 py-12 text-center">
-                                            <div class="text-gray-400 text-lg">👨‍🎓</div>
+                                            <div class="text-gray-400 text-lg">‍</div>
                                             <p class="text-gray-500 mt-2">No students found</p>
                                             @if(auth()->user()->role !== 'parent')
                                                 <a href="{{ route('students.create') }}" class="inline-block mt-4 text-purple-600 hover:text-purple-800 font-medium">

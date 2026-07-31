@@ -142,7 +142,7 @@
                 @if(isset($entry['is_month_start']) && $entry['is_month_start'])
                     <tr style="background-color: #e8f5e9; font-weight: bold;">
                         <td colspan="7" style="text-align: left; padding: 8px; color: #2e7d32;">
-                            📅 {{ $entry['month'] }} - OPENING BALANCE
+                             {{ $entry['month'] }} - OPENING BALANCE
                         </td>
                         <td class="amount-balance" style="background-color: #c8e6c9;">{{ number_format($entry['opening_balance'], 2) }}</td>
                         <td></td>
@@ -150,7 +150,7 @@
                 @elseif(isset($entry['is_month_end']) && $entry['is_month_end'])
                     <tr style="background-color: #fff3e0; font-weight: bold;">
                         <td colspan="5" style="text-align: left; padding: 8px; color: #e65100;">
-                            📅 {{ $entry['month'] }} - CLOSING BALANCE
+                             {{ $entry['month'] }} - CLOSING BALANCE
                         </td>
                         <td class="amount-debit" style="background-color: #ffe0b2;">{{ number_format($entry['monthly_debit'], 2) }}</td>
                         <td class="amount-credit" style="background-color: #ffe0b2;">{{ number_format($entry['monthly_credit'], 2) }}</td>

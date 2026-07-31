@@ -7,7 +7,7 @@
 <div class="w-full p-6">
             <!-- Filters -->
             <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-                <h2 class="text-lg font-bold mb-4 text-gray-700">🔍 Filter Logs</h2>
+                <h2 class="text-lg font-bold mb-4 text-gray-700"> Filter Logs</h2>
                 <form method="GET" action="{{ route('accountant.sms-logs') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
@@ -105,14 +105,14 @@
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     @if($log->status === 'delivered')
                                         <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                            ✅ Delivered
+                                             Delivered
                                         </span>
                                         @if($log->delivered_at)
                                             <div class="text-xs text-gray-500 mt-1">{{ $log->delivered_at->format('H:i') }}</div>
                                         @endif
                                     @elseif($log->status === 'sent')
                                         <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                            📤 Sent
+                                             Sent
                                         </span>
                                         @if($log->sent_at)
                                             <div class="text-xs text-gray-500 mt-1">{{ $log->sent_at->format('H:i') }}</div>
@@ -123,7 +123,7 @@
                                         </span>
                                     @else
                                         <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                            ❌ Failed
+                                             Failed
                                         </span>
                                         @if($log->status_description)
                                             <div class="text-xs text-red-600 mt-1" title="{{ $log->status_description }}">
@@ -142,7 +142,7 @@
                             @empty
                             <tr>
                                 <td colspan="7" class="px-6 py-12 text-center text-gray-500">
-                                    <div class="text-4xl mb-2">📭</div>
+                                    <div class="text-4xl mb-2"></div>
                                     <p>No SMS logs found</p>
                                     <p class="text-sm mt-2">Try adjusting your filters or send some messages first</p>
                                 </td>
