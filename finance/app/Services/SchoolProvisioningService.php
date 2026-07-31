@@ -39,10 +39,15 @@ class SchoolProvisioningService
             $useExistingDatabase = !empty($data['use_existing_database']);
             $existingDatabaseName = $data['existing_database_name'] ?? null;
 
-            // Determine database name
+            // Determine database name. A custom slug can override the
+            // auto-generated one - useful when the school-name-derived name
+            // gets rejected by the hosting panel for reasons outside our
+            // control (observed 2026-07-31: DirectAdmin consistently refused
+            // one specific generated name while accepting every other name
+            // tried, with no clear rule - a manual override was the only fix).
             $databaseName = $useExistingDatabase && $existingDatabaseName
                 ? $existingDatabaseName
-                : $this->generateDatabaseName($data['name']);
+                : $this->generateDatabaseName($data['name'], $data['db_name_slug'] ?? null);
 
             // Allocate a unique 3-digit school code from the platform
             $code = $this->platformRegistry->allocateSchoolCode();
@@ -210,11 +215,15 @@ class SchoolProvisioningService
 
     /**
      * Generate a unique Finance tenant DB name with the server prefix.
+     * Pass $slugOverride to use a custom slug instead of one derived from
+     * the school name (see the call site's comment for why this exists).
      */
-    protected function generateDatabaseName(string $schoolName): string
+    protected function generateDatabaseName(string $schoolName, ?string $slugOverride = null): string
     {
         $prefix = config('directadmin.db_prefix', '');
-        $slug   = substr(Str::slug($schoolName, '_'), 0, 30);
+        $slug   = $slugOverride
+            ? substr(Str::slug($slugOverride, '_'), 0, 30)
+            : substr(Str::slug($schoolName, '_'), 0, 30);
         $count  = School::count() + 1;
         return $prefix . 'school_' . str_pad($count, 3, '0', STR_PAD_LEFT) . '_' . $slug;
     }
