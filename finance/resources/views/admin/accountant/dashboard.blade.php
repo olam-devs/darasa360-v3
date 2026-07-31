@@ -362,22 +362,6 @@
                         </div>
                     </div>
                 </a>
-                <div class="hover-lift rounded-xl border border-slate-200 border-l-4 border-l-indigo-500 bg-white p-4 md:p-5">
-                    <div class="mb-3 flex gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-semibold text-slate-900 md:text-base">SMS</h3>
-                            <p class="text-xs text-slate-500">Messaging</p>
-                        </div>
-                    </div>
-                    <div class="space-y-2">
-                        <a href="{{ route('accountant.sms') }}" class="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-100 md:text-sm">Send SMS</a>
-                        <a href="{{ route('accountant.phone-numbers') }}" class="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-100 md:text-sm">Phone numbers</a>
-                        <a href="{{ route('accountant.sms-logs') }}" class="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-100 md:text-sm">SMS logs</a>
-                    </div>
-                </div>
                 <a href="{{ route('accountant.invoices-page') }}" class="hover-lift rounded-xl border border-slate-200 border-l-4 border-l-purple-500 bg-white p-4 md:p-5">
                     <div class="flex gap-3">
                         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
@@ -434,6 +418,22 @@
                         </div>
                     </div>
                 </a>
+                <div class="hover-lift rounded-xl border border-slate-200 border-l-4 border-l-indigo-500 bg-white p-4 md:p-5">
+                    <div class="mb-3 flex gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-900 md:text-base">SMS</h3>
+                            <p class="text-xs text-slate-500">Messaging</p>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <a href="{{ route('accountant.sms') }}" class="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-100 md:text-sm">Send SMS</a>
+                        <a href="{{ route('accountant.phone-numbers') }}" class="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-100 md:text-sm">Phone numbers</a>
+                        <a href="{{ route('accountant.sms-logs') }}" class="block rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-800 hover:bg-slate-100 md:text-sm">SMS logs</a>
+                    </div>
+                </div>
             </div>
         </div>
 
