@@ -45,7 +45,11 @@ Route::post('/api/bank-webhook', [BankAPIController::class, 'webhook'])->name('a
 Route::post('/api/messenger/parent', [ParentMessengerController::class, 'handle'])->name('api.messenger.parent');
 
 // Portal assistant (accountant auth, headmaster session, or parent session)
-Route::middleware(['portal.session'])->group(function () {
+// Each of the three tenant-context middlewares only acts on the session
+// shape it recognizes (accountant/superadmin, headmaster, parent) and is a
+// no-op otherwise, so stacking all three safely covers every audience this
+// route group serves.
+Route::middleware(['tenant.context', 'headmaster.tenant.context', 'parent.tenant.context', 'portal.session'])->group(function () {
     Route::get('api/assistant/intents', [PortalAssistantController::class, 'intents'])->name('api.assistant.intents');
     Route::post('api/assistant/ask', [PortalAssistantController::class, 'ask'])->name('api.assistant.ask');
     Route::post('api/assistant/chat', [PortalAssistantController::class, 'chat'])->name('api.assistant.chat');
