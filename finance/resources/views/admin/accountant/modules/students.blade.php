@@ -288,12 +288,6 @@ const API_BASE = '/api';
 
         async function editStudent(studentId) {
             try {
-                // Fetch student details (we can get from existing data but better to fetch fresh)
-                const response = await axios.get(`/students/${studentId}`);
-                // Note: This might return HTML. Let's use the data from the table instead for now
-                // Or we need to create an API endpoint for single student
-
-                // For now, let's make a simpler approach - get all students and find the one
                 const studentsResponse = await axios.get(`${API_BASE}/students`);
                 const student = studentsResponse.data.students.find(s => s.id === studentId);
 
