@@ -26,15 +26,35 @@ class StudentController extends Controller
     {
         $query = Student::with('schoolClass');
 
-        if ($request->has('class_id')) {
+        if ($request->filled('class_id')) {
             $query->where('class_id', $request->class_id);
         }
 
-        if ($request->has('status')) {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        $students = $query->orderBy('name')->get();
+        if ($request->filled('gender')) {
+            $query->where('gender', strtolower($request->gender));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('student_reg_no', 'LIKE', "%{$search}%");
+            });
+        }
+
+        match ($request->input('sort')) {
+            'name_desc' => $query->orderBy('name', 'desc'),
+            'recent' => $query->orderBy('created_at', 'desc'),
+            'oldest' => $query->orderBy('created_at', 'asc'),
+            'modified' => $query->orderBy('updated_at', 'desc'),
+            default => $query->orderBy('name', 'asc'),
+        };
+
+        $students = $query->get();
 
         return response()->json(['students' => $students]);
     }

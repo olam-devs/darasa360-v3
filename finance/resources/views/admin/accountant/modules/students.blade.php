@@ -31,8 +31,8 @@
                     </select>
                     <select id="genderFilter" onchange="loadStudents()" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="">All Genders</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
                     </select>
                     <select id="sortFilter" onchange="loadStudents()" class="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="name_asc">Name (A-Z)</option>
@@ -68,8 +68,8 @@
                         <label class="block font-bold mb-2">Gender <span class="text-red-500">*</span></label>
                         <select id="studentGender" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
                             <option value="">Select Gender</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
                         </select>
                     </div>
                     <div>
