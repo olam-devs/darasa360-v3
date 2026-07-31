@@ -82,7 +82,7 @@ class DirectAdminService
     {
         try {
             $response = Http::withBasicAuth($this->user, $this->password)
-                ->withOptions(['verify' => false, 'allow_redirects' => false])
+                ->withOptions(['verify' => false, 'allow_redirects' => false, 'force_ip_resolve' => 'v4'])
                 ->timeout(30)
                 ->delete("https://{$this->host}:{$this->port}/api/db-manage/databases/{$fullName}");
 
@@ -99,14 +99,17 @@ class DirectAdminService
 
     protected function post(string $endpoint, array $data): \Illuminate\Http\Client\Response
     {
-        // allow_redirects disabled: Guzzle's default redirect handling drops
-        // the Authorization header on redirect, which DirectAdmin then reports
-        // as "Not logged in" - an intermittent, hard-to-reproduce-by-hand
-        // failure since curl (no -L) never follows redirects and never hit
-        // this. If DA ever legitimately redirects this endpoint, we want a
-        // visible 3xx response here instead of a silently-deauthenticated one.
+        // force_ip_resolve=v4 is the real fix (confirmed 2026-07-31): Guzzle/
+        // curl on this server resolves vda6000.is.cc to a link-local IPv6
+        // address and connects over that by default, which DirectAdmin's
+        // login-key IP allowlist (174.138.190.170, IPv4 only) then rejects as
+        // an unauthorized source - reported confusingly as "Not logged in"
+        // rather than an IP-restriction error. Manual curl testing never
+        // caught this because plain curl on this box happened to prefer IPv4.
+        // allow_redirects is also disabled defensively (Guzzle drops the
+        // Authorization header on redirect) though it wasn't the root cause.
         return Http::withBasicAuth($this->user, $this->password)
-            ->withOptions(['verify' => false, 'allow_redirects' => false])
+            ->withOptions(['verify' => false, 'allow_redirects' => false, 'force_ip_resolve' => 'v4'])
             ->timeout(30)
             ->asForm()
             ->post("https://{$this->host}:{$this->port}{$endpoint}", $data);
