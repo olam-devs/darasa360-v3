@@ -7,6 +7,8 @@ use App\Models\SmsLog;
 use App\Models\SmsTemplate;
 use App\Models\SchoolClass;
 use App\Models\Central\School;
+use App\Models\Central\SmsDeliveryIndex;
+use App\Services\TenantDatabaseManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -16,11 +18,178 @@ class SmsController extends Controller
     protected $apiToken;
     protected $senderName;
     protected $apiUrl = 'https://messaging-service.co.tz';
+    protected $deliveryCallbackToken;
 
     public function __construct()
     {
         $this->apiToken = env('SMS_API_TOKEN');
         $this->senderName = env('SMS_SENDER_NAME', 'DARASA 360');
+        $this->deliveryCallbackToken = env('SMS_DELIVERY_CALLBACK_TOKEN');
+    }
+
+    /**
+     * Record which school a NextSMS messageId belongs to, so the shared
+     * delivery-callback webhook (no session/school context of its own,
+     * since one gateway account serves every school) can route an
+     * incoming delivery report back to the right tenant database.
+     */
+    protected function recordDeliveryIndex(?string $messageId, ?int $schoolId): void
+    {
+        if (! $messageId || ! $schoolId) {
+            return;
+        }
+
+        try {
+            SmsDeliveryIndex::updateOrCreate(
+                ['message_id' => $messageId],
+                ['school_id' => $schoolId, 'created_at' => now()]
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to record SMS delivery index for ' . $messageId . ': ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Receives delivery reports from NextSMS (POST, no session - one shared
+     * gateway account covers every school). Verified via a shared secret
+     * token rather than auth, then routed to the right tenant database via
+     * SmsDeliveryIndex before updating the matching SmsLog row.
+     */
+    public function deliveryCallback(Request $request)
+    {
+        if (! $this->deliveryCallbackToken || $request->input('token') !== $this->deliveryCallbackToken) {
+            Log::warning('SMS delivery callback rejected: invalid or missing token', ['ip' => $request->ip()]);
+            return response()->json(['success' => false], 403);
+        }
+
+        $messageId = $request->input('messageId');
+        $rawStatus = strtolower((string) $request->input('status'));
+
+        if (! $messageId) {
+            return response()->json(['success' => true]);
+        }
+
+        $index = SmsDeliveryIndex::where('message_id', $messageId)->first();
+        if (! $index || ! $index->school_id) {
+            Log::info("SMS delivery callback: no school mapping for messageId {$messageId} (status: {$rawStatus})");
+            return response()->json(['success' => true]);
+        }
+
+        $school = School::find($index->school_id);
+        if (! $school) {
+            return response()->json(['success' => true]);
+        }
+
+        app(TenantDatabaseManager::class)->switchToSchool($school);
+
+        $log = SmsLog::where('message_id', $messageId)->first();
+        if ($log) {
+            if (in_array($rawStatus, ['delivered', 'failed', 'rejected', 'expired', 'undelivered'], true)) {
+                $log->status = $rawStatus === 'delivered' ? 'delivered' : 'failed';
+            }
+            $log->status_description = $request->input('status', $log->status_description);
+            if ($rawStatus === 'delivered') {
+                $log->delivered_at = now();
+            }
+            $log->save();
+        } else {
+            Log::info("SMS delivery callback: no SmsLog found for messageId {$messageId} in school {$school->id}");
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Resend a previously failed SMS, optionally to a different phone
+     * number. Creates a fresh SmsLog row (keeping the failed original as
+     * history) rather than mutating the failed entry in place.
+     */
+    public function resendSms(Request $request, $logId)
+    {
+        $validated = $request->validate([
+            'phone' => 'nullable|string',
+        ]);
+
+        $log = SmsLog::findOrFail($logId);
+
+        if ($log->status !== 'failed') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only failed messages can be resent.',
+            ], 400);
+        }
+
+        $recipient = $validated['phone'] ?? $log->recipient_phone;
+        $smsCount = $this->calculateSmsCount($log->message);
+        $creditCheck = $this->checkSmsCredits($smsCount);
+
+        if (! $creditCheck['allowed']) {
+            return response()->json([
+                'success' => false,
+                'message' => $creditCheck['message'],
+            ], 403);
+        }
+
+        $school = $creditCheck['school'];
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiToken,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->post($this->apiUrl . '/api/sms/v2/text/single', [
+                'from' => $this->senderName,
+                'to' => $recipient,
+                'text' => $log->message,
+            ]);
+
+            $responseData = $response->json();
+            $newMessageId = $responseData['messages'][0]['messageId'] ?? null;
+
+            SmsLog::create([
+                'student_id' => $log->student_id,
+                'sent_by' => auth()->id(),
+                'recipient_phone' => $recipient,
+                'message' => $log->message,
+                'message_id' => $newMessageId,
+                'reference' => 'resend_of_' . $log->id,
+                'status' => $response->successful() ? 'sent' : 'failed',
+                'status_code' => $response->status(),
+                'status_description' => $responseData['messages'][0]['status']['description'] ?? 'Unknown',
+                'sent_at' => now(),
+                'sms_count' => $smsCount,
+            ]);
+
+            if ($response->successful()) {
+                if ($school) {
+                    $school->deductSmsCredits($smsCount);
+                    $this->recordDeliveryIndex($newMessageId, $school->id);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'SMS resent successfully',
+                    'sms_credits' => $school ? [
+                        'used' => $smsCount,
+                        'remaining' => $school->fresh()->sms_credits_remaining,
+                    ] : null,
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Resend failed',
+                'error' => $responseData,
+            ], 400);
+        } catch (\Exception $e) {
+            Log::error('SMS resend failed: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'SMS resend failed',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -284,9 +453,19 @@ class SmsController extends Controller
 
     public function logsAccountant()
     {
-        $logs = SmsLog::with(['student', 'sentBy'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
+        $query = SmsLog::with(['student', 'sentBy'])->orderBy('created_at', 'desc');
+
+        if ($status = request('status')) {
+            $query->where('status', $status);
+        }
+        if ($fromDate = request('from_date')) {
+            $query->whereDate('created_at', '>=', $fromDate);
+        }
+        if ($toDate = request('to_date')) {
+            $query->whereDate('created_at', '<=', $toDate);
+        }
+
+        $logs = $query->paginate(50)->withQueryString();
 
         return view('admin.accountant.modules.sms-logs', compact('logs'));
     }
@@ -355,6 +534,7 @@ class SmsController extends Controller
             if ($response->successful()) {
                 if ($school) {
                     $school->deductSmsCredits($smsCount);
+                    $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
                 }
 
                 return response()->json([
@@ -517,6 +697,7 @@ class SmsController extends Controller
                     if ($response->successful()) {
                         if ($school) {
                             $school->deductSmsCredits($smsCount);
+                            $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
                         }
                         $totalSmsUsed += $smsCount;
                         $sent++;
@@ -913,6 +1094,7 @@ class SmsController extends Controller
                     if ($response->successful()) {
                         if ($school) {
                             $school->deductSmsCredits($smsCount);
+                            $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
                         }
                         $totalSmsUsed += $smsCount;
                         $sent++;

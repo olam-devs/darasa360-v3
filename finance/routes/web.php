@@ -41,6 +41,10 @@ Route::get('/', function () {
 // Public Bank Webhook Endpoint (no auth required - called by bank)
 Route::post('/api/bank-webhook', [BankAPIController::class, 'webhook'])->name('api.bank-webhook');
 
+// Public SMS delivery-callback webhook (no auth - called by the NextSMS gateway;
+// verified via a shared token instead, see SmsController::deliveryCallback)
+Route::post('/api/sms/delivery-callback', [SmsController::class, 'deliveryCallback'])->name('api.sms.delivery-callback');
+
 // Parent SMS/WhatsApp messenger (connect school office number via Twilio/Meta → this endpoint)
 Route::post('/api/messenger/parent', [ParentMessengerController::class, 'handle'])->name('api.messenger.parent');
 
@@ -336,6 +340,7 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::get('sms/download-template', [SmsController::class, 'downloadPhoneTemplate'])->name('sms.download-template');
         Route::post('sms/upload-phones', [SmsController::class, 'uploadPhoneNumbers'])->name('sms.upload-phones');
         Route::put('sms/student/{studentId}/phone', [SmsController::class, 'updatePhoneNumber'])->name('sms.update-phone');
+        Route::post('sms/logs/{logId}/resend', [SmsController::class, 'resendSms'])->name('sms.resend');
 
         // SMS Template routes
         Route::get('sms/templates', [SmsController::class, 'getTemplates'])->name('sms.templates');

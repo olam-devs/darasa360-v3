@@ -53,6 +53,13 @@ return Application::configure(basePath: dirname(__DIR__))
             RedirectLocalhostTo127::class,
         ]);
 
+        // External webhooks (NextSMS delivery reports) arrive with no
+        // session, so they can never carry a CSRF token - exempt explicitly
+        // rather than relying on auth/session state to fail open.
+        $middleware->validateCsrfTokens(except: [
+            'api/sms/delivery-callback',
+        ]);
+
         // Route-model binding (SubstituteBindings) is the LAST middleware in
         // Laravel's default 'web' group, so without this it resolves
         // {student}/{headmaster}/{class}/etc. route params BEFORE our

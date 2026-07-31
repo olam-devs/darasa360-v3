@@ -81,6 +81,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SMS Count</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sent By</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -138,10 +139,19 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {{ $log->sentBy?->name ?? 'System' }}
                                 </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    @if($log->status === 'failed')
+                                        <button type="button"
+                                            onclick="openResendModal({{ $log->id }}, @js($log->recipient_phone))"
+                                            class="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 text-red-700 border border-red-200 hover:bg-red-100">
+                                            Resend
+                                        </button>
+                                    @endif
+                                </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
                                     <div class="text-4xl mb-2"></div>
                                     <p>No SMS logs found</p>
                                     <p class="text-sm mt-2">Try adjusting your filters or send some messages first</p>
@@ -153,5 +163,73 @@
                 </div>
             </div>
         </div>
+
+        <!-- Resend modal -->
+        <div id="resendModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">Resend SMS</h3>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Phone number</label>
+                <input type="text" id="resendPhone" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border mb-1">
+                <p class="text-xs text-gray-500 mb-4">Edit the number to send to a different contact, or leave as-is to retry the same one.</p>
+                <p id="resendError" class="text-sm text-red-600 mb-3 hidden"></p>
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="closeResendModal()" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button type="button" id="resendConfirmBtn" onclick="confirmResend()" class="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Resend</button>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        let resendLogId = null;
+
+        function openResendModal(logId, phone) {
+            resendLogId = logId;
+            document.getElementById('resendPhone').value = phone || '';
+            document.getElementById('resendError').classList.add('hidden');
+            document.getElementById('resendModal').classList.remove('hidden');
+        }
+
+        function closeResendModal() {
+            resendLogId = null;
+            document.getElementById('resendModal').classList.add('hidden');
+        }
+
+        async function confirmResend() {
+            if (!resendLogId) return;
+            const btn = document.getElementById('resendConfirmBtn');
+            const errorEl = document.getElementById('resendError');
+            errorEl.classList.add('hidden');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const response = await fetch(`/sms/logs/${resendLogId}/resend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ phone: document.getElementById('resendPhone').value.trim() }),
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    closeResendModal();
+                    window.location.reload();
+                } else {
+                    errorEl.textContent = data.message || 'Resend failed';
+                    errorEl.classList.remove('hidden');
+                }
+            } catch (e) {
+                errorEl.textContent = 'Resend failed: ' + e.message;
+                errorEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Resend';
+            }
+        }
+    </script>
 @endsection
