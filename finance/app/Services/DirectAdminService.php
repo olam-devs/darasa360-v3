@@ -82,7 +82,7 @@ class DirectAdminService
     {
         try {
             $response = Http::withBasicAuth($this->user, $this->password)
-                ->withOptions(['verify' => false])
+                ->withOptions(['verify' => false, 'allow_redirects' => false])
                 ->timeout(30)
                 ->delete("https://{$this->host}:{$this->port}/api/db-manage/databases/{$fullName}");
 
@@ -99,8 +99,14 @@ class DirectAdminService
 
     protected function post(string $endpoint, array $data): \Illuminate\Http\Client\Response
     {
+        // allow_redirects disabled: Guzzle's default redirect handling drops
+        // the Authorization header on redirect, which DirectAdmin then reports
+        // as "Not logged in" - an intermittent, hard-to-reproduce-by-hand
+        // failure since curl (no -L) never follows redirects and never hit
+        // this. If DA ever legitimately redirects this endpoint, we want a
+        // visible 3xx response here instead of a silently-deauthenticated one.
         return Http::withBasicAuth($this->user, $this->password)
-            ->withOptions(['verify' => false])
+            ->withOptions(['verify' => false, 'allow_redirects' => false])
             ->timeout(30)
             ->asForm()
             ->post("https://{$this->host}:{$this->port}{$endpoint}", $data);
