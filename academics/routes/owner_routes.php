@@ -69,7 +69,7 @@ use Illuminate\Support\Facades\Hash;
 
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner'])
   ->prefix('owner')
   ->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'ownerDashboard'])->name('owner.dashboard');
@@ -98,7 +98,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
   });
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner'])
   ->prefix('owner')->group(function () {
     Route::get('/grades/type/{type}', [GradeController::class, 'showGradesByType'])->name('grades.showByType');
 
@@ -108,7 +108,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
   });
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Headmaster'])
   ->prefix('owner/classes')
   ->group(function () {
     Route::get('/', [ClassController::class, 'index'])->name('classes.index');
@@ -123,7 +123,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
   });
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Accountant'])
   ->prefix('owner/students')
   ->group(function () {
     Route::get('/', [StudentController::class, 'manageStudents'])->name('students.index');
@@ -140,7 +140,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
 
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner'])
   ->prefix('/owner/subjects')->group(function () {
     Route::get('/', [SubjectController::class, 'listSubjects'])->name('subjects.list');
     Route::get('/create', [SubjectController::class, 'showAddSubjectForm'])->name('subjects.create');
@@ -165,7 +165,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
   });
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner'])
   ->prefix('/owner/passwords')->group(function () {
     Route::get('/', [OwnerController::class, 'schoolPasswords'])->name('schooladmin.passwords');
     Route::post('/admin/change-password', [OwnerController::class, 'changePassword'])->name('schooladmin.passwords.change');
