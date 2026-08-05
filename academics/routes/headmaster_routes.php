@@ -73,14 +73,14 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Hash;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat\Wizard\Accounting;
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Headmaster'])
   ->prefix('/headmaster')->group(function () {
     Route::get('/', [DashboardController::class, 'headmasterDashboard'])->name('headMaster.dashboard');
     Route::get('/manage-staff', [OwnerController::class, 'manageStaff'])->name('headMaster.manageStaff');
   });
 
 // Headmaster student management routes
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Headmaster'])
   ->prefix('headmaster/students')
   ->group(function () {
     Route::get('/', [StudentController::class, 'manageStudents'])->name('headmaster.students.index');
@@ -95,7 +95,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
 
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Academic'])
   ->prefix('/academic')->group(function () {
     Route::get('/', [DashboardController::class, 'academicDashboard'])->name('academic.dashboard');
     Route::get('/notes', [TeacherController::class, 'viewNotes'])->name('academic.notes');
@@ -179,7 +179,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
   });
 
 // Academic student management routes
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Academic'])
   ->prefix('academic/students')
   ->group(function () {
     Route::get('/', [StudentController::class, 'manageStudents'])->name('academic.students.index');
@@ -194,7 +194,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
 
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Accountant'])
 
     ->prefix('/accountant')->group(function () {
 

@@ -71,7 +71,7 @@ use Illuminate\Support\Facades\Hash;
 
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Teacher,ClassTeacher'])
   ->prefix('teachers')->group(function () {
     Route::get('/', [DashboardController::class, 'teacherDashboard'])->name('teachers.dashboard');
     Route::get('/view', [TeacherController::class, 'viewTeachers'])->name('teachers.view');
@@ -90,7 +90,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
   });
 
 // Teacher student management routes
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Teacher,ClassTeacher'])
   ->prefix('teachers/students')
   ->group(function () {
     Route::get('/', [StudentController::class, 'manageStudents'])->name('teachers.students.index');
@@ -104,7 +104,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
   });
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Teacher,ClassTeacher'])
   ->prefix('/exams')
   ->group(function () {
 
@@ -182,7 +182,7 @@ Route::middleware([LogRequests::class])->group(function () {
 });
 
 // Class Teacher Report Card Routes
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:ClassTeacher'])
   ->prefix('class-teacher/report-cards')
   ->group(function () {
     Route::get('/', [\App\Http\Controllers\ReportCardController::class, 'classTeacherIndex'])->name('classTeacher.reportCards.index');
