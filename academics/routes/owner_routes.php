@@ -86,10 +86,6 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.
     Route::put('/update-staff/{id}', [OwnerController::class, 'updateStaff'])->name('staffs.update');
     Route::delete('/delete-staff/{id}', [OwnerController::class, 'deleteStaff'])->name('staffs.delete');
 
-    Route::get('/promotions', [PromotionController::class, 'index'])->name('owner.promotions.index');
-    Route::get('/promotions/students/{classId}', [PromotionController::class, 'getStudents'])->name('owner.promotions.students');
-    Route::post('/promotions/promote', [PromotionController::class, 'promote'])->name('owner.promotions.promote');
-
     Route::get('/staff-promotion', [StaffPromotionController::class, 'index'])->name('owner.staff-promotion.index');
     Route::get('/staff-promotion/staff/{roleId}', [StaffPromotionController::class, 'getStaff'])->name('owner.staff-promotion.staff');
     Route::post('/staff-promotion/promote', [StaffPromotionController::class, 'promote'])->name('owner.staff-promotion.promote');
@@ -97,8 +93,16 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.
     Route::post('/update-user-status/{id}', [OwnerController::class, 'updateUserStatus'])->name('owner.update.user.status');
   });
 
+// Student promotion - also hardcoded into School Admin's own dashboard (school_admin/dashboard.blade.php)
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Admin'])
+  ->prefix('owner')->group(function () {
+    Route::get('/promotions', [PromotionController::class, 'index'])->name('owner.promotions.index');
+    Route::get('/promotions/students/{classId}', [PromotionController::class, 'getStudents'])->name('owner.promotions.students');
+    Route::post('/promotions/promote', [PromotionController::class, 'promote'])->name('owner.promotions.promote');
+  });
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner'])
+
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Admin'])
   ->prefix('owner')->group(function () {
     Route::get('/grades/type/{type}', [GradeController::class, 'showGradesByType'])->name('grades.showByType');
 
@@ -108,7 +112,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.
   });
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Headmaster'])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Admin,Headmaster'])
   ->prefix('owner/classes')
   ->group(function () {
     Route::get('/', [ClassController::class, 'index'])->name('classes.index');
@@ -123,7 +127,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.
   });
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Accountant'])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Admin,Accountant'])
   ->prefix('owner/students')
   ->group(function () {
     Route::get('/', [StudentController::class, 'manageStudents'])->name('students.index');
@@ -140,7 +144,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.
 
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner'])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Admin'])
   ->prefix('/owner/subjects')->group(function () {
     Route::get('/', [SubjectController::class, 'listSubjects'])->name('subjects.list');
     Route::get('/create', [SubjectController::class, 'showAddSubjectForm'])->name('subjects.create');
@@ -165,7 +169,7 @@ Route::middleware([InitializeTenantDatabase::class, LogRequests::class])
   });
 
 
-Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner'])
+Route::middleware([InitializeTenantDatabase::class, LogRequests::class, 'tenant.role:Owner,Admin'])
   ->prefix('/owner/passwords')->group(function () {
     Route::get('/', [OwnerController::class, 'schoolPasswords'])->name('schooladmin.passwords');
     Route::post('/admin/change-password', [OwnerController::class, 'changePassword'])->name('schooladmin.passwords.change');

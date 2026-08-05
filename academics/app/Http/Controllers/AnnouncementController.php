@@ -153,7 +153,7 @@ class AnnouncementController extends Controller
 
           if (!empty($announcement->filepath)) {
             if (Storage::disk('tenant_files')->exists($announcement->filepath)) {
-              $fileUrl = url("/announcements/download/{$announcement->id}");
+              $fileUrl = url("/students/download/{$announcement->id}");
               $fileName = basename($announcement->title);
 
               // Get file size
@@ -340,7 +340,7 @@ class AnnouncementController extends Controller
         return response()->json([
           'title' => $announcement->title,
           'file_path' => $path,
-          'download_url' => url("/announcements/download/$id"),
+          'download_url' => url("/students/download/$id"),
           'message' => 'Announcement file ready for download'
         ]);
       }
