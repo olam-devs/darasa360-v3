@@ -87,7 +87,9 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
 
         Route::get('/advance-payments', [AdvancePaymentController::class, 'page'])->name('advance-payments');
 
-        Route::get('/reconciliation', [ReconciliationController::class, 'page'])->name('reconciliation');
+        Route::middleware('school.feature:reconciliation_enabled')->group(function () {
+            Route::get('/reconciliation', [ReconciliationController::class, 'page'])->name('reconciliation');
+        });
         Route::get('/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'page'])->name('activity-logs');
 
         Route::get('/particulars', function () {
@@ -157,13 +159,15 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::get('/sms-logs', [SmsController::class, 'logsAccountant'])->name('sms-logs');
         Route::post('/sms/send-overdue-reminders', [SmsController::class, 'sendOverdueReminders'])->name('sms.send-overdue-reminders');
 
-        // Headmaster Management
-        Route::get('/headmasters', [HeadmasterManagementController::class, 'index'])->name('headmasters');
-        Route::post('/headmasters', [HeadmasterManagementController::class, 'store'])->name('headmasters.store');
-        Route::put('/headmasters/{headmaster}', [HeadmasterManagementController::class, 'update'])->name('headmasters.update');
-        Route::post('/headmasters/{headmaster}/toggle', [HeadmasterManagementController::class, 'toggleStatus'])->name('headmasters.toggle');
-        Route::post('/headmasters/{headmaster}/reset-password', [HeadmasterManagementController::class, 'resetPassword'])->name('headmasters.reset-password');
-        Route::delete('/headmasters/{headmaster}', [HeadmasterManagementController::class, 'destroy'])->name('headmasters.destroy');
+        // Headmaster Management (super-admin-gated per school, see School::headmaster_management_enabled)
+        Route::middleware('school.feature:headmaster_management_enabled')->group(function () {
+            Route::get('/headmasters', [HeadmasterManagementController::class, 'index'])->name('headmasters');
+            Route::post('/headmasters', [HeadmasterManagementController::class, 'store'])->name('headmasters.store');
+            Route::put('/headmasters/{headmaster}', [HeadmasterManagementController::class, 'update'])->name('headmasters.update');
+            Route::post('/headmasters/{headmaster}/toggle', [HeadmasterManagementController::class, 'toggleStatus'])->name('headmasters.toggle');
+            Route::post('/headmasters/{headmaster}/reset-password', [HeadmasterManagementController::class, 'resetPassword'])->name('headmasters.reset-password');
+            Route::delete('/headmasters/{headmaster}', [HeadmasterManagementController::class, 'destroy'])->name('headmasters.destroy');
+        });
 
         Route::get('/invoices-page', [LedgerController::class, 'invoicesPage'])->name('invoices-page');
 
@@ -181,12 +185,14 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::get('/invoices/class/{className}/pdf', [LedgerController::class, 'exportClassInvoicesPdf'])->name('invoices.class.pdf');
         Route::get('/invoices/student/{studentId}/pdf', [LedgerController::class, 'exportStudentInvoicePdf'])->name('invoices.student.pdf');
 
-        // Parent portal password management
-        Route::get('/portal-passwords', [StudentController::class, 'portalPasswordsPage'])->name('portal-passwords');
-        Route::get('api/students/portal-password/search', [StudentController::class, 'searchStudentsForPassword'])->name('api.students.portal-password.search');
-        Route::post('api/students/portal-password/bulk', [StudentController::class, 'bulkSetPortalPassword'])->name('api.students.portal-password.bulk');
-        Route::post('api/students/{studentId}/portal-password', [StudentController::class, 'setPortalPassword'])->name('api.students.portal-password.set');
-        Route::post('api/students/{studentId}/portal-email/generate', [StudentController::class, 'regeneratePortalEmail'])->name('api.students.portal-email.generate');
+        // Parent portal password management (super-admin-gated per school, see School::parent_portal_management_enabled)
+        Route::middleware('school.feature:parent_portal_management_enabled')->group(function () {
+            Route::get('/portal-passwords', [StudentController::class, 'portalPasswordsPage'])->name('portal-passwords');
+            Route::get('api/students/portal-password/search', [StudentController::class, 'searchStudentsForPassword'])->name('api.students.portal-password.search');
+            Route::post('api/students/portal-password/bulk', [StudentController::class, 'bulkSetPortalPassword'])->name('api.students.portal-password.bulk');
+            Route::post('api/students/{studentId}/portal-password', [StudentController::class, 'setPortalPassword'])->name('api.students.portal-password.set');
+            Route::post('api/students/{studentId}/portal-email/generate', [StudentController::class, 'regeneratePortalEmail'])->name('api.students.portal-email.generate');
+        });
     });
 
     Route::middleware(['finance.portal'])->group(function () {
@@ -306,18 +312,22 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::get('api/advance-payments/csv', [AdvancePaymentController::class, 'csv'])->name('api.advance-payments.csv');
 
         // Book reconciliation (adjustments + correcting fee/cut vouchers)
-        Route::post('api/reconciliation/adjustments', [ReconciliationController::class, 'storeAdjustment'])
-            ->middleware('can.edit.history')
-            ->name('api.reconciliation.adjustments');
-        Route::post('api/reconciliation/bank-fee', [ReconciliationController::class, 'storeBankFee'])
-            ->middleware('can.edit.history')
-            ->name('api.reconciliation.bank-fee');
-        Route::post('api/reconciliation/monthly-cut', [ReconciliationController::class, 'storeMonthlyCut'])
-            ->middleware('can.edit.history')
-            ->name('api.reconciliation.monthly-cut');
-        Route::put('api/reconciliation/vouchers/{id}', [ReconciliationController::class, 'updateVoucher'])
-            ->middleware('can.edit.history')
-            ->name('api.reconciliation.vouchers.update');
+        // - super-admin-gated per school first, then can.edit.history gates
+        // which accountants within an enabled school may use it.
+        Route::middleware('school.feature:reconciliation_enabled')->group(function () {
+            Route::post('api/reconciliation/adjustments', [ReconciliationController::class, 'storeAdjustment'])
+                ->middleware('can.edit.history')
+                ->name('api.reconciliation.adjustments');
+            Route::post('api/reconciliation/bank-fee', [ReconciliationController::class, 'storeBankFee'])
+                ->middleware('can.edit.history')
+                ->name('api.reconciliation.bank-fee');
+            Route::post('api/reconciliation/monthly-cut', [ReconciliationController::class, 'storeMonthlyCut'])
+                ->middleware('can.edit.history')
+                ->name('api.reconciliation.monthly-cut');
+            Route::put('api/reconciliation/vouchers/{id}', [ReconciliationController::class, 'updateVoucher'])
+                ->middleware('can.edit.history')
+                ->name('api.reconciliation.vouchers.update');
+        });
 
         Route::get('api/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index'])->name('api.activity-logs.index');
         Route::get('api/accountant-users', [\App\Http\Controllers\AccountantUserController::class, 'index'])->name('api.accountant-users.index');

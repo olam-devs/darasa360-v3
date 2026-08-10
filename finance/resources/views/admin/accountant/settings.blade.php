@@ -207,6 +207,52 @@
                     <div id="accountantPermissionsTable" class="text-sm text-slate-500">Loading accountants…</div>
                 </div>
 
+                <!-- Portal setup (super-admin-gated per school) -->
+                <div class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
+                    <h3 class="text-lg font-semibold text-slate-900 mb-2">Portal setup</h3>
+                    <p class="text-sm text-slate-600 mb-4">Headmaster and parent-portal login setup for your school. Your Darasa Finance administrator turns these on per school.</p>
+
+                    <div class="space-y-3">
+                        @if($currentSchool?->headmaster_management_enabled)
+                            <a href="{{ route('accountant.headmasters') }}"
+                               class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:border-blue-300 hover:bg-blue-50 transition">
+                                <div>
+                                    <div class="font-semibold text-slate-900">Headmaster setup</div>
+                                    <div class="text-xs text-slate-500">Create and manage headmaster logins for this school</div>
+                                </div>
+                                <span class="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">Open</span>
+                            </a>
+                        @else
+                            <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 opacity-60">
+                                <div>
+                                    <div class="font-semibold text-slate-700">Headmaster setup</div>
+                                    <div class="text-xs text-slate-500">Not enabled for this school — ask your Darasa Finance administrator to turn it on</div>
+                                </div>
+                                <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Disabled</span>
+                            </div>
+                        @endif
+
+                        @if($currentSchool?->parent_portal_management_enabled)
+                            <a href="{{ route('accountant.portal-passwords') }}"
+                               class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 hover:border-blue-300 hover:bg-blue-50 transition">
+                                <div>
+                                    <div class="font-semibold text-slate-900">Parent portal passwords</div>
+                                    <div class="text-xs text-slate-500">Set or reset parent portal login passwords</div>
+                                </div>
+                                <span class="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">Open</span>
+                            </a>
+                        @else
+                            <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3 opacity-60">
+                                <div>
+                                    <div class="font-semibold text-slate-700">Parent portal passwords</div>
+                                    <div class="text-xs text-slate-500">Not enabled for this school — ask your Darasa Finance administrator to turn it on</div>
+                                </div>
+                                <span class="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Disabled</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
                 <!-- Bank Accounts Section -->
                 <div class="mt-8 bg-gray-50 rounded-lg p-6">
                     <div class="flex justify-between items-center mb-4">

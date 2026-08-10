@@ -52,6 +52,9 @@ class School extends Model
         'has_academics',
         'cross_jump_enabled',
         'parent_cross_access',
+        'headmaster_management_enabled',
+        'parent_portal_management_enabled',
+        'reconciliation_enabled',
         'academics_db_name',
         'platform_school_id',
     ];
@@ -73,6 +76,9 @@ class School extends Model
             'has_academics' => 'boolean',
             'cross_jump_enabled' => 'boolean',
             'parent_cross_access' => 'boolean',
+            'headmaster_management_enabled' => 'boolean',
+            'parent_portal_management_enabled' => 'boolean',
+            'reconciliation_enabled' => 'boolean',
             'platform_school_id' => 'integer',
         ];
     }
@@ -144,6 +150,30 @@ class School extends Model
     public function canCrossJump(): bool
     {
         return $this->has_finance && $this->has_academics && $this->cross_jump_enabled;
+    }
+
+    /**
+     * Resolve the school for the currently-authenticated accountant (or the
+     * school a super admin is impersonating), the same way EnsureTenantContext
+     * does it. Deliberately does NOT use the legacy fallback chain in
+     * HasSchoolContext/app('current_school') (env DB name, "only one school
+     * exists", etc.) - those are known-unreliable for identifying a specific
+     * school and are only still used for the tenant *database* connection.
+     */
+    public static function resolveForRequest(?\Illuminate\Http\Request $request = null): ?self
+    {
+        $request = $request ?? request();
+
+        if (session('impersonating') && session('current_school_id')) {
+            return self::find(session('current_school_id'));
+        }
+
+        $user = $request?->user();
+        if ($user instanceof SchoolAccountant) {
+            return $user->school;
+        }
+
+        return null;
     }
 
     /**

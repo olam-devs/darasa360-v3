@@ -608,7 +608,13 @@ class SchoolController extends Controller
      */
     public function togglePlatformFlag(Request $request, School $school)
     {
-        $allowed = ['has_academics', 'cross_jump_enabled', 'parent_cross_access'];
+        // Flags mirrored to platform_schools (used cross-app, e.g. Academics'
+        // cross-jump check) vs. Finance-only accountant feature flags that
+        // have no equivalent column on platform_schools - mirroring those
+        // would 500 on an unknown-column error.
+        $platformMirroredFlags = ['has_academics', 'cross_jump_enabled', 'parent_cross_access'];
+        $financeOnlyFlags = ['headmaster_management_enabled', 'parent_portal_management_enabled', 'reconciliation_enabled'];
+        $allowed = array_merge($platformMirroredFlags, $financeOnlyFlags);
         $flag = $request->input('flag');
 
         if (!in_array($flag, $allowed, true)) {
@@ -627,8 +633,8 @@ class SchoolController extends Controller
         $newValue = !$school->$flag;
         $school->update([$flag => $newValue]);
 
-        // Mirror to platform_schools
-        if ($school->platform_school_id) {
+        // Mirror to platform_schools (only for flags that actually exist there)
+        if ($school->platform_school_id && in_array($flag, $platformMirroredFlags, true)) {
             \App\Models\Platform\PlatformSchool::where('id', $school->platform_school_id)
                 ->update([$flag => $newValue]);
         }

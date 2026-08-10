@@ -40,6 +40,14 @@ class AppServiceProvider extends ServiceProvider
                     $view->with('settings', null);
                 }
             }
+
+            if (!array_key_exists('currentSchool', $data)) {
+                try {
+                    $view->with('currentSchool', School::resolveForRequest());
+                } catch (\Throwable $e) {
+                    $view->with('currentSchool', null);
+                }
+            }
         });
     }
 

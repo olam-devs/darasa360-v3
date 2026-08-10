@@ -96,6 +96,9 @@
                         $simpleFlags = [
                             ['key' => 'cross_jump_enabled',  'label' => 'Cross-System Jump (SSO)', 'desc' => 'Allowed users jump between Finance & Academics without re-login'],
                             ['key' => 'parent_cross_access', 'label' => 'Parent Cross-Access',     'desc' => 'Parents can jump to Finance fee portal from Academics'],
+                            ['key' => 'headmaster_management_enabled', 'label' => 'Headmaster Setup', 'desc' => "Accountant can create/manage this school's headmaster logins (does not affect headmaster login itself)"],
+                            ['key' => 'parent_portal_management_enabled', 'label' => 'Parent Portal Passwords', 'desc' => "Accountant can set/reset parents' portal login passwords (does not affect parent login itself)"],
+                            ['key' => 'reconciliation_enabled', 'label' => 'Reconciliation', 'desc' => 'Accountant can access book reconciliation (adjustments, correcting fee/cut vouchers)'],
                         ];
                     @endphp
 
