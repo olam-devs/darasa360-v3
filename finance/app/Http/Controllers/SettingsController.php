@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Central\School;
 use App\Models\SchoolSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -11,8 +12,9 @@ class SettingsController extends Controller
     public function index()
     {
         $settings = SchoolSetting::getSettings();
+        $currentSchool = School::resolveForRequest();
 
-        return view('admin.accountant.settings', compact('settings'));
+        return view('admin.accountant.settings', compact('settings', 'currentSchool'));
     }
 
     public function update(Request $request)

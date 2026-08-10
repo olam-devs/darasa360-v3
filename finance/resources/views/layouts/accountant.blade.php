@@ -1,6 +1,8 @@
 ﻿@php
     /** @var \App\Models\SchoolSetting|null $settings */
     $settings = $settings ?? \App\Models\SchoolSetting::getSettings();
+    /** @var \App\Models\Central\School|null $currentSchool */
+    $currentSchool = $currentSchool ?? \App\Models\Central\School::resolveForRequest();
 @endphp
 <!DOCTYPE html>
 <html lang="en">
