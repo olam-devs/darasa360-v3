@@ -343,6 +343,18 @@ class SupportTicketController extends Controller
 
     $this->switchTenantDB();
 
+    // The escalation form's checkboxes have no `value` attribute, so a checked box
+    // submits the literal string "on" (the HTML default) - Laravel's `boolean` rule
+    // does NOT accept "on" (only true/false/1/0/"1"/"0"/"true"/"false"), so every
+    // escalation submitted with either box checked (the default state) used to fail
+    // validation with a 422 before ever reaching findAdminForLevel() below. Normalize
+    // via $request->boolean() first so the value is always a real bool by the time
+    // it hits validation.
+    $request->merge([
+      'notify_sms' => $request->boolean('notify_sms'),
+      'notify_email' => $request->boolean('notify_email'),
+    ]);
+
     $validated = $request->validate([
       'escalation_reason' => 'required|string',
       'notify_sms' => 'boolean',
