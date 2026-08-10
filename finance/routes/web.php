@@ -87,9 +87,11 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
 
         Route::get('/advance-payments', [AdvancePaymentController::class, 'page'])->name('advance-payments');
 
-        Route::middleware('school.feature:reconciliation_enabled')->group(function () {
-            Route::get('/reconciliation', [ReconciliationController::class, 'page'])->name('reconciliation');
-        });
+        // Reconciliation is per-accountant (can_edit_history, set by the super
+        // admin from the school's Accountants list), not a school-wide flag.
+        Route::get('/reconciliation', [ReconciliationController::class, 'page'])
+            ->middleware('can.edit.history')
+            ->name('reconciliation');
         Route::get('/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'page'])->name('activity-logs');
 
         Route::get('/particulars', function () {
@@ -311,27 +313,22 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::get('api/advance-payments/pdf', [AdvancePaymentController::class, 'pdf'])->name('api.advance-payments.pdf');
         Route::get('api/advance-payments/csv', [AdvancePaymentController::class, 'csv'])->name('api.advance-payments.csv');
 
-        // Book reconciliation (adjustments + correcting fee/cut vouchers)
-        // - super-admin-gated per school first, then can.edit.history gates
-        // which accountants within an enabled school may use it.
-        Route::middleware('school.feature:reconciliation_enabled')->group(function () {
-            Route::post('api/reconciliation/adjustments', [ReconciliationController::class, 'storeAdjustment'])
-                ->middleware('can.edit.history')
-                ->name('api.reconciliation.adjustments');
-            Route::post('api/reconciliation/bank-fee', [ReconciliationController::class, 'storeBankFee'])
-                ->middleware('can.edit.history')
-                ->name('api.reconciliation.bank-fee');
-            Route::post('api/reconciliation/monthly-cut', [ReconciliationController::class, 'storeMonthlyCut'])
-                ->middleware('can.edit.history')
-                ->name('api.reconciliation.monthly-cut');
-            Route::put('api/reconciliation/vouchers/{id}', [ReconciliationController::class, 'updateVoucher'])
-                ->middleware('can.edit.history')
-                ->name('api.reconciliation.vouchers.update');
-        });
+        // Book reconciliation (adjustments + correcting fee/cut vouchers) -
+        // gated purely by can_edit_history (per-accountant, super-admin-set).
+        Route::post('api/reconciliation/adjustments', [ReconciliationController::class, 'storeAdjustment'])
+            ->middleware('can.edit.history')
+            ->name('api.reconciliation.adjustments');
+        Route::post('api/reconciliation/bank-fee', [ReconciliationController::class, 'storeBankFee'])
+            ->middleware('can.edit.history')
+            ->name('api.reconciliation.bank-fee');
+        Route::post('api/reconciliation/monthly-cut', [ReconciliationController::class, 'storeMonthlyCut'])
+            ->middleware('can.edit.history')
+            ->name('api.reconciliation.monthly-cut');
+        Route::put('api/reconciliation/vouchers/{id}', [ReconciliationController::class, 'updateVoucher'])
+            ->middleware('can.edit.history')
+            ->name('api.reconciliation.vouchers.update');
 
         Route::get('api/activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index'])->name('api.activity-logs.index');
-        Route::get('api/accountant-users', [\App\Http\Controllers\AccountantUserController::class, 'index'])->name('api.accountant-users.index');
-        Route::put('api/accountant-users/{id}/permissions', [\App\Http\Controllers\AccountantUserController::class, 'updatePermissions'])->name('api.accountant-users.permissions');
 
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/income-statement', [ReportController::class, 'incomeStatement'])->name('reports.income-statement');

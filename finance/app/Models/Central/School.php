@@ -54,7 +54,6 @@ class School extends Model
         'parent_cross_access',
         'headmaster_management_enabled',
         'parent_portal_management_enabled',
-        'reconciliation_enabled',
         'academics_db_name',
         'platform_school_id',
     ];
@@ -78,7 +77,6 @@ class School extends Model
             'parent_cross_access' => 'boolean',
             'headmaster_management_enabled' => 'boolean',
             'parent_portal_management_enabled' => 'boolean',
-            'reconciliation_enabled' => 'boolean',
             'platform_school_id' => 'integer',
         ];
     }

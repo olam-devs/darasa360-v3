@@ -98,8 +98,10 @@
                             ['key' => 'parent_cross_access', 'label' => 'Parent Cross-Access',     'desc' => 'Parents can jump to Finance fee portal from Academics'],
                             ['key' => 'headmaster_management_enabled', 'label' => 'Headmaster Setup', 'desc' => "Accountant can create/manage this school's headmaster logins (does not affect headmaster login itself)"],
                             ['key' => 'parent_portal_management_enabled', 'label' => 'Parent Portal Passwords', 'desc' => "Accountant can set/reset parents' portal login passwords (does not affect parent login itself)"],
-                            ['key' => 'reconciliation_enabled', 'label' => 'Reconciliation', 'desc' => 'Accountant can access book reconciliation (adjustments, correcting fee/cut vouchers)'],
                         ];
+                        // Reconciliation is per-accountant (Edit history, below in the Accountants list),
+                        // not a school-wide flag - it's inherently tied to which specific accountant is
+                        // trusted to edit historical records, not whether the school "has" the feature.
                     @endphp
 
                     <div class="space-y-3">
@@ -454,6 +456,23 @@
                                     <span class="text-xs px-2 py-1 rounded-full {{ $accountant->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                         {{ $accountant->is_active ? 'Active' : 'Inactive' }}
                                     </span>
+                                    @if($accountant->can_edit_history)
+                                        <span class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800">Edit history</span>
+                                    @endif
+                                    @if($accountant->can_view_logs)
+                                        <span class="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-800">View logs</span>
+                                    @endif
+                                    <button onclick="showEditAccountant({{ Illuminate\Support\Js::from([
+                                        'updateUrl' => route('superadmin.schools.accountants.update', [$school, $accountant]),
+                                        'name' => $accountant->name,
+                                        'email' => $accountant->email,
+                                        'is_active' => $accountant->is_active,
+                                        'can_edit_history' => (bool) $accountant->can_edit_history,
+                                        'can_view_logs' => (bool) $accountant->can_view_logs,
+                                    ]) }})"
+                                        class="text-xs bg-slate-600 hover:bg-slate-700 text-white px-2 py-1 rounded">
+                                        Edit
+                                    </button>
                                     <button onclick="showPasswordReset({{$accountant->id}}, '{{$accountant->email}}')"
                                         class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">
                                         Reset Password
@@ -549,6 +568,60 @@
         </div>
     </div>
 
+    <!-- Edit Accountant Modal -->
+    <div id="editAccountantModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">Edit Accountant</h3>
+            <form method="POST" id="editAccountantForm">
+                @csrf
+                @method('PUT')
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                    <input type="text" name="name" id="edit_accountant_name" required
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" name="email" id="edit_accountant_email" required
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" id="edit_accountant_is_active" class="rounded">
+                        <span>Active (can log in)</span>
+                    </label>
+                </div>
+
+                <div class="mb-4 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-sm font-medium text-slate-800">Permissions</p>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="hidden" name="can_edit_history" value="0">
+                        <input type="checkbox" name="can_edit_history" value="1" id="edit_accountant_can_edit_history" class="rounded">
+                        <span>Edit history (reconciliation)</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="hidden" name="can_view_logs" value="0">
+                        <input type="checkbox" name="can_view_logs" value="1" id="edit_accountant_can_view_logs" class="rounded">
+                        <span>View activity logs</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        Save
+                    </button>
+                    <button type="button" onclick="hideEditAccountant()"
+                        class="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Password Reset Modal -->
     <div id="passwordResetModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
@@ -592,6 +665,20 @@ function showAddAccountantModal() {
 
     function hideAddAccountantModal() {
         document.getElementById('addAccountantModal').classList.add('hidden');
+    }
+
+    function showEditAccountant(accountant) {
+        document.getElementById('editAccountantForm').action = accountant.updateUrl;
+        document.getElementById('edit_accountant_name').value = accountant.name;
+        document.getElementById('edit_accountant_email').value = accountant.email;
+        document.getElementById('edit_accountant_is_active').checked = accountant.is_active;
+        document.getElementById('edit_accountant_can_edit_history').checked = accountant.can_edit_history;
+        document.getElementById('edit_accountant_can_view_logs').checked = accountant.can_view_logs;
+        document.getElementById('editAccountantModal').classList.remove('hidden');
+    }
+
+    function hideEditAccountant() {
+        document.getElementById('editAccountantModal').classList.add('hidden');
     }
 
     function showPasswordReset(accountantId, email) {

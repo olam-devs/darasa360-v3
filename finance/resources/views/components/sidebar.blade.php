@@ -40,7 +40,7 @@
                 <div id="finance-submenu" class="ml-3 mt-1 space-y-1 {{ request()->routeIs('accountant.fee-entry', 'accountant.ledgers', 'accountant.particular-ledger', 'accountant.overdue', 'accountant.suspense', 'accountant.advance-payments', 'accountant.reconciliation') ? '' : 'hidden' }}">
                     <a href="{{ route('accountant.fee-entry') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.fee-entry') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Fee Entry</a>
                     <a href="{{ route('accountant.ledgers') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.ledgers') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Ledgers</a>
-                    @if($currentSchool?->reconciliation_enabled)
+                    @if(auth()->user() && auth()->user()->can_edit_history)
                     <a href="{{ route('accountant.reconciliation') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.reconciliation') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Reconciliation</a>
                     @endif
                     <a href="{{ route('accountant.advance-payments') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.advance-payments') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Advance Payments</a>

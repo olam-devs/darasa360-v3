@@ -613,7 +613,7 @@ class SchoolController extends Controller
         // have no equivalent column on platform_schools - mirroring those
         // would 500 on an unknown-column error.
         $platformMirroredFlags = ['has_academics', 'cross_jump_enabled', 'parent_cross_access'];
-        $financeOnlyFlags = ['headmaster_management_enabled', 'parent_portal_management_enabled', 'reconciliation_enabled'];
+        $financeOnlyFlags = ['headmaster_management_enabled', 'parent_portal_management_enabled'];
         $allowed = array_merge($platformMirroredFlags, $financeOnlyFlags);
         $flag = $request->input('flag');
 

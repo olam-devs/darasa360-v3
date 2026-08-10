@@ -9,18 +9,20 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Gates accountant-facing features that are off by default per school -
- * headmaster setup, parent portal password setup, reconciliation - behind a
- * boolean the Finance super admin controls from the school's detail page
+ * headmaster setup, parent portal password setup - behind a boolean the
+ * Finance super admin controls from the school's detail page
  * (App\Http\Controllers\SuperAdmin\SchoolController::togglePlatformFlag).
  *
- * Usage: ->middleware('school.feature:reconciliation_enabled')
+ * Reconciliation is NOT gated here - it's per-accountant, not per-school
+ * (SchoolAccountant::can_edit_history, via the can.edit.history middleware).
+ *
+ * Usage: ->middleware('school.feature:headmaster_management_enabled')
  */
 class EnsureSchoolFeatureEnabled
 {
     protected const LABELS = [
         'headmaster_management_enabled' => 'Headmaster setup',
         'parent_portal_management_enabled' => 'Parent portal password setup',
-        'reconciliation_enabled' => 'Reconciliation',
     ];
 
     public function handle(Request $request, Closure $next, string $flag): Response

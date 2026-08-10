@@ -200,13 +200,6 @@
                     </div>
                 </form>
 
-                <!-- Accountant permissions (local users) -->
-                <div class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
-                    <h3 class="text-lg font-semibold text-slate-900 mb-2">Accountant access</h3>
-                    <p class="text-sm text-slate-600 mb-4">Control who can edit historical ledger data (reconciliation) and who can view activity logs.</p>
-                    <div id="accountantPermissionsTable" class="text-sm text-slate-500">Loading accountants…</div>
-                </div>
-
                 <!-- Portal setup (super-admin-gated per school) -->
                 <div class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
                     <h3 class="text-lg font-semibold text-slate-900 mb-2">Portal setup</h3>
@@ -357,47 +350,10 @@
     <script>
         axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
 
-        async function loadAccountantPermissions() {
-            const box = document.getElementById('accountantPermissionsTable');
-            if (!box) return;
-            try {
-                const res = await axios.get('/api/accountant-users');
-                const users = res.data.users || [];
-                if (!users.length) {
-                    box.innerHTML = '<p class="text-slate-500">No accountant users found.</p>';
-                    return;
-                }
-                let html = '<table class="w-full border border-slate-200 rounded-lg overflow-hidden"><thead class="bg-slate-100"><tr><th class="p-2 text-left">Name</th><th class="p-2 text-left">Email</th><th class="p-2 text-center">Edit history</th><th class="p-2 text-center">View logs</th><th class="p-2"></th></tr></thead><tbody>';
-                users.forEach(u => {
-                    html += `<tr class="border-t bg-white"><td class="p-2 font-medium">${u.name}</td><td class="p-2 text-slate-600">${u.email}</td>
-                        <td class="p-2 text-center"><input type="checkbox" id="edit_${u.id}" ${u.can_edit_history ? 'checked' : ''}></td>
-                        <td class="p-2 text-center"><input type="checkbox" id="logs_${u.id}" ${u.can_view_logs ? 'checked' : ''}></td>
-                        <td class="p-2 text-right"><button type="button" onclick="saveUserPermissions(${u.id})" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">Save</button></td></tr>`;
-                });
-                html += '</tbody></table>';
-                box.innerHTML = html;
-            } catch (e) {
-                box.innerHTML = '<p class="text-red-600">Could not load accountant users.</p>';
-            }
-        }
-
-        async function saveUserPermissions(userId) {
-            try {
-                await axios.put(`/api/accountant-users/${userId}/permissions`, {
-                    can_edit_history: document.getElementById('edit_' + userId).checked,
-                    can_view_logs: document.getElementById('logs_' + userId).checked,
-                });
-                alert('Permissions saved.');
-            } catch (e) {
-                alert(e.response?.data?.error || 'Failed to save permissions.');
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
             loadBankAccounts();
             loadAcademicYears();
             initSettingsPreviews();
-            loadAccountantPermissions();
         });
 
         function initSettingsPreviews() {
