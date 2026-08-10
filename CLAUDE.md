@@ -29,6 +29,24 @@ Two Laravel apps sharing a platform DB, deployed to a shared-hosting DirectAdmin
 - Git doesn't track empty directories: `bootstrap/cache` and several `storage/framework/*` subdirs won't exist after a fresh clone and must be created manually before `composer install`'s `package:discover` hook will succeed.
 - Each domain's docroot must point at `<app>/public`, not the monorepo root — set via DirectAdmin's domain/subdomain table (a plain, user-editable "Docroot" column, not an admin-only setting).
 
+## Finance login URLs (live)
+Not credentials (see `## Credentials & server access` below for those) - just where each portal lives. Headmaster/parent login are now per-school (see the per-school login URLs feature, 2026-08-10) - always use the slug-scoped URL once more than one real school exists; the bare URLs below only reliably resolve to the right school while there's exactly one.
+
+| Portal | URL |
+|---|---|
+| Super Admin | `https://finance.darasa360.co.tz/superadmin/login` |
+| Accountant | `https://finance.darasa360.co.tz/login` |
+| Headmaster (per-school) | `https://finance.darasa360.co.tz/headmaster/login/{school-slug}` |
+| Parent (per-school) | `https://finance.darasa360.co.tz/parent/login/{school-slug}` |
+| Headmaster (bare, legacy fallback) | `https://finance.darasa360.co.tz/headmaster/login` |
+| Parent (bare, legacy fallback) | `https://finance.darasa360.co.tz/parent/login` |
+
+**LITTLE DOVES DAYCARE AND NURSERY SCHOOL** (school id 17, the one real live school as of 2026-08-10), slug `little-doves-daycare-and-nursery-school`:
+- Headmaster: `https://finance.darasa360.co.tz/headmaster/login/little-doves-daycare-and-nursery-school`
+- Parent: `https://finance.darasa360.co.tz/parent/login/little-doves-daycare-and-nursery-school`
+
+Sandbox equivalents: swap `finance.darasa360.co.tz` for `finance-sandbox.darasa360.co.tz`. Sandbox's test school is OLAM SECONDARY SCHOOL, slug `olam-secondary-school`.
+
 ## Fixed: Finance live .env had wrong DirectAdmin API variable names (2026-07-26)
 Finance's `config/directadmin.php` reads `DA_HOST`/`DA_PORT`/`DA_USER`, but the live `.env` created during initial deployment used `DA_API_URL`/`DA_USERNAME` instead (copy-paste drift from whatever the original deployment notes had). Since `TenantDatabaseManager::createDatabase()` only calls the DirectAdmin API when `config('directadmin.user')` is non-empty, this silently made Finance's school-provisioning fall back to a raw-SQL path that doesn't work on this shared-hosting MySQL (same underlying constraint as the Academics issue below) — every new school created via Finance's admin panel on live would likely have hit this fallback. Fixed by correcting the live `.env` var names to match sandbox's (which was already correct) and re-caching config. **When creating any new environment's `.env` from a template, diff the variable names against what `config/directadmin.php` (or equivalent) actually reads — don't assume the template itself is correct.**
 
