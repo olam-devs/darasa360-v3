@@ -60,10 +60,13 @@ Route::middleware('auth')->group(function () {
 });
 
 // Parent Portal Authentication Routes
+// {schoolSlug} is optional so bare /parent/login keeps working (falls back to
+// the legacy "only one school" guess in EnsureParentPortalTenantContext) -
+// but /parent/login/{slug} is the real per-school link to give parents.
 Route::prefix('parent')->name('parent.')->middleware('parent.tenant.context')->group(function () {
     Route::middleware('guest')->group(function () {
-        Route::get('login', [ParentAuthController::class, 'showLogin'])->name('login');
-        Route::post('login', [ParentAuthController::class, 'login']);
+        Route::get('login/{schoolSlug?}', [ParentAuthController::class, 'showLogin'])->name('login');
+        Route::post('login/{schoolSlug?}', [ParentAuthController::class, 'login']);
     });
 
     Route::post('logout', [ParentAuthController::class, 'logout'])->name('logout');

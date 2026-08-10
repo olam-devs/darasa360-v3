@@ -15,8 +15,11 @@ class HeadmasterAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $schoolSlug = session('headmaster_school_slug');
+        $loginRoute = fn () => route('headmaster.login', $schoolSlug ? ['schoolSlug' => $schoolSlug] : []);
+
         if (!session('headmaster_id')) {
-            return redirect()->route('headmaster.login')
+            return redirect($loginRoute())
                 ->with('error', 'Please login to access the headmaster portal');
         }
 
@@ -25,7 +28,7 @@ class HeadmasterAuthMiddleware
 
         if (!$headmaster || !$headmaster->is_active) {
             session()->forget('headmaster_id');
-            return redirect()->route('headmaster.login')
+            return redirect($loginRoute())
                 ->with('error', 'Your account is inactive. Please contact the school accountant.');
         }
 

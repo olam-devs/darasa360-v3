@@ -111,7 +111,7 @@
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
 
-            <form method="POST" action="{{ route('headmaster.login.post') }}">
+            <form method="POST" action="{{ route('headmaster.login.post', $schoolSlug ? ['schoolSlug' => $schoolSlug] : []) }}">
                 @csrf
                 <div class="field">
                     <label>Registration Number</label>

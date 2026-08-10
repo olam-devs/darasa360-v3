@@ -14,11 +14,12 @@ use Symfony\Component\HttpFoundation\Response;
  * authenticated dashboard/ledgers/overdue/invoices routes - before any
  * tenant model (Headmaster, Voucher, ...) is touched.
  *
- * Same chicken-and-egg problem as EnsureParentPortalTenantContext: there's
- * no logged-in Laravel user to read the school from, only a plain session
- * flag (headmaster_id), so this resolves via HasSchoolContext's fallback
- * chain (currently: "if exactly one school exists, use it") and then pins
- * the resolved school's slug in session for subsequent requests.
+ * Real per-school login URLs now exist (/headmaster/login/{schoolSlug}, see
+ * routes/headmaster.php) - the route parameter is authoritative when
+ * present. Bare /headmaster/login (no slug, old bookmarks/links) still falls
+ * back to HasSchoolContext's legacy "if exactly one school exists, use it"
+ * guess, which silently resolves the wrong school's credentials the moment a
+ * second real school exists.
  */
 class EnsureHeadmasterTenantContext
 {
@@ -43,9 +44,20 @@ class EnsureHeadmasterTenantContext
             return $next($request);
         }
 
-        // Guest hitting the login page / submitting login: resolve via the
-        // same fallback chain used elsewhere (currently: the only school).
-        $school = $this->getCurrentSchool();
+        // Guest hitting the login page / submitting login.
+        $routeSlug = $request->route('schoolSlug');
+        if ($routeSlug) {
+            // An explicit slug was given - resolve only that school. Don't
+            // silently fall back to a different one on a bad/typo'd slug.
+            $school = \App\Models\Central\School::where('slug', $routeSlug)->first();
+            if (!$school) {
+                abort(404, 'School not found.');
+            }
+        } else {
+            // No slug given (old-style /headmaster/login) - legacy fallback.
+            $school = $this->getCurrentSchool();
+        }
+
         if ($school) {
             $this->tenantManager->switchToSchool($school);
             session(['headmaster_school_slug' => $school->slug]);

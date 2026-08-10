@@ -119,7 +119,7 @@
                 <div class="alert-error">{{ session('error') }}</div>
             @endif
 
-            <form action="{{ route('parent.login') }}" method="POST">
+            <form action="{{ route('parent.login', $schoolSlug ? ['schoolSlug' => $schoolSlug] : []) }}" method="POST">
                 @csrf
                 <input type="hidden" name="language" id="selected-lang" value="en">
                 <div class="field">

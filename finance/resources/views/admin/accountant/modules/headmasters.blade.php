@@ -41,7 +41,7 @@
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">Registration number *</label>
                         <input type="text" name="registration_number" required placeholder="e.g. HM001" class="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200">
-                        <p class="mt-1 text-xs text-slate-500">Used to sign in at /headmaster/login</p>
+                        <p class="mt-1 text-xs text-slate-500">Used to sign in at <span class="font-mono">{{ $currentSchool ? route('headmaster.login', ['schoolSlug' => $currentSchool->slug]) : route('headmaster.login') }}</span></p>
                     </div>
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700">Email (optional)</label>
@@ -135,7 +135,8 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
             <h3 class="font-semibold text-slate-900">About headmaster access</h3>
             <p class="mt-2">
-                Headmasters sign in with their registration number at <strong class="font-mono text-slate-800">/headmaster/login</strong>.
+                Headmasters sign in with their registration number at
+                <strong class="font-mono text-slate-800">{{ $currentSchool ? route('headmaster.login', ['schoolSlug' => $currentSchool->slug]) : route('headmaster.login') }}</strong>.
                 Access is read-only for summaries, ledgers, overdue amounts, and invoices.
             </p>
         </div>

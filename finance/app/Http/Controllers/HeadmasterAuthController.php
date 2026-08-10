@@ -20,13 +20,13 @@ class HeadmasterAuthController extends Controller
         $this->activityLogger = $activityLogger;
     }
 
-    public function showLogin()
+    public function showLogin(?string $schoolSlug = null)
     {
         if (session('headmaster_id')) {
             return redirect()->route('headmaster.dashboard');
         }
 
-        return view('headmaster.login');
+        return view('headmaster.login', compact('schoolSlug'));
     }
 
     public function login(Request $request)
@@ -86,6 +86,7 @@ class HeadmasterAuthController extends Controller
         $schoolId      = $this->getSchoolId();
         $headmasterId  = session('headmaster_id');
         $headmasterName = session('headmaster_name');
+        $schoolSlug    = session('headmaster_school_slug');
 
         if ($schoolId && $headmasterId) {
             $this->activityLogger->logHeadmasterPortalAction(
@@ -97,11 +98,11 @@ class HeadmasterAuthController extends Controller
             );
         }
 
-        session()->forget(['headmaster_id', 'headmaster_name']);
+        session()->forget(['headmaster_id', 'headmaster_name', 'headmaster_school_slug']);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('headmaster.login')
+        return redirect()->route('headmaster.login', $schoolSlug ? ['schoolSlug' => $schoolSlug] : [])
             ->with('success', 'You have been logged out successfully.');
     }
 

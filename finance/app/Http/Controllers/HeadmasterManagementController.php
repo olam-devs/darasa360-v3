@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Central\School;
 use App\Models\Headmaster;
 use App\Services\ActivityLogger;
 use App\Traits\HasSchoolContext;
@@ -26,8 +27,9 @@ class HeadmasterManagementController extends Controller
     {
         $headmasters = Headmaster::latest()->get();
         $settings = \App\Models\SchoolSetting::getSettings();
-        
-        return view('admin.accountant.modules.headmasters', compact('headmasters', 'settings'));
+        $currentSchool = School::resolveForRequest();
+
+        return view('admin.accountant.modules.headmasters', compact('headmasters', 'settings', 'currentSchool'));
     }
 
     /**

@@ -20,9 +20,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/handoff/consume', [HandoffController::class, 'consumeFromAcademics'])->name('handoff.consume');
 
 // Headmaster Authentication
+// {schoolSlug} is optional so bare /headmaster/login keeps working (falls
+// back to the legacy "only one school" guess in EnsureHeadmasterTenantContext)
+// - but /headmaster/login/{slug} is the real per-school link to give out.
 Route::prefix('headmaster')->name('headmaster.')->middleware(['headmaster.tenant.context'])->group(function () {
-    Route::get('/login', [HeadmasterAuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [HeadmasterAuthController::class, 'login'])->name('login.post');
+    Route::get('/login/{schoolSlug?}', [HeadmasterAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login/{schoolSlug?}', [HeadmasterAuthController::class, 'login'])->name('login.post');
     Route::post('/logout', [HeadmasterAuthController::class, 'logout'])->name('logout');
 });
 

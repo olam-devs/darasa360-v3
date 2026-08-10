@@ -16,7 +16,9 @@ class ParentAuthMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         if (!\Illuminate\Support\Facades\Session::has('parent_student_id')) {
-            return redirect()->route('parent.login')->with('error', 'Please login to access the parent portal.');
+            $schoolSlug = session('parent_school_slug');
+            return redirect()->route('parent.login', $schoolSlug ? ['schoolSlug' => $schoolSlug] : [])
+                ->with('error', 'Please login to access the parent portal.');
         }
         return $next($request);
     }

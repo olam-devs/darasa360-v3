@@ -21,14 +21,14 @@ class ParentAuthController extends Controller
         $this->activityLogger = $activityLogger;
     }
 
-    public function showLogin()
+    public function showLogin(?string $schoolSlug = null)
     {
         if (Session::has('parent_student_id')) {
             return redirect()->route('parent.dashboard');
         }
 
         $school = SchoolSetting::getSettings();
-        return view('parent.login', compact('school'));
+        return view('parent.login', compact('school', 'schoolSlug'));
     }
 
     public function login(Request $request)
@@ -78,6 +78,7 @@ class ParentAuthController extends Controller
         $schoolId  = $this->getSchoolId();
         $studentId = Session::get('parent_student_id');
         $studentName = Session::get('parent_student_name');
+        $schoolSlug = Session::get('parent_school_slug');
 
         if ($schoolId && $studentId) {
             $this->activityLogger->logParentAction(
@@ -89,7 +90,8 @@ class ParentAuthController extends Controller
             );
         }
 
-        Session::forget(['parent_student_id', 'parent_student_name', 'parent_language']);
-        return redirect()->route('parent.login');
+        Session::forget(['parent_student_id', 'parent_student_name', 'parent_language', 'parent_school_slug']);
+
+        return redirect()->route('parent.login', $schoolSlug ? ['schoolSlug' => $schoolSlug] : []);
     }
 }
