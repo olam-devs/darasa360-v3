@@ -6,6 +6,9 @@ use App\Models\SupportTicket;
 use App\Models\SupportModule;
 use App\Models\SupportTicketComment;
 use App\Models\SchoolUser;
+use App\Models\School;
+use App\Models\SchoolAdmin;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -410,19 +413,39 @@ class SupportTicketController extends Controller
    */
   private function findAdminForLevel($level)
   {
-    // For school_system_admin level, find from SchoolUsers
+    // school_system_admin is a tenant-scoped role (SchoolUser, tenant DB).
     if ($level === 'school_system_admin') {
       return SchoolUser::whereHas('role', function ($q) {
         $q->where('name', 'school_system_admin');
       })->first();
     }
 
-    // For system_admin and super_admin, these are in main database
-    // You might need to query the main database here
-    // For now, return first available admin
-    return SchoolUser::whereHas('role', function ($q) use ($level) {
-      $q->where('name', $level);
-    })->first();
+    // system_admin and super_admin are central/platform accounts (App\Models\User,
+    // default connection) - they never exist as tenant SchoolUser rows, which is why
+    // the old fallback here always returned null. system_admin is assigned per-school
+    // via SchoolAdmin (mirrors the lookup SystemAdminController::dashboard() already
+    // does in the other direction); super_admin is platform-wide, so just take the
+    // first active one.
+    if ($level === 'system_admin') {
+      $school = School::where('school_code', session('school_code'))->first();
+      if (!$school) {
+        return null;
+      }
+
+      return SchoolAdmin::where('school_id', $school->id)
+        ->where('admin_type', 'system_admin')
+        ->where('is_active', true)
+        ->first()
+        ?->admin;
+    }
+
+    if ($level === 'super_admin') {
+      return User::whereHas('userRole', function ($q) {
+        $q->where('name', 'super_admin');
+      })->first();
+    }
+
+    return null;
   }
 
   /**
