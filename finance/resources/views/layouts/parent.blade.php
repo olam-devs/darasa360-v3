@@ -167,6 +167,11 @@
             });
         });
     </script>
+    {{-- Page-specific scripts (e.g. dashboard/fees/invoices merging their own
+         translations into the `translations` const above) - must render
+         after it, so @push('scripts') here rather than inline in @section('content'),
+         which @yield's before this point in the layout. --}}
+    @stack('scripts')
     @include('components.portal-assistant')
     <footer class="sticky bottom-0 z-30 bg-white border-t border-gray-200">
         <div class="px-4 py-2.5 flex flex-col gap-1 text-center text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">

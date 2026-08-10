@@ -63,11 +63,17 @@ Route::middleware('auth')->group(function () {
 // {schoolSlug} is optional so bare /parent/login keeps working (falls back to
 // the legacy "only one school" guess in EnsureParentPortalTenantContext) -
 // but /parent/login/{slug} is the real per-school link to give parents.
+//
+// Deliberately NOT wrapped in the 'guest' middleware: that alias checks the
+// default 'web' guard (accountant/superadmin login), which has nothing to do
+// with the parent portal's own session-flag-based auth - it was redirecting
+// an already-logged-in *accountant* away from this page entirely, to their
+// own dashboard, whenever they visited /parent/login in the same browser.
+// ParentAuthController::showLogin() already redirects an already-logged-in
+// *parent* to their dashboard on its own, so 'guest' added no real guard here.
 Route::prefix('parent')->name('parent.')->middleware('parent.tenant.context')->group(function () {
-    Route::middleware('guest')->group(function () {
-        Route::get('login/{schoolSlug?}', [ParentAuthController::class, 'showLogin'])->name('login');
-        Route::post('login/{schoolSlug?}', [ParentAuthController::class, 'login']);
-    });
+    Route::get('login/{schoolSlug?}', [ParentAuthController::class, 'showLogin'])->name('login');
+    Route::post('login/{schoolSlug?}', [ParentAuthController::class, 'login']);
 
     Route::post('logout', [ParentAuthController::class, 'logout'])->name('logout');
 });

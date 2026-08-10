@@ -155,6 +155,9 @@
     </div>
 </div>
 
+@endsection
+
+@push('scripts')
 <script>
     // Add dashboard-specific translations
     const dashboardTranslations = {
@@ -208,4 +211,4 @@
     Object.assign(translations.en, dashboardTranslations.en);
     Object.assign(translations.sw, dashboardTranslations.sw);
 </script>
-@endsection
+@endpush

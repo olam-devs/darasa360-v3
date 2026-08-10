@@ -85,6 +85,9 @@
     @endif
 </div>
 
+@endsection
+
+@push('scripts')
 <script>
     const notificationsTranslations = {
         en: {
@@ -118,4 +121,4 @@
     Object.assign(translations.en, notificationsTranslations.en);
     Object.assign(translations.sw, notificationsTranslations.sw);
 </script>
-@endsection
+@endpush
