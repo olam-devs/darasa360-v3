@@ -213,7 +213,12 @@
 <script>
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
 
-const EBASE = '{{ url('/accountant/api') }}';
+// Expense routes live in the same non-/accountant-prefixed route group as
+// ledgers/vouchers/etc (Route::middleware(['finance.portal'])), not the
+// accountant.-prefixed group Team Permissions uses - matches how every
+// other page in this group (e.g. ledgers.blade.php's /api/ledgers/... links)
+// already calls its own API.
+const EBASE = '{{ url('/api') }}';
 const IS_MAIN_ACCOUNTANT = @json($isMainAccountant);
 
 function fmt(n) {
