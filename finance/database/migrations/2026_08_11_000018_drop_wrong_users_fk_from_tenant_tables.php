@@ -29,9 +29,15 @@ return new class extends Migration
     {
         $targets = [
             'vouchers' => ['created_by'],
-            'expenses' => ['created_by', 'approved_by', 'processed_by'],
+            // 'expenses' was renamed to 'legacy_expenses' by an earlier
+            // migration (2026_08_11_000015) - by the time this migration
+            // runs, the table is always called legacy_expenses, never the
+            // original name, on both already-provisioned and future schools.
+            'legacy_expenses' => ['created_by', 'approved_by', 'processed_by'],
             'suspense_accounts' => ['resolved_by', 'created_by'],
             'payroll_entries' => ['created_by', 'approved_by'],
+            'payroll_deduction_types' => ['created_by'],
+            'staff' => ['created_by'],
             'sms_logs' => ['sent_by'],
             'sms_templates' => ['created_by'],
             'bank_transactions' => ['processed_by'],
@@ -44,15 +50,25 @@ return new class extends Migration
             }
 
             foreach ($columns as $column) {
-                $constraintName = "{$table}_{$column}_foreign";
+                // Looked up by column, not by assuming Laravel's
+                // {table}_{column}_foreign naming convention - a renamed
+                // table (legacy_expenses, formerly expenses) keeps its
+                // original constraint names, so guessing the name from the
+                // table's current name would silently miss it.
+                $constraintName = DB::selectOne(
+                    "SELECT kcu.CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE kcu
+                     JOIN information_schema.TABLE_CONSTRAINTS tc
+                       ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+                     WHERE kcu.TABLE_SCHEMA = DATABASE()
+                       AND kcu.TABLE_NAME = ?
+                       AND kcu.COLUMN_NAME = ?
+                       AND kcu.REFERENCED_TABLE_NAME = 'users'
+                       AND tc.CONSTRAINT_TYPE = 'FOREIGN KEY'
+                     LIMIT 1",
+                    [$table, $column]
+                )?->CONSTRAINT_NAME;
 
-                $exists = DB::select(
-                    "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
-                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
-                    [$table, $constraintName]
-                );
-
-                if (! empty($exists)) {
+                if ($constraintName) {
                     Schema::table($table, function ($t) use ($constraintName) {
                         $t->dropForeign($constraintName);
                     });

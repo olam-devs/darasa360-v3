@@ -33,7 +33,11 @@ return new class extends Migration
                 $table->text('notes')->nullable()->after('date_joined');
             }
             if (! Schema::hasColumn('staff', 'created_by')) {
-                $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null')->after('notes');
+                // No FK to `users` - real controllers populate this from
+                // auth()->id(), which resolves to the CENTRAL accountant id,
+                // not a tenant users.id (see the 2026-08-11 migration that
+                // dropped this same mistaken FK elsewhere on this schema).
+                $table->foreignId('created_by')->nullable()->after('notes');
             }
         });
 
@@ -83,7 +87,8 @@ return new class extends Migration
                 $table->boolean('is_percentage')->default(false);           // true = default_value is a %
                 $table->boolean('is_active')->default(true);
                 $table->text('notes')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` - see note above.
+                $table->foreignId('created_by')->nullable();
                 $table->timestamps();
             });
         }
