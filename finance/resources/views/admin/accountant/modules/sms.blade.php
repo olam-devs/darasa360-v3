@@ -754,7 +754,15 @@ let selectedStudents = [];
                 if (response.data.sms_credits) {
                     successMsg += ` (${response.data.sms_credits.used} SMS used, ${response.data.sms_credits.remaining} remaining)`;
                 }
-                showMessage(successMsg, 'success');
+                if (response.data.errors && response.data.errors.length > 0) {
+                    successMsg += '<br><br>Details:<br>' + response.data.errors.map(e => '• ' + e).join('<br>');
+                }
+                // "Sent" always comes back as a successful HTTP response even when
+                // nothing was actually delivered (everyone skipped/failed) - style
+                // that case as a warning rather than a plain green success so it
+                // doesn't look like the message actually went out.
+                const outcomeType = (response.data.sent > 0) ? 'success' : 'warning';
+                showMessage(successMsg, outcomeType);
                 clearForm();
                 loadSmsBalance();
             } catch (error) {
@@ -880,18 +888,21 @@ let selectedStudents = [];
             const container = document.getElementById('message-container');
             const boxClass = type === 'success'
                 ? 'mb-4 rounded-lg border border-slate-200 border-l-4 border-l-slate-700 bg-slate-50 p-4 text-slate-800 shadow-sm'
+                : type === 'warning'
+                ? 'mb-4 rounded-lg border border-amber-200 border-l-4 border-l-amber-500 bg-amber-50 p-4 text-amber-800 shadow-sm'
                 : 'mb-4 rounded-lg border border-red-200 border-l-4 border-l-red-600 bg-red-50 p-4 text-red-800 shadow-sm';
+            const label = type === 'success' ? 'Success' : type === 'warning' ? 'Nothing sent' : 'Error';
 
             container.innerHTML = `
                 <div class="${boxClass}" role="alert">
-                    <p class="font-bold">${type === 'success' ? 'Success' : 'Error'}</p>
+                    <p class="font-bold">${label}</p>
                     <p>${message}</p>
                 </div>
             `;
 
             setTimeout(() => {
                 container.innerHTML = '';
-            }, 5000);
+            }, type === 'warning' ? 12000 : 5000);
         }
     </script>
 @endpush

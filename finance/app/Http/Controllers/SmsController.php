@@ -625,6 +625,7 @@ class SmsController extends Controller
             // If student is fully paid and no thank you message provided, skip
             if ($isFullyPaid && empty($validated['thank_you_message'])) {
                 $skipped++;
+                $errors[] = "{$student->name}: Fully paid (balance TSh 0) and no thank-you message was provided, so nothing was sent";
                 continue;
             }
 
