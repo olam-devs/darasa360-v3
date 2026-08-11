@@ -17,8 +17,16 @@ return new class extends Migration
             $table->id();
             $table->string('submission_number')->unique();
             $table->foreignId('expense_category_id')->constrained();
-            $table->foreignId('book_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('academic_year_id')->constrained();
+            // No FK constraint on book_id/academic_year_id/voucher_id/
+            // bank_fee_voucher_id: books, academic_years, and vouchers are
+            // all pre-existing base tenant tables that remain MyISAM on
+            // schools provisioned before this app's InnoDB-engine-forcing
+            // fix (confirmed on this sandbox school) - MySQL cannot create a
+            // foreign key referencing a MyISAM table (error 1824). Plain
+            // indexed columns instead, enforced at the app layer only, same
+            // as every other cross-connection-style reference in this batch.
+            $table->unsignedBigInteger('book_id')->nullable();
+            $table->unsignedBigInteger('academic_year_id');
             $table->date('transaction_date');
             $table->string('title')->nullable();
             $table->text('description')->nullable();
@@ -30,11 +38,13 @@ return new class extends Migration
             $table->unsignedBigInteger('decided_by')->nullable();
             $table->timestamp('decided_at')->nullable();
             $table->text('decision_note')->nullable(); // visible to ALL accountants at the school
-            $table->foreignId('voucher_id')->nullable()->constrained('vouchers')->nullOnDelete();
-            $table->foreignId('bank_fee_voucher_id')->nullable()->constrained('vouchers')->nullOnDelete();
+            $table->unsignedBigInteger('voucher_id')->nullable();
+            $table->unsignedBigInteger('bank_fee_voucher_id')->nullable();
             $table->decimal('bank_fee_amount', 15, 2)->nullable();
             $table->timestamps();
 
+            $table->index('book_id');
+            $table->index('academic_year_id');
             $table->index('submitted_by');
             $table->index('decided_by');
             $table->index(['status', 'transaction_date']);
