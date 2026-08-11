@@ -28,6 +28,22 @@ class SmsController extends Controller
     }
 
     /**
+     * A clear, honest failure message for a genuine send error (gateway
+     * unreachable, or the gateway itself rejected it) - deliberately does
+     * NOT suggest retrying. Retrying a real failure doesn't fix it, and
+     * blindly suggesting it is exactly what led to a real duplicate SMS
+     * being sent three times to a real parent's phone. Always names the
+     * escalation path so the school knows what to do next instead of
+     * guessing.
+     */
+    protected function sendFailureMessage(?string $recipientLabel = null): string
+    {
+        $prefix = $recipientLabel ? "{$recipientLabel}: " : '';
+
+        return "{$prefix}This message could not be sent. Please do not retry it - if this keeps happening, contact Darasa360 support at devs@olamtec.co.tz for help.";
+    }
+
+    /**
      * Record which school a NextSMS messageId belongs to, so the shared
      * delivery-callback webhook (no session/school context of its own,
      * since one gateway account serves every school) can route an
@@ -526,7 +542,7 @@ class SmsController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Could not reach the SMS gateway right now. Please try again in a moment.',
+                'message' => $this->sendFailureMessage(),
             ], 500);
         }
 
@@ -567,10 +583,14 @@ class SmsController extends Controller
             ]);
         }
 
+        \App\Models\Central\AppErrorLog::record($school?->id, 'sms.single_send.gateway_rejected', new \Exception(json_encode($responseData)), [
+            'recipient_phone' => $validated['recipient_phone'],
+            'status_code' => $response->status(),
+        ]);
+
         return response()->json([
             'success' => false,
-            'message' => 'Failed to send SMS',
-            'error' => $responseData,
+            'message' => $this->sendFailureMessage(),
         ], 400);
     }
 
@@ -714,7 +734,7 @@ class SmsController extends Controller
                     $responseData = $response->json();
                 } catch (\Exception $e) {
                     $failed++;
-                    $errors[] = "{$student->name}: Could not reach the SMS gateway. Please try again.";
+                    $errors[] = $this->sendFailureMessage($student->name);
                     \App\Models\Central\AppErrorLog::record($school?->id, 'sms.bulk_send.gateway_failed', $e, [
                         'student_id' => $student->id,
                         'phone' => $phone,
@@ -756,7 +776,12 @@ class SmsController extends Controller
                     $sent++;
                 } else {
                     $failed++;
-                    $errors[] = "{$student->name}: API error";
+                    $errors[] = $this->sendFailureMessage($student->name);
+                    \App\Models\Central\AppErrorLog::record($school?->id, 'sms.bulk_send.gateway_rejected', new \Exception(json_encode($responseData)), [
+                        'student_id' => $student->id,
+                        'phone' => $phone,
+                        'status_code' => $response->status(),
+                    ]);
                 }
             }
         }
@@ -1169,9 +1194,14 @@ class SmsController extends Controller
             }
         }
 
+        $message = "Sent {$sent} reminders, {$failed} failed";
+        if ($failed > 0) {
+            $message .= '. Please do not retry the failed ones - if this keeps happening, contact Darasa360 support at devs@olamtec.co.tz for help.';
+        }
+
         return response()->json([
             'success' => true,
-            'message' => "Sent {$sent} reminders, {$failed} failed",
+            'message' => $message,
             'sent' => $sent,
             'failed' => $failed,
             'sms_credits' => $school ? [

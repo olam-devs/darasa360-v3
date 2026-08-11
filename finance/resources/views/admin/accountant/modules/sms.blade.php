@@ -794,10 +794,15 @@ let selectedStudents = [];
                     successMsg += '<br><br>Details:<br>' + response.data.errors.map(e => '• ' + e).join('<br>');
                 }
                 // "Sent" always comes back as a successful HTTP response even when
-                // nothing was actually delivered (everyone skipped/failed) - style
-                // that case as a warning rather than a plain green success so it
-                // doesn't look like the message actually went out.
-                const outcomeType = (response.data.sent > 0) ? 'success' : 'warning';
+                // nothing was actually delivered - style real technical failures
+                // as an error (red), a clean skip (paid-up, no phone) as a
+                // warning (amber), and only a genuine delivery as success (green).
+                let outcomeType = 'success';
+                if (response.data.failed > 0) {
+                    outcomeType = 'error';
+                } else if (response.data.sent === 0) {
+                    outcomeType = 'warning';
+                }
                 showMessage(successMsg, outcomeType);
                 clearForm();
                 loadSmsBalance();
@@ -938,7 +943,7 @@ let selectedStudents = [];
 
             setTimeout(() => {
                 container.innerHTML = '';
-            }, type === 'warning' ? 12000 : 5000);
+            }, (type === 'warning' || type === 'error') ? 12000 : 5000);
         }
     </script>
 @endpush
