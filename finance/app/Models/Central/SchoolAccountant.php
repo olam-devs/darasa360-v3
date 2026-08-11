@@ -38,6 +38,7 @@ class SchoolAccountant extends Authenticatable
         'is_primary',
         'can_edit_history',
         'can_view_logs',
+        'is_main_accountant',
     ];
 
     /**
@@ -64,6 +65,7 @@ class SchoolAccountant extends Authenticatable
             'is_primary' => 'boolean',
             'can_edit_history' => 'boolean',
             'can_view_logs' => 'boolean',
+            'is_main_accountant' => 'boolean',
         ];
     }
 

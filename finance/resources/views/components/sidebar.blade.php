@@ -135,6 +135,17 @@
             </a>
             @endif
 
+            @if(auth()->user() && auth()->user()->is_main_accountant)
+            <a href="{{ route('accountant.team-permissions') }}"
+               class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition
+                      {{ request()->routeIs('accountant.team-permissions') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-8.13a4 4 0 110 5.29m-6 0a4 4 0 110-5.29M12 14a4 4 0 100-8 4 4 0 000 8z" />
+                </svg>
+                <span>Team permissions</span>
+            </a>
+            @endif
+
             <a href="{{ route('accountant.settings') }}"
                class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition
                       {{ request()->routeIs('accountant.settings') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">

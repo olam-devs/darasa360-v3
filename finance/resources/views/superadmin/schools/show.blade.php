@@ -440,6 +440,14 @@
                             + Add
                         </button>
                     </div>
+                    @php
+                        $activeAccountants = $school->accountants->where('is_active', true);
+                    @endphp
+                    @if($activeAccountants->count() > 1 && $activeAccountants->where('is_main_accountant', true)->isEmpty())
+                        <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                            This school has multiple active accountants but none is marked <strong>Main</strong> — delegated permission management (Edit history / View logs) won't be available to anyone until one is designated via Edit.
+                        </div>
+                    @endif
                     <div class="space-y-3">
                         @forelse($school->accountants as $accountant)
                             <div class="p-3 bg-gray-50 rounded">
@@ -456,6 +464,9 @@
                                     <span class="text-xs px-2 py-1 rounded-full {{ $accountant->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                         {{ $accountant->is_active ? 'Active' : 'Inactive' }}
                                     </span>
+                                    @if($accountant->is_main_accountant)
+                                        <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-800">Main</span>
+                                    @endif
                                     @if($accountant->can_edit_history)
                                         <span class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800">Edit history</span>
                                     @endif
@@ -469,6 +480,7 @@
                                         'is_active' => $accountant->is_active,
                                         'can_edit_history' => (bool) $accountant->can_edit_history,
                                         'can_view_logs' => (bool) $accountant->can_view_logs,
+                                        'is_main_accountant' => (bool) $accountant->is_main_accountant,
                                     ]) }})"
                                         class="text-xs bg-slate-600 hover:bg-slate-700 text-white px-2 py-1 rounded">
                                         Edit
@@ -609,6 +621,15 @@
                     </label>
                 </div>
 
+                <div class="mb-4 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="hidden" name="is_main_accountant" value="0">
+                        <input type="checkbox" name="is_main_accountant" value="1" id="edit_accountant_is_main_accountant" class="rounded">
+                        <span class="font-medium text-amber-900">Main accountant</span>
+                    </label>
+                    <p class="text-xs text-amber-700">Can grant/revoke Edit history and View logs for this school's other accountants, without needing a super admin each time. Does not itself grant those permissions.</p>
+                </div>
+
                 <div class="flex gap-2">
                     <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                         Save
@@ -674,6 +695,7 @@ function showAddAccountantModal() {
         document.getElementById('edit_accountant_is_active').checked = accountant.is_active;
         document.getElementById('edit_accountant_can_edit_history').checked = accountant.can_edit_history;
         document.getElementById('edit_accountant_can_view_logs').checked = accountant.can_view_logs;
+        document.getElementById('edit_accountant_is_main_accountant').checked = accountant.is_main_accountant;
         document.getElementById('editAccountantModal').classList.remove('hidden');
     }
 

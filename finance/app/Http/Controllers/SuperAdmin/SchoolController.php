@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Central\School;
 use App\Models\Central\SchoolAccountant;
 use App\Models\Central\ActivityLog;
+use App\Services\AccountantPermissionSync;
 use App\Services\SchoolProvisioningService;
 use App\Services\TenantDatabaseManager;
 use App\Services\ActivityLogger;
@@ -19,15 +20,18 @@ class SchoolController extends Controller
     protected SchoolProvisioningService $provisioningService;
     protected ActivityLogger $activityLogger;
     protected TenantDatabaseManager $tenantManager;
+    protected AccountantPermissionSync $accountantPermissionSync;
 
     public function __construct(
         SchoolProvisioningService $provisioningService,
         ActivityLogger $activityLogger,
-        TenantDatabaseManager $tenantManager
+        TenantDatabaseManager $tenantManager,
+        AccountantPermissionSync $accountantPermissionSync
     ) {
         $this->provisioningService = $provisioningService;
         $this->activityLogger = $activityLogger;
         $this->tenantManager = $tenantManager;
+        $this->accountantPermissionSync = $accountantPermissionSync;
     }
 
     /**
@@ -430,7 +434,7 @@ class SchoolController extends Controller
             'can_view_logs' => $request->boolean('can_view_logs'),
         ]);
 
-        $this->syncAccountantPermissionsToTenant($school, $accountant);
+        $this->accountantPermissionSync->sync($school, $accountant);
 
         // Log the activity
         $superAdmin = auth('superadmin')->user();
@@ -441,7 +445,7 @@ class SchoolController extends Controller
             $school
         );
 
-        return back()->with('success', "Accountant {$accountant->name} added successfully!");
+        return back()->with('success', "Accountant {$accountant->name} added successfully!" . $this->mainAccountantNudge($school));
     }
 
     /**
@@ -460,6 +464,7 @@ class SchoolController extends Controller
             'is_active' => 'boolean',
             'can_edit_history' => 'nullable|boolean',
             'can_view_logs' => 'nullable|boolean',
+            'is_main_accountant' => 'nullable|boolean',
         ]);
 
         $accountant->update([
@@ -468,9 +473,10 @@ class SchoolController extends Controller
             'is_active' => $request->boolean('is_active', true),
             'can_edit_history' => $request->boolean('can_edit_history'),
             'can_view_logs' => $request->boolean('can_view_logs'),
+            'is_main_accountant' => $request->boolean('is_main_accountant'),
         ]);
 
-        $this->syncAccountantPermissionsToTenant($school, $accountant);
+        $this->accountantPermissionSync->sync($school, $accountant);
 
         // Log the activity
         $superAdmin = auth('superadmin')->user();
@@ -481,7 +487,7 @@ class SchoolController extends Controller
             $school
         );
 
-        return back()->with('success', "Accountant {$accountant->name} updated successfully!");
+        return back()->with('success', "Accountant {$accountant->name} updated successfully!" . $this->mainAccountantNudge($school));
     }
 
     /**
@@ -507,7 +513,7 @@ class SchoolController extends Controller
             $school
         );
 
-        return back()->with('success', "Accountant {$accountant->name} has been {$status}!");
+        return back()->with('success', "Accountant {$accountant->name} has been {$status}!" . $this->mainAccountantNudge($school));
     }
 
     /**
@@ -537,7 +543,24 @@ class SchoolController extends Controller
             $school
         );
 
-        return back()->with('success', "Accountant {$name} has been deleted!");
+        return back()->with('success', "Accountant {$name} has been deleted!" . $this->mainAccountantNudge($school));
+    }
+
+    /**
+     * Soft nudge (not a hard block, per explicit product decision): if a
+     * school ends up with 2+ active accountants and none marked main, warn
+     * the super admin that delegated permission management (Feature:
+     * is_main_accountant) won't be available until one is designated.
+     */
+    protected function mainAccountantNudge(School $school): string
+    {
+        $active = $school->accountants()->where('is_active', true)->get();
+
+        if ($active->count() > 1 && $active->where('is_main_accountant', true)->isEmpty()) {
+            return ' Note: this school has multiple active accountants but none is marked Main - mark one via Edit so they can manage other accountants\' Edit history/View logs permissions.';
+        }
+
+        return '';
     }
 
     /**
@@ -692,25 +715,5 @@ class SchoolController extends Controller
         );
 
         return back()->with('success', "School name synced from tenant: {$newName}");
-    }
-
-    /**
-     * Mirror accountant permission flags to the tenant users table (by email).
-     */
-    protected function syncAccountantPermissionsToTenant(School $school, SchoolAccountant $accountant): void
-    {
-        try {
-            $this->tenantManager->executeForSchool($school, function () use ($accountant) {
-                DB::connection('tenant')->table('users')
-                    ->where('email', $accountant->email)
-                    ->update([
-                        'can_edit_history' => (bool) $accountant->can_edit_history,
-                        'can_view_logs' => (bool) $accountant->can_view_logs,
-                        'updated_at' => now(),
-                    ]);
-            });
-        } catch (\Throwable $e) {
-            // Non-fatal: central record is authoritative; tenant may be single-DB setup.
-        }
     }
 }

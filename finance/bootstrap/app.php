@@ -3,6 +3,7 @@
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\EnsureCanEditHistory;
 use App\Http\Middleware\EnsureHeadmasterTenantContext;
+use App\Http\Middleware\EnsureMainAccountant;
 use App\Http\Middleware\EnsureParentPortalTenantContext;
 use App\Http\Middleware\EnsureSchoolFeatureEnabled;
 use App\Http\Middleware\EnsureTenantContext;
@@ -43,6 +44,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'superadmin' => SuperAdminMiddleware::class,
             'headmaster.auth' => HeadmasterAuthMiddleware::class,
             'can.edit.history' => EnsureCanEditHistory::class,
+            'is.main.accountant' => EnsureMainAccountant::class,
             'finance.portal' => \App\Http\Middleware\EnsureFinancePortalAccess::class,
             'portal.session' => \App\Http\Middleware\EnsurePortalSession::class,
             'tenant.context' => EnsureTenantContext::class,

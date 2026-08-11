@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcademicYearController;
+use App\Http\Controllers\AccountantPermissionController;
 use App\Http\Controllers\AdvancePaymentController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BankAccountController;
@@ -169,6 +170,18 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
             Route::post('/headmasters/{headmaster}/toggle', [HeadmasterManagementController::class, 'toggleStatus'])->name('headmasters.toggle');
             Route::post('/headmasters/{headmaster}/reset-password', [HeadmasterManagementController::class, 'resetPassword'])->name('headmasters.reset-password');
             Route::delete('/headmasters/{headmaster}', [HeadmasterManagementController::class, 'destroy'])->name('headmasters.destroy');
+        });
+
+        // Main-accountant-delegated permission management (Edit history / View logs
+        // for this school's other accountants) - see School Accountant::is_main_accountant.
+        Route::middleware('is.main.accountant')->group(function () {
+            Route::get('/team-permissions', function () {
+                $settings = SchoolSetting::getSettings();
+
+                return view('admin.accountant.modules.team-permissions', compact('settings'));
+            })->name('team-permissions');
+            Route::get('api/accountant-permissions', [AccountantPermissionController::class, 'index'])->name('api.accountant-permissions.index');
+            Route::put('api/accountant-permissions/{accountant}', [AccountantPermissionController::class, 'updatePermissions'])->name('api.accountant-permissions.update');
         });
 
         Route::get('/invoices-page', [LedgerController::class, 'invoicesPage'])->name('invoices-page');
