@@ -17,6 +17,8 @@ use App\Http\Controllers\ExpenseItemController;
 use App\Http\Controllers\ExpenseSubmissionController;
 use App\Http\Controllers\FeeItemController;
 use App\Http\Controllers\HeadmasterManagementController;
+use App\Http\Controllers\InventoryItemController;
+use App\Http\Controllers\InventoryMovementController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\ParentController;
@@ -194,6 +196,10 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
 
             return view('admin.accountant.modules.expenses', compact('settings'));
         })->name('expenses');
+
+        Route::get('/inventory', function () {
+            return view('admin.accountant.modules.inventory');
+        })->name('inventory');
 
         Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
@@ -469,6 +475,21 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
             Route::get('api/expense-submissions-report/pdf', [ExpenseSubmissionController::class, 'exportPdf'])->name('api.expense-submissions.report.pdf');
             Route::get('api/expense-submissions-report/csv', [ExpenseSubmissionController::class, 'exportCsv'])->name('api.expense-submissions.report.csv');
         });
+
+        // Inventory / Stock - independent of Expense Planning by explicit
+        // design, no approval workflow, open to any accountant. Page route
+        // lives under the accountant.-prefixed group (see /expenses above),
+        // API routes live here (bare), matching that same split.
+        Route::get('api/inventory-items', [InventoryItemController::class, 'index'])->name('api.inventory-items.index');
+        Route::post('api/inventory-items', [InventoryItemController::class, 'store'])->name('api.inventory-items.store');
+        Route::put('api/inventory-items/{item}', [InventoryItemController::class, 'update'])->name('api.inventory-items.update');
+        Route::delete('api/inventory-items/{item}', [InventoryItemController::class, 'destroy'])->name('api.inventory-items.destroy');
+        Route::get('api/inventory-categories', [InventoryItemController::class, 'categories'])->name('api.inventory-items.categories');
+
+        Route::get('api/inventory-movements', [InventoryMovementController::class, 'index'])->name('api.inventory-movements.index');
+        Route::post('api/inventory-movements', [InventoryMovementController::class, 'store'])->name('api.inventory-movements.store');
+        Route::delete('api/inventory-movements/{movement}', [InventoryMovementController::class, 'destroy'])->name('api.inventory-movements.destroy');
+        Route::get('api/inventory-movements-report/csv', [InventoryMovementController::class, 'exportCsv'])->name('api.inventory-movements.report.csv');
 
         // Book Transactions (Deposits & Withdrawals) routes
         Route::get('api/book-transactions/{bookId}', [BookTransactionController::class, 'index'])->name('api.book-transactions.index');

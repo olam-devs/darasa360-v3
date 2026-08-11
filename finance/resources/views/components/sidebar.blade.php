@@ -70,13 +70,14 @@
                 <button type="button" onclick="toggleCategory('expenses')"
                         class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-900 hover:bg-blue-50/90 transition">
                     <span>Expenses & Payroll</span>
-                    <svg class="w-4 h-4 transform transition-transform {{ request()->routeIs('accountant.payroll', 'accountant.expenses') ? 'rotate-180' : '' }}" id="expenses-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 transform transition-transform {{ request()->routeIs('accountant.payroll', 'accountant.expenses', 'accountant.inventory') ? 'rotate-180' : '' }}" id="expenses-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
-                <div id="expenses-submenu" class="ml-3 mt-1 space-y-1 {{ request()->routeIs('accountant.payroll', 'accountant.expenses') ? '' : 'hidden' }}">
+                <div id="expenses-submenu" class="ml-3 mt-1 space-y-1 {{ request()->routeIs('accountant.payroll', 'accountant.expenses', 'accountant.inventory') ? '' : 'hidden' }}">
                     <a href="{{ route('accountant.payroll') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.payroll') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15 font-semibold' : 'text-slate-700 hover:bg-blue-50/90' }}">Payroll</a>
                     <a href="{{ route('accountant.expenses') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.expenses') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15 font-semibold' : 'text-slate-700 hover:bg-blue-50/90' }}">Expenses</a>
+                    <a href="{{ route('accountant.inventory') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.inventory') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15 font-semibold' : 'text-slate-700 hover:bg-blue-50/90' }}">Inventory</a>
                 </div>
             </div>
 
