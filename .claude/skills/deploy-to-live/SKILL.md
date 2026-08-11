@@ -9,6 +9,8 @@ Full checklist for shipping a change from `sandbox` to `main`/live. Read `CLAUDE
 
 Ask the user which app(s) are affected (Finance, Academics, or both) and what changed (code only? migrations? frontend assets? new npm/composer deps?) so you only do the steps that apply — but always do step 0 and step 6 regardless.
 
+**If SSH or HTTPS to `vda6000.is.cc` times out mid-deploy**: this is a real, recurring whole-host outage on this host, confirmed repeatedly across sessions — not something your deploy caused. Check both (`ssh ... "echo ALIVE"` and `curl -sk https://finance.darasa360.co.tz/`) — if both hang/timeout together, it's the host, not you. Wait and retry (a `Monitor` with an until-loop polling every 10-15s works well for this) rather than assuming a regression or trying to work around it. Your commits are already safe in git either way; the deploy just resumes once the host is back.
+
 ## Step 0 — Check for sandbox-server-only changes (do this every time, no exceptions)
 
 This codebase has a history of user-facing changes being made directly on the sandbox server's filesystem and never committed. Before merging anything, check for drift between the sandbox server and git:
@@ -84,6 +86,24 @@ If a migration fails with `max key length is 1000 bytes` → MyISAM engine issue
 If a migration fails with `Access denied ... to database 'olamtecc_mivumoni'` (or any placeholder-looking tenant DB name) → a migration is unconditionally calling `Schema::connection('tenant')->hasTable(...)` without checking the tenant DB is actually reachable. This is fine/expected on any environment with zero schools onboarded. Wrap the tenant-DB portion in a try/catch (see `2026_01_10_143826_add_enhanced_fields_to_report_cards_and_related_tables.php` for the pattern already used) rather than skipping the migration or force-creating a dummy DB.
 
 If a migration partially succeeds before failing (check `SHOW TABLES` on the target DB, and check whether the tracking `migrations` table — which usually lives on the *default* connection's database, not necessarily the DB the migration actually wrote to — recorded it), drop the partially-created table before retrying rather than trying to patch it in place.
+
+**Tenant-table migrations (bare `database/migrations/`, no `central`/`platform` in the path) must NOT be run via a bare `php artisan migrate --force`.** Confirmed real, costly bug (2026-08-11): a bare migrate from the CLI has no active HTTP request to switch the `tenant` connection, so it silently targets whatever the `tenant` connection's *default* database is — on this environment, that's the central DB, which is a real, queryable database (not an error-throwing placeholder), so it can succeed at creating tables in entirely the wrong place with no obvious signal anything went wrong. Always use the tinker-script pattern for any already-provisioned real school:
+```bash
+ssh -p 22 olamtecc@vda6000.is.cc "cd ~/domains/finance.darasa360.co.tz/public_html/finance && cat > /tmp/migrate_tenant.php << 'PHPEOF'
+<?php
+use App\\Models\\Central\\School;
+use App\\Services\\TenantDatabaseManager;
+
+\$school = School::find(<school_id>);
+app(TenantDatabaseManager::class)->switchToSchool(\$school);
+Artisan::call('migrate', ['--database' => 'tenant', '--path' => 'database/migrations', '--force' => true]);
+echo Artisan::output();
+PHPEOF
+php artisan tinker --execute=\"require '/tmp/migrate_tenant.php';\" && rm -f /tmp/migrate_tenant.php"
+```
+Run this **per real school** — there is no bulk "run against every provisioned school" command in Finance (see CLAUDE.md's Pending section). If you're not sure whether a migration file lives under `central/`/`platform/` (safe for the plain `--path=database/migrations/central --force` form above) or bare (needs the tinker pattern), check its actual path before running anything.
+
+**Re-running a tenant migration you just edited (not a new file)**: Laravel tracks migrations by filename, so if you fix the *content* of an already-applied migration, it won't re-run on its own. Delete its tracked row from the tenant DB's own `migrations` table first (via the same tinker pattern, `DB::connection('tenant')->table('migrations')->where('migration', '<name>')->delete()`), then re-run. Only safe to do this for migrations that are genuinely idempotent (checks `Schema::hasTable`/`hasColumn`/existence before acting) — confirmed this exact flow twice on 2026-08-11 fixing a migration that had silently missed several tables on its first pass.
 
 ## Step 5 — Cache & permissions (only if this is a fresh deploy, or views/config changed)
 
