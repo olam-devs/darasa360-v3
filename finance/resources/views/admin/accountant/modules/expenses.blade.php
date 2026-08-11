@@ -57,11 +57,16 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Book</label>
-                    <select id="composeBook" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"></select>
+                    <select id="composeBook" onchange="loadFeeCategoriesForSelect(document.getElementById('composeBook'), document.getElementById('composeFeeCategory'))" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"></select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
                     <input type="date" id="composeDate" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Fee (optional)</label>
+                    <select id="composeFeeCategory" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"><option value="">-- No fee --</option></select>
+                    <p class="text-xs text-gray-500 mt-1">Select a category to auto-cut that book's transaction fee for this expense.</p>
                 </div>
             </div>
             <div class="mb-4">
@@ -279,11 +284,43 @@ async function loadAcademicYearsForSelects() {
     });
 }
 
+let booksCache = [];
+
 async function loadBooksForSelect() {
     const res = await axios.get('/api/books');
-    const books = res.data || [];
+    booksCache = res.data || [];
     const el = document.getElementById('composeBook');
-    if (el) el.innerHTML = '<option value="">Select a book</option>' + books.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+    if (el) el.innerHTML = '<option value="">Select a book</option>' + booksOptionsHtml();
+}
+
+function booksOptionsHtml(selectedId) {
+    return booksCache.map(b => `<option value="${b.id}" ${selectedId && String(b.id) === String(selectedId) ? 'selected' : ''}>${b.name}</option>`).join('');
+}
+
+/**
+ * Populates a "Transaction Fee" select with the chosen book's configured fee
+ * categories - same GET /api/books/{book}/fee-categories the Books
+ * management withdraw modal already uses, so the main accountant sees the
+ * same fee options here that they'd see when withdrawing directly.
+ */
+async function loadFeeCategoriesForSelect(bookSelectEl, feeSelectEl, selectedFeeCategoryId) {
+    if (!bookSelectEl || !feeSelectEl) return;
+    const bookId = bookSelectEl.value;
+    feeSelectEl.innerHTML = '<option value="">-- No fee --</option>';
+    if (!bookId) return;
+    try {
+        const res = await axios.get(`${EBASE}/books/${bookId}/fee-categories`);
+        const list = (Array.isArray(res.data) ? res.data : []).filter(c => c.is_active);
+        list.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.code ? `${c.name} (${c.code})` : c.name;
+            if (selectedFeeCategoryId && String(c.id) === String(selectedFeeCategoryId)) opt.selected = true;
+            feeSelectEl.appendChild(opt);
+        });
+    } catch (e) {
+        console.error('Failed to load fee categories', e);
+    }
 }
 
 // ─── Compose ─────────────────────────────────────────────────────────────
@@ -390,6 +427,7 @@ async function submitExpense() {
         transaction_date: document.getElementById('composeDate').value,
         title: document.getElementById('composeTitle').value || null,
         description: document.getElementById('composeDescription').value || null,
+        book_fee_category_id: document.getElementById('composeFeeCategory').value || null,
         line_items: lineItems,
     };
 
@@ -413,6 +451,7 @@ function resetComposeForm() {
     document.getElementById('composeTitle').value = '';
     document.getElementById('composeDescription').value = '';
     document.getElementById('composeGrandTotal').textContent = 'TSh 0';
+    document.getElementById('composeFeeCategory').innerHTML = '<option value="">-- No fee --</option>';
     addComposeLineRow();
 }
 
@@ -442,6 +481,14 @@ async function loadReviewQueue() {
         box.innerHTML = submissions.length
             ? submissions.map(sub => renderQueueCard(sub, priceHistory)).join('')
             : '<p class="text-gray-400 text-center py-6">Nothing pending review.</p>';
+
+        // Pre-load fee category options for any card whose submitter already
+        // picked a book, so the select isn't just blank until touched.
+        box.querySelectorAll('.review-book').forEach(sel => {
+            if (sel.value) {
+                loadFeeCategoriesForSelect(sel, sel.closest('[data-submission-id]').querySelector('.review-fee-category'));
+            }
+        });
     } catch (e) {
         box.innerHTML = '<p class="text-red-600">Could not load the review queue.</p>';
     }
@@ -486,9 +533,22 @@ function renderQueueCard(sub, priceHistoryMap) {
         <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
             <div>
                 <p class="font-semibold">${sub.submission_number} — ${sub.category?.name || ''}</p>
-                <p class="text-xs text-gray-500">${sub.transaction_date} · ${sub.title || 'No title'} · Book: ${sub.book?.name || 'Not set'}</p>
+                <p class="text-xs text-gray-500">${sub.transaction_date} · ${sub.title || 'No title'}</p>
             </div>
             <p class="font-bold text-gray-900">TSh ${fmt(total)}</p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 bg-gray-50 rounded p-2">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Book (money comes from) *</label>
+                <select class="w-full border rounded px-2 py-1 text-sm review-book" onchange="loadFeeCategoriesForSelect(this, this.closest('[data-submission-id]').querySelector('.review-fee-category'))">
+                    <option value="">Select a book</option>
+                    ${booksOptionsHtml(sub.book_id)}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Transaction fee (optional)</label>
+                <select class="w-full border rounded px-2 py-1 text-sm review-fee-category"><option value="">-- No fee --</option></select>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm mb-3">
@@ -512,6 +572,13 @@ async function submitReview(submissionId, overallDecision) {
         return;
     }
 
+    const bookId = card.querySelector('.review-book').value || null;
+    if (overallDecision === 'approve' && !bookId) {
+        showDarasaToast({ type: 'error', message: 'Select which book the money comes from before approving.' });
+        return;
+    }
+    const feeCategoryId = card.querySelector('.review-fee-category').value || null;
+
     const lineItems = [...card.querySelectorAll('tr[data-line-id]')].map(tr => ({
         id: parseInt(tr.dataset.lineId, 10),
         status: overallDecision === 'deny' ? 'denied' : tr.querySelector('.review-status').value,
@@ -523,6 +590,8 @@ async function submitReview(submissionId, overallDecision) {
         await axios.post(`${EBASE}/expense-submissions/${submissionId}/review`, {
             decision_note: note,
             overall_decision: overallDecision,
+            book_id: bookId,
+            book_fee_category_id: feeCategoryId,
             line_items: lineItems,
         });
         showDarasaToast({ type: 'success', message: 'Decision saved.' });

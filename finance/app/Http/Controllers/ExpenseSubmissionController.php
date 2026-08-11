@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AcademicYear;
 use App\Models\Book;
+use App\Models\BookFeeCategory;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseItem;
 use App\Models\ExpenseLineItem;
@@ -74,6 +75,7 @@ class ExpenseSubmissionController extends Controller
             'line_items.*.new_item_unit_type' => 'nullable|string|max:100',
             'line_items.*.quantity' => 'required|numeric|min:0.001',
             'line_items.*.unit_price' => 'required|numeric|min:0',
+            'book_fee_category_id' => 'nullable|exists:book_fee_categories,id',
         ]);
 
         $category = ExpenseCategory::findOrFail($validated['expense_category_id']);
@@ -118,14 +120,16 @@ class ExpenseSubmissionController extends Controller
 
                 if ($isMain) {
                     $book = Book::with(['bankFeeTiers', 'bankFeeParticular'])->findOrFail($submission->book_id);
-                    $this->voucherFactory->assertSufficientBalance($book, $total);
+                    $feeCategory = $this->resolveFeeCategory($book->id, $validated['book_fee_category_id'] ?? null);
+                    $this->voucherFactory->assertSufficientBalance($book, $total, $feeCategory);
                     $voucherData = $this->voucherFactory->create(
                         $book,
                         $submission->transaction_date->toDateString(),
                         $total,
                         $submission->title ?: $submission->submission_number,
                         $submission->description,
-                        $user->id
+                        $user->id,
+                        $feeCategory
                     );
 
                     $submission->update(array_merge($voucherData, [
@@ -199,6 +203,7 @@ class ExpenseSubmissionController extends Controller
             'line_items.*.unit_price' => 'nullable|numeric|min:0',
             'line_items.*.expense_item_id' => 'nullable|exists:expense_items,id',
             'line_items.*.denial_reason' => 'nullable|string',
+            'book_fee_category_id' => 'nullable|exists:book_fee_categories,id',
         ]);
 
         $user = $request->user();
@@ -260,14 +265,16 @@ class ExpenseSubmissionController extends Controller
                 }
 
                 $book = Book::with(['bankFeeTiers', 'bankFeeParticular'])->findOrFail($locked->book_id);
-                $this->voucherFactory->assertSufficientBalance($book, $approvedTotal);
+                $feeCategory = $this->resolveFeeCategory($book->id, $validated['book_fee_category_id'] ?? null);
+                $this->voucherFactory->assertSufficientBalance($book, $approvedTotal, $feeCategory);
                 $voucherData = $this->voucherFactory->create(
                     $book,
                     $locked->transaction_date->toDateString(),
                     $approvedTotal,
                     $locked->title ?: $locked->submission_number,
                     $locked->description,
-                    $user->id
+                    $user->id,
+                    $feeCategory
                 );
 
                 $locked->update(array_merge($voucherData, [
@@ -341,6 +348,7 @@ class ExpenseSubmissionController extends Controller
                 'voucher_id' => null,
                 'bank_fee_voucher_id' => null,
                 'bank_fee_amount' => null,
+                'bank_fee_category_id' => null,
             ]);
         });
 
@@ -442,6 +450,24 @@ class ExpenseSubmissionController extends Controller
         }
 
         return $query->orderBy('transaction_date')->get();
+    }
+
+    /**
+     * Scopes the main accountant's selected fee category to the book it's
+     * actually being applied against - same guard the withdraw flow applies
+     * implicitly via its `where('book_id', ...)` query - so a category from
+     * a different book can never be used, and a deactivated category is
+     * silently ignored rather than accepted.
+     */
+    protected function resolveFeeCategory(int $bookId, ?int $feeCategoryId): ?BookFeeCategory
+    {
+        if (!$feeCategoryId) {
+            return null;
+        }
+
+        return BookFeeCategory::where('book_id', $bookId)
+            ->where('is_active', true)
+            ->find($feeCategoryId);
     }
 
     protected function resolveOrCreateItem(array $lineData, int $createdBy): ExpenseItem

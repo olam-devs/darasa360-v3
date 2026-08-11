@@ -34,6 +34,7 @@ class ExpenseSubmission extends BaseModel
         'voucher_id',
         'bank_fee_voucher_id',
         'bank_fee_amount',
+        'bank_fee_category_id',
     ];
 
     protected $casts = [
@@ -83,6 +84,11 @@ class ExpenseSubmission extends BaseModel
     public function bankFeeVoucher()
     {
         return $this->belongsTo(Voucher::class, 'bank_fee_voucher_id');
+    }
+
+    public function bankFeeCategory()
+    {
+        return $this->belongsTo(BookFeeCategory::class, 'bank_fee_category_id');
     }
 
     /**
