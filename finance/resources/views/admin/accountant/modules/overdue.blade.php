@@ -137,15 +137,15 @@ const API_BASE = '/api';
         function updateMessagePreview() {
             const language = document.querySelector('input[name="language"]:checked')?.value || 'english';
 
+            // {student_name} and {amount} are the only two placeholders
+            // SmsController::sendOverdueReminders() actually replaces - keep
+            // these two templates in sync with that method if either changes.
             const templates = {
                 english: `Dear Parent of {student_name},
 
 This is a reminder that your child has overdue fee payments.
 
-Overdue Fees:
-{particulars}
-
-Total Amount Due: TSH {total}
+Total Amount Due: TSH {amount}
 
 Please make payment as soon as possible to avoid inconvenience.
 
@@ -155,10 +155,7 @@ Darasa Finance`,
 
 Hii ni ukumbusho kwamba mtoto wako ana malipo ya ada yaliyopita muda.
 
-Ada Zilizopita Muda:
-{particulars}
-
-Jumla ya Kiasi: TSH {total}
+Jumla ya Kiasi: TSH {amount}
 
 Tafadhali fanya malipo haraka iwezekanavyo ili kuepuka usumbufu.
 
@@ -272,38 +269,37 @@ Darasa Finance`
                 return;
             }
 
-            const language = document.querySelector('input[name="language"]:checked').value;
             const customTemplate = document.getElementById('messagePreview').value;
 
             closeSmsModal();
             document.getElementById('resultContent').innerHTML = '<p class="text-center py-4">Sending SMS reminders... Please wait.</p>';
             document.getElementById('resultModal').classList.remove('hidden');
 
-            const selectedStudentData = overdueStudentsData.filter(s => selectedStudents.has(s.student?.id));
-
             try {
+                // message_template / student_ids are what
+                // SmsController::sendOverdueReminders() actually validates -
+                // the previous payload shape (language/custom_template/
+                // students) never matched, so every real send from this
+                // page 422'd before reaching the gateway.
                 const response = await axios.post('/accountant/sms/send-overdue-reminders', {
-                    language: language,
-                    custom_template: customTemplate,
-                    students: selectedStudentData
+                    message_template: customTemplate,
+                    student_ids: Array.from(selectedStudents)
                 });
 
                 const result = response.data;
+                const failed = result.failed || 0;
+                const boxClass = failed > 0
+                    ? 'mb-4 bg-red-50 border-2 border-red-300 rounded p-4'
+                    : 'mb-4 bg-green-50 border-2 border-green-300 rounded p-4';
+                const titleClass = failed > 0 ? 'font-bold text-red-800 mb-2' : 'font-bold text-green-800 mb-2';
+                const textClass = failed > 0 ? 'text-red-700' : 'text-green-700';
+
                 let html = `
-                    <div class="mb-4 bg-green-50 border-2 border-green-300 rounded p-4">
-                        <h4 class="font-bold text-green-800 mb-2">Successfully Sent</h4>
-                        <p class="text-green-700">${result.success_count || 0} SMS messages sent successfully</p>
+                    <div class="${boxClass}">
+                        <h4 class="${titleClass}">${failed > 0 ? 'Some Reminders Failed' : 'Successfully Sent'}</h4>
+                        <p class="${textClass}">${result.message || `${result.sent || 0} SMS messages sent successfully`}</p>
                     </div>
                 `;
-
-                if (result.skipped_count > 0) {
-                    html += `
-                        <div class="mb-4 bg-yellow-50 border-2 border-yellow-300 rounded p-4">
-                            <h4 class="font-bold text-yellow-800 mb-2">Skipped (No Phone Number)</h4>
-                            <p class="text-yellow-700">${result.skipped_count} students skipped</p>
-                        </div>
-                    `;
-                }
 
                 document.getElementById('resultContent').innerHTML = html;
             } catch (error) {
