@@ -233,7 +233,11 @@ return new class extends Migration
                 $table->text('notes')->nullable();
                 $table->date('transaction_date')->nullable();
                 $table->date('date')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` - real controllers populate this from
+                // auth()->id(), which resolves to the CENTRAL accountant id,
+                // not a tenant users.id (see the 2026-08-11 migration that
+                // dropped this same mistaken FK on already-provisioned schools).
+                $table->foreignId('created_by')->nullable();
                 $table->timestamps();
             });
         }
@@ -256,9 +260,10 @@ return new class extends Migration
                 $table->string('status')->default('approved');
                 $table->text('notes')->nullable();
                 $table->foreignId('voucher_id')->nullable()->constrained('vouchers')->onDelete('set null');
-                $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
-                $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
-                $table->foreignId('processed_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` on these three - see note above.
+                $table->foreignId('created_by')->nullable();
+                $table->foreignId('approved_by')->nullable();
+                $table->foreignId('processed_by')->nullable();
                 $table->timestamps();
             });
         }
@@ -280,9 +285,10 @@ return new class extends Migration
                 $table->text('description')->nullable();
                 $table->string('status')->default('pending');
                 $table->foreignId('resolved_student_id')->nullable()->constrained('students')->onDelete('set null');
-                $table->foreignId('resolved_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` on these two - see note above.
+                $table->foreignId('resolved_by')->nullable();
                 $table->timestamp('resolved_at')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+                $table->foreignId('created_by')->nullable();
                 $table->foreignId('voucher_id')->nullable()->constrained('vouchers')->onDelete('set null');
                 $table->timestamps();
             });
@@ -323,8 +329,9 @@ return new class extends Migration
                 $table->string('payment_method')->nullable();
                 $table->string('reference_number')->nullable();
                 $table->text('notes')->nullable();
-                $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
-                $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` on these two - see note above.
+                $table->foreignId('created_by')->nullable();
+                $table->foreignId('approved_by')->nullable();
                 $table->timestamps();
             });
         }
@@ -334,7 +341,8 @@ return new class extends Migration
             Schema::create('sms_logs', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('student_id')->nullable()->constrained()->onDelete('set null');
-                $table->foreignId('sent_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` - see note above.
+                $table->foreignId('sent_by')->nullable();
                 $table->string('recipient_phone');
                 $table->text('message');
                 $table->string('message_id')->nullable();
@@ -356,7 +364,8 @@ return new class extends Migration
                 $table->text('message_sw')->nullable();
                 $table->string('type')->default('custom');
                 $table->boolean('is_active')->default(true);
-                $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` - see note above.
+                $table->foreignId('created_by')->nullable();
                 $table->timestamps();
             });
         }
@@ -406,7 +415,8 @@ return new class extends Migration
                 $table->timestamp('transaction_date');
                 $table->string('status')->default('pending');
                 $table->foreignId('matched_student_id')->nullable()->constrained('students')->onDelete('set null');
-                $table->foreignId('processed_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` - see note above.
+                $table->foreignId('processed_by')->nullable();
                 $table->timestamp('processed_at')->nullable();
                 $table->timestamps();
             });
@@ -435,7 +445,8 @@ return new class extends Migration
                 $table->string('description')->nullable();
                 $table->string('reference_number')->nullable();
                 $table->date('transaction_date');
-                $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+                // No FK to `users` - see note above.
+                $table->foreignId('created_by')->nullable();
                 $table->timestamps();
             });
         }

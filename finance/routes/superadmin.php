@@ -85,7 +85,11 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin'])->gr
     
     // Activity Logs
     Route::get('/activity-logs', [SuperAdminDashboardController::class, 'activityLogs'])->name('activity-logs');
-    
+
+    // App Error Logs - technical errors captured behind a friendly
+    // end-user message (see App\Models\Central\AppErrorLog)
+    Route::get('/error-logs', [SuperAdminDashboardController::class, 'errorLogs'])->name('error-logs');
+
     // Analytics
     Route::get('/analytics', function () {
         return view('superadmin.analytics');

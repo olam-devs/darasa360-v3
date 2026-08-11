@@ -22,6 +22,7 @@
                 <a href="{{ route('superadmin.dashboard') }}" class="rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 {{ request()->routeIs('superadmin.dashboard') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Dashboard</a>
                 <a href="{{ route('superadmin.schools.index') }}" class="rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 {{ request()->routeIs('superadmin.schools.*') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Schools</a>
                 <a href="{{ route('superadmin.activity-logs') }}" class="rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 {{ request()->routeIs('superadmin.activity-logs') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Logs</a>
+                <a href="{{ route('superadmin.error-logs') }}" class="rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 {{ request()->routeIs('superadmin.error-logs') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Errors</a>
                 <a href="{{ route('superadmin.admins.index') }}" class="hidden rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 sm:inline {{ request()->routeIs('superadmin.admins.*') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Admins</a>
                 <a href="{{ route('superadmin.profile') }}" class="hidden text-slate-600 hover:text-blue-800 md:inline">{{ auth('superadmin')->user()->name ?? 'Profile' }}</a>
                 <form method="POST" action="{{ route('superadmin.logout') }}">

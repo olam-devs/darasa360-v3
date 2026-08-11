@@ -504,6 +504,9 @@ class SmsController extends Controller
 
         $school = $creditCheck['school'];
 
+        // As in sendBulkSms(): the gateway call and the local log write are
+        // in separate try blocks so a log-write failure can never turn an
+        // actually-sent message into a reported failure.
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiToken,
@@ -516,9 +519,19 @@ class SmsController extends Controller
             ]);
 
             $responseData = $response->json();
+        } catch (\Exception $e) {
+            \App\Models\Central\AppErrorLog::record($school?->id, 'sms.single_send.gateway_failed', $e, [
+                'recipient_phone' => $validated['recipient_phone'],
+            ]);
 
-            // Log the SMS
-            $smsLog = SmsLog::create([
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not reach the SMS gateway right now. Please try again in a moment.',
+            ], 500);
+        }
+
+        try {
+            SmsLog::create([
                 'student_id' => $validated['student_id'] ?? null,
                 'sent_by' => auth()->id(),
                 'recipient_phone' => $validated['recipient_phone'],
@@ -530,38 +543,35 @@ class SmsController extends Controller
                 'sent_at' => now(),
                 'sms_count' => $smsCount,
             ]);
-
-            if ($response->successful()) {
-                if ($school) {
-                    $school->deductSmsCredits($smsCount);
-                    $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
-                }
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'SMS sent successfully',
-                    'data' => $responseData,
-                    'sms_credits' => $school ? [
-                        'used' => $smsCount,
-                        'remaining' => $school->fresh()->sms_credits_remaining,
-                    ] : null,
-                ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to send SMS',
-                    'error' => $responseData,
-                ], 400);
-            }
         } catch (\Exception $e) {
-            Log::error('SMS sending failed: ' . $e->getMessage());
+            \App\Models\Central\AppErrorLog::record($school?->id, 'sms.single_send.log_write_failed', $e, [
+                'recipient_phone' => $validated['recipient_phone'],
+                'message_sent' => $response->successful(),
+            ]);
+        }
+
+        if ($response->successful()) {
+            if ($school) {
+                $school->deductSmsCredits($smsCount);
+                $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
+            }
 
             return response()->json([
-                'success' => false,
-                'message' => 'SMS sending failed',
-                'error' => $e->getMessage(),
-            ], 500);
+                'success' => true,
+                'message' => 'SMS sent successfully',
+                'data' => $responseData,
+                'sms_credits' => $school ? [
+                    'used' => $smsCount,
+                    'remaining' => $school->fresh()->sms_credits_remaining,
+                ] : null,
+            ]);
         }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to send SMS',
+            'error' => $responseData,
+        ], 400);
     }
 
     public function sendBulkSms(Request $request)
@@ -683,6 +693,13 @@ class SmsController extends Controller
                     continue;
                 }
 
+                // The real gateway call and the local SmsLog::create() are
+                // deliberately in separate try blocks. A message that the
+                // gateway already sent must never be reported back as
+                // "failed" just because writing our own log row afterward
+                // hit an unrelated DB error - that previously caused a real
+                // duplicate send every time the accountant retried, with no
+                // credit deducted and no record kept either time.
                 try {
                     $response = Http::withHeaders([
                         'Authorization' => 'Bearer ' . $this->apiToken,
@@ -695,8 +712,17 @@ class SmsController extends Controller
                     ]);
 
                     $responseData = $response->json();
+                } catch (\Exception $e) {
+                    $failed++;
+                    $errors[] = "{$student->name}: Could not reach the SMS gateway. Please try again.";
+                    \App\Models\Central\AppErrorLog::record($school?->id, 'sms.bulk_send.gateway_failed', $e, [
+                        'student_id' => $student->id,
+                        'phone' => $phone,
+                    ]);
+                    continue;
+                }
 
-                    // Log the SMS
+                try {
                     SmsLog::create([
                         'student_id' => $student->id,
                         'sent_by' => auth()->id(),
@@ -709,22 +735,28 @@ class SmsController extends Controller
                         'sent_at' => now(),
                         'sms_count' => $smsCount,
                     ]);
-
-                    if ($response->successful()) {
-                        if ($school) {
-                            $school->deductSmsCredits($smsCount);
-                            $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
-                        }
-                        $totalSmsUsed += $smsCount;
-                        $sent++;
-                    } else {
-                        $failed++;
-                        $errors[] = "{$student->name}: API error";
-                    }
                 } catch (\Exception $e) {
+                    // Deliberately not added to $errors - the message really
+                    // did send (see $response->successful() below), only our
+                    // own record-keeping failed. Accountant sees a normal
+                    // "sent" outcome; admin sees the real cause.
+                    \App\Models\Central\AppErrorLog::record($school?->id, 'sms.bulk_send.log_write_failed', $e, [
+                        'student_id' => $student->id,
+                        'phone' => $phone,
+                        'message_sent' => $response->successful(),
+                    ]);
+                }
+
+                if ($response->successful()) {
+                    if ($school) {
+                        $school->deductSmsCredits($smsCount);
+                        $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
+                    }
+                    $totalSmsUsed += $smsCount;
+                    $sent++;
+                } else {
                     $failed++;
-                    $errors[] = "{$student->name}: {$e->getMessage()}";
-                    Log::error("SMS to {$student->name} failed: " . $e->getMessage());
+                    $errors[] = "{$student->name}: API error";
                 }
             }
         }
@@ -1080,6 +1112,10 @@ class SmsController extends Controller
                     continue;
                 }
 
+                // Same reasoning as sendBulkSms(): the gateway call and the
+                // local log write are in separate try blocks so a log-write
+                // failure can never turn an actually-sent message into a
+                // reported "failure".
                 try {
                     $response = Http::withHeaders([
                         'Authorization' => 'Bearer ' . $this->apiToken,
@@ -1092,8 +1128,15 @@ class SmsController extends Controller
                     ]);
 
                     $responseData = $response->json();
+                } catch (\Exception $e) {
+                    $failed++;
+                    \App\Models\Central\AppErrorLog::record($school?->id, 'sms.overdue_reminders.gateway_failed', $e, [
+                        'student_id' => $student->id,
+                    ]);
+                    continue;
+                }
 
-                    // Log the SMS
+                try {
                     SmsLog::create([
                         'student_id' => $student->id,
                         'sent_by' => auth()->id(),
@@ -1106,20 +1149,22 @@ class SmsController extends Controller
                         'sent_at' => now(),
                         'sms_count' => $smsCount,
                     ]);
-
-                    if ($response->successful()) {
-                        if ($school) {
-                            $school->deductSmsCredits($smsCount);
-                            $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
-                        }
-                        $totalSmsUsed += $smsCount;
-                        $sent++;
-                    } else {
-                        $failed++;
-                    }
                 } catch (\Exception $e) {
+                    \App\Models\Central\AppErrorLog::record($school?->id, 'sms.overdue_reminders.log_write_failed', $e, [
+                        'student_id' => $student->id,
+                        'message_sent' => $response->successful(),
+                    ]);
+                }
+
+                if ($response->successful()) {
+                    if ($school) {
+                        $school->deductSmsCredits($smsCount);
+                        $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
+                    }
+                    $totalSmsUsed += $smsCount;
+                    $sent++;
+                } else {
                     $failed++;
-                    Log::error("Failed to send overdue reminder to {$student->name}: " . $e->getMessage());
                 }
             }
         }
