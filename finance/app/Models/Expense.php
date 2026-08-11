@@ -4,6 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * Legacy single-amount expense records - replaced by ExpenseSubmission
+ * (category/item/approval-based). Kept read-only for historical reference
+ * (Voucher::expense(), old ledger entries) - table renamed to
+ * legacy_expenses, nothing writes to it anymore.
+ */
 class Expense extends BaseModel
 {
     use HasFactory;
@@ -14,6 +20,8 @@ class Expense extends BaseModel
      * @var string|null
      */
     protected $connection = 'tenant';
+
+    protected $table = 'legacy_expenses';
 
     protected $fillable = [
         'expense_name',

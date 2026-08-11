@@ -1,650 +1,744 @@
-﻿@extends('layouts.accountant')
+@extends('layouts.accountant')
 
 @section('title', 'Expenses — Darasa Finance')
 @section('page_title', 'Expenses')
 
-
-@push('head')
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
-@endpush
+@php
+    $isMainAccountant = (bool) (auth()->user()->is_main_accountant ?? false);
+@endphp
 
 @section('content')
-<div class="w-full px-4 py-8">
-        <!-- Summary Cards with Calendar Filter -->
-        <div class="mb-6">
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-gray-800"> Expense Summary</h2>
-                    <div class="flex gap-3 items-center">
-                        <label class="text-sm font-medium text-gray-700">From:</label>
-                        <input type="date" id="summary-from-date" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                        <label class="text-sm font-medium text-gray-700">To:</label>
-                        <input type="date" id="summary-to-date" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
-                        <button onclick="updateSummary()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold text-sm">
-                             Filter
-                        </button>
-                        <button onclick="clearSummaryFilter()" class="bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 transition font-semibold text-sm">
-                            Clear
-                        </button>
+<div class="w-full p-6">
+
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-3xl font-bold text-rose-600">Expenses</h2>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-300 mb-6 gap-1 flex-wrap">
+        <button onclick="switchExpenseTab('compose')" id="etab-compose"
+            class="expense-tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-rose-600 text-white border-rose-600">
+            Compose
+        </button>
+        @if($isMainAccountant)
+        <button onclick="switchExpenseTab('review')" id="etab-review"
+            class="expense-tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-white text-gray-600 border-gray-300 hover:bg-rose-50">
+            Review Queue
+        </button>
+        @endif
+        <button onclick="switchExpenseTab('budget')" id="etab-budget"
+            class="expense-tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-white text-gray-600 border-gray-300 hover:bg-rose-50">
+            Categories &amp; Budget
+        </button>
+        <button onclick="switchExpenseTab('catalog')" id="etab-catalog"
+            class="expense-tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-white text-gray-600 border-gray-300 hover:bg-rose-50">
+            Item Catalog
+        </button>
+        <button onclick="switchExpenseTab('reports')" id="etab-reports"
+            class="expense-tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-white text-gray-600 border-gray-300 hover:bg-rose-50">
+            Reports &amp; Log
+        </button>
+    </div>
+
+    <!-- Compose Tab -->
+    <div id="epanel-compose">
+        <div class="bg-white rounded-lg shadow p-6 max-w-4xl">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <div class="flex gap-2">
+                        <select id="composeCategory" class="flex-1 border-2 border-gray-300 rounded px-3 py-2 text-sm"></select>
+                        <button type="button" onclick="proposeNewCategory()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded whitespace-nowrap">+ New</button>
                     </div>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Pending Expenses -->
-                    <div class="bg-gradient-to-br from-yellow-500 to-orange-500 text-white p-6 rounded-xl shadow-lg">
-                        <h3 class="text-sm font-semibold opacity-90">Pending Expenses</h3>
-                        <p class="text-3xl font-bold mt-2" id="pending-count">0</p>
-                        <p class="text-sm opacity-90 mt-1">TSh <span id="pending-amount">0</span></p>
-                    </div>
-
-                    <!-- Processed Expenses -->
-                    <div class="bg-gradient-to-br from-green-500 to-blue-500 text-white p-6 rounded-xl shadow-lg">
-                        <h3 class="text-sm font-semibold opacity-90">Processed Expenses</h3>
-                        <p class="text-3xl font-bold mt-2" id="processed-count">0</p>
-                        <p class="text-sm opacity-90 mt-1">TSh <span id="processed-amount">0</span></p>
-                    </div>
-
-                    <!-- Total Expenses -->
-                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-6 rounded-xl shadow-lg">
-                        <h3 class="text-sm font-semibold opacity-90">Total Expenses</h3>
-                        <p class="text-3xl font-bold mt-2" id="total-count">0</p>
-                        <p class="text-sm opacity-90 mt-1">TSh <span id="total-amount">0</span></p>
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+                    <select id="composeAcademicYear" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Book</label>
+                    <select id="composeBook" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                    <input type="date" id="composeDate" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm">
                 </div>
             </div>
-        </div>
-
-        <!-- Create Expense Form -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Create New Expense</h2>
-            <form id="expense-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Expense Name *</label>
-                    <input type="text" id="expense_name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Transaction Date *</label>
-                    <input type="date" id="transaction_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Select Book *</label>
-                    <select id="book_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="">-- Select Book (Optional) --</option>
-                    </select>
-                    <p class="text-sm text-gray-600 mt-1">Available Balance: <span id="book-balance" class="font-bold text-green-600">TSH 0</span></p>
-                    <p class="text-sm text-gray-600 mt-1" id="bank-fee-estimate-wrap" style="display:none;">Est. bank fee (if processed now): <span id="est-bank-fee" class="font-bold text-orange-700">TSH 0</span></p>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Amount *</label>
-                    <input type="text" id="amount" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.00">
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Status *</label>
-                    <select id="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="pending">Pending (Can be edited/canceled later)</option>
-                        <option value="processed">Processed (Money removed immediately)</option>
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">
-                        <strong>Note:</strong> Processed expenses cannot be undone or deleted
-                    </p>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                    <textarea id="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
-                </div>
-                <div class="md:col-span-2">
-                    <button type="submit" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-bold">
-                        Create Expense
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Date Range Filter & Filters -->
-        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 class="text-xl font-bold text-gray-800 mb-4">Filter Expenses</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <select id="filter-status" class="px-4 py-2 border border-gray-300 rounded-lg">
-                    <option value="">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="processed">Processed</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-                <select id="filter-book" class="px-4 py-2 border border-gray-300 rounded-lg">
-                    <option value="">All Books</option>
-                </select>
-                <input type="text" id="filter-from" placeholder="From Date" class="px-4 py-2 border border-gray-300 rounded-lg">
-                <input type="text" id="filter-to" placeholder="To Date" class="px-4 py-2 border border-gray-300 rounded-lg">
-                <div class="flex gap-2">
-                    <button onclick="loadExpenses()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-semibold">
-                        Apply
-                    </button>
-                    <button onclick="clearFilters()" class="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition font-semibold">
-                        Clear
-                    </button>
-                </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Title (optional)</label>
+                <input type="text" id="composeTitle" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. Monthly stationery purchase">
             </div>
-        </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                <textarea id="composeDescription" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" rows="2"></textarea>
+            </div>
 
-        <!-- Expenses List -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">Expense List</h2>
+            <h3 class="font-semibold text-gray-800 mb-2">Line items</h3>
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="w-full text-sm mb-2">
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Expense Name</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Book</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Amount</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Bank fee</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-                            <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                            <th class="p-2 text-left">Item</th>
+                            <th class="p-2 text-left w-24">Unit</th>
+                            <th class="p-2 text-right w-24">Qty</th>
+                            <th class="p-2 text-right w-32">Unit Price</th>
+                            <th class="p-2 text-right w-32">Subtotal</th>
+                            <th class="p-2 w-10"></th>
                         </tr>
                     </thead>
-                    <tbody id="expenses-table">
-                        <tr>
-                            <td colspan="8" class="px-4 py-8 text-center text-gray-500">Loading expenses...</td>
-                        </tr>
-                    </tbody>
+                    <tbody id="composeLineItems"></tbody>
                 </table>
             </div>
-            <div id="pagination" class="mt-6"></div>
+            <button type="button" onclick="addComposeLineRow()" class="text-sm bg-blue-50 text-blue-700 px-3 py-1.5 rounded hover:bg-blue-100 mb-4">+ Add item</button>
+
+            <div class="flex justify-end mb-4">
+                <div class="text-right">
+                    <p class="text-sm text-gray-500">Total</p>
+                    <p class="text-2xl font-bold text-gray-900" id="composeGrandTotal">TSh 0</p>
+                </div>
+            </div>
+
+            <button type="button" onclick="submitExpense()" id="composeSubmitBtn"
+                class="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2.5 rounded font-semibold">
+                {{ $isMainAccountant ? 'Approve & Record' : 'Submit for Approval' }}
+            </button>
+        </div>
+    </div>
+
+    <!-- Review Queue Tab -->
+    @if($isMainAccountant)
+    <div id="epanel-review" class="hidden">
+        <div id="pendingCategoriesBox" class="mb-4"></div>
+        <div id="reviewQueueBox"><p class="text-gray-400 text-center py-6">Loading…</p></div>
+    </div>
+    @endif
+
+    <!-- Categories & Budget Tab -->
+    <div id="epanel-budget" class="hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold mb-3">Categories</h3>
+                    <div id="categoryListBox"><p class="text-gray-400 text-sm">Loading…</p></div>
+                </div>
+            </div>
+            <div class="lg:col-span-2 space-y-4">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="flex flex-wrap gap-2 items-end mb-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Category</label>
+                            <select id="chartCategory" onchange="loadChart()" class="border rounded px-2 py-1.5 text-sm"><option value="">All categories</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Academic Year</label>
+                            <select id="chartAcademicYear" onchange="loadChart()" class="border rounded px-2 py-1.5 text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">From</label>
+                            <input type="date" id="chartFrom" onchange="loadChart()" class="border rounded px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">To</label>
+                            <input type="date" id="chartTo" onchange="loadChart()" class="border rounded px-2 py-1.5 text-sm">
+                        </div>
+                    </div>
+                    <div class="flex gap-6 mb-4">
+                        <div><p class="text-xs text-gray-500">Expected</p><p class="text-xl font-bold text-blue-600" id="chartExpected">TSh 0</p></div>
+                        <div><p class="text-xs text-gray-500">Actual</p><p class="text-xl font-bold text-rose-600" id="chartActual">TSh 0</p></div>
+                    </div>
+                    <div id="chartCanvasWrap"><canvas id="expenseChart" height="220"></canvas></div>
+                    <p id="chartHiddenMsg" class="hidden text-sm text-gray-500 italic mt-4">The main accountant hasn't made this category's budget visible to other accountants.</p>
+                </div>
+
+                @if($isMainAccountant)
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold mb-3">Edit plan for selected category</h3>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div><label class="block text-xs text-gray-500 mb-1">Expected amount (TSh)</label><input type="number" step="0.01" id="planAmount" class="w-full border rounded px-2 py-1.5 text-sm"></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">Academic year</label><select id="planAcademicYear" class="w-full border rounded px-2 py-1.5 text-sm"></select></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">From</label><input type="date" id="planFrom" class="w-full border rounded px-2 py-1.5 text-sm"></div>
+                        <div><label class="block text-xs text-gray-500 mb-1">To</label><input type="date" id="planTo" class="w-full border rounded px-2 py-1.5 text-sm"></div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="savePlan()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm">Save plan</button>
+                        <button onclick="toggleBudgetVisibility()" class="bg-gray-200 hover:bg-gray-300 px-4 py-1.5 rounded text-sm">Toggle visibility to others</button>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <!-- Item Catalog Tab -->
+    <div id="epanel-catalog" class="hidden">
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                <h3 class="font-semibold">Item catalog</h3>
+                <div class="flex gap-2">
+                    <input type="text" id="catalogSearch" oninput="loadCatalog()" placeholder="Search items..." class="border rounded px-3 py-1.5 text-sm">
+                    <button onclick="showAddCatalogItem()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm">+ Add item</button>
+                </div>
+            </div>
+            <div id="catalogTableBox"><p class="text-gray-400 text-sm">Loading…</p></div>
+        </div>
+    </div>
+
+    <!-- Reports & Log Tab -->
+    <div id="epanel-reports" class="hidden">
+        <div class="bg-white rounded-lg shadow p-4 mb-4">
+            <h3 class="font-semibold mb-3">Decision log (school-wide)</h3>
+            <div id="logBox"><p class="text-gray-400 text-sm">Loading…</p></div>
         </div>
 
-    <div id="edit-expense-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
-        <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
-            <h3 class="mb-1 text-xl font-bold text-slate-900">Edit expense</h3>
-            <p id="edit-expense-status-hint" class="mb-4 text-xs text-slate-500"></p>
-            <form id="edit-expense-form" class="space-y-4" onsubmit="saveEditExpense(event)">
-                <input type="hidden" id="edit_expense_id">
-                <div>
-                    <label class="mb-1 block text-sm font-semibold text-gray-700">Expense name *</label>
-                    <input type="text" id="edit_expense_name" required class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="mb-1 block text-sm font-semibold text-gray-700">Transaction date *</label>
-                    <input type="date" id="edit_transaction_date" required class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="mb-1 block text-sm font-semibold text-gray-700">Book *</label>
-                    <select id="edit_book_id" required class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"></select>
-                    <p id="edit-book-locked-note" class="mt-1 hidden text-xs text-amber-700">Book cannot be changed on a processed expense. Cancel first if you need a different book.</p>
-                </div>
-                <div>
-                    <label class="mb-1 block text-sm font-semibold text-gray-700">Amount *</label>
-                    <input type="text" id="edit_amount" required class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="mb-1 block text-sm font-semibold text-gray-700">Description</label>
-                    <textarea id="edit_description" rows="3" class="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"></textarea>
-                </div>
-                <div class="flex gap-3 pt-2">
-                    <button type="button" onclick="closeEditExpenseModal()" class="flex-1 rounded-lg bg-gray-200 py-2.5 font-bold text-gray-800 hover:bg-gray-300">Cancel</button>
-                    <button type="submit" class="flex-1 rounded-lg bg-blue-600 py-2.5 font-bold text-white hover:bg-blue-700">Save changes</button>
-                </div>
-            </form>
+        @if($isMainAccountant)
+        <div class="bg-white rounded-lg shadow p-4">
+            <h3 class="font-semibold mb-3">Export report</h3>
+            <div class="flex flex-wrap gap-2 items-end">
+                <div><label class="block text-xs text-gray-500 mb-1">Academic Year</label><select id="reportAcademicYear" class="border rounded px-2 py-1.5 text-sm"></select></div>
+                <div><label class="block text-xs text-gray-500 mb-1">Category</label><select id="reportCategory" class="border rounded px-2 py-1.5 text-sm"><option value="">All</option></select></div>
+                <div><label class="block text-xs text-gray-500 mb-1">From</label><input type="date" id="reportFrom" class="border rounded px-2 py-1.5 text-sm"></div>
+                <div><label class="block text-xs text-gray-500 mb-1">To</label><input type="date" id="reportTo" class="border rounded px-2 py-1.5 text-sm"></div>
+                <button onclick="downloadReport('pdf')" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded text-sm">PDF</button>
+                <button onclick="downloadReport('csv')" class="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded text-sm">CSV</button>
+            </div>
         </div>
+        @endif
     </div>
-    </div>
+
+    <datalist id="itemsDatalist"></datalist>
+</div>
 @endsection
 
 @push('scripts')
-    <script>
-let books = [];
-        let currentPage = 1;
+<script>
+axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
 
-        // Money input formatting (commas) while keeping numeric payloads
-        function parseMoneyInput(value) {
-            if (value === null || value === undefined) return 0;
-            const cleaned = String(value).replace(/,/g, '').trim();
-            const n = parseFloat(cleaned);
-            return Number.isFinite(n) ? n : 0;
+const EBASE = '{{ url('/accountant/api') }}';
+const IS_MAIN_ACCOUNTANT = @json($isMainAccountant);
+
+function fmt(n) {
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n || 0);
+}
+
+// ─── Tabs ────────────────────────────────────────────────────────────────
+const EXPENSE_TABS = IS_MAIN_ACCOUNTANT ? ['compose', 'review', 'budget', 'catalog', 'reports'] : ['compose', 'budget', 'catalog', 'reports'];
+
+function switchExpenseTab(name) {
+    EXPENSE_TABS.forEach(t => {
+        document.getElementById('epanel-' + t)?.classList.add('hidden');
+        const btn = document.getElementById('etab-' + t);
+        btn?.classList.remove('bg-rose-600', 'text-white', 'border-rose-600');
+        btn?.classList.add('bg-white', 'text-gray-600', 'border-gray-300');
+    });
+    document.getElementById('epanel-' + name).classList.remove('hidden');
+    const active = document.getElementById('etab-' + name);
+    active.classList.add('bg-rose-600', 'text-white', 'border-rose-600');
+    active.classList.remove('bg-white', 'text-gray-600', 'border-gray-300');
+
+    if (name === 'review') loadReviewQueue();
+    if (name === 'budget') { loadCategoryListForBudget(); loadChart(); }
+    if (name === 'catalog') loadCatalog();
+    if (name === 'reports') loadLog();
+}
+
+// ─── Shared caches ───────────────────────────────────────────────────────
+let itemsCache = []; // {id, name, unit_type}
+let categoriesCache = []; // approved only, for selects
+
+async function loadItemsCache() {
+    const res = await axios.get(`${EBASE}/expense-items`);
+    itemsCache = res.data.items || [];
+    const list = document.getElementById('itemsDatalist');
+    list.innerHTML = itemsCache.map(i => `<option value="${i.name}">`).join('');
+}
+
+async function loadCategoriesForSelects() {
+    const res = await axios.get(`${EBASE}/expense-categories?approved_only=1`);
+    categoriesCache = res.data.categories || [];
+    const opts = categoriesCache.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    ['composeCategory', 'chartCategory', 'reportCategory'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const keepFirst = id === 'chartCategory' || id === 'reportCategory';
+        el.innerHTML = (keepFirst ? el.querySelector('option')?.outerHTML || '' : '') + opts;
+    });
+}
+
+async function loadAcademicYearsForSelects() {
+    const res = await axios.get('/api/academic-years');
+    const years = res.data || [];
+    const opts = years.map(y => `<option value="${y.id}" ${y.is_current ? 'selected' : ''}>${y.name}</option>`).join('');
+    ['composeAcademicYear', 'chartAcademicYear', 'planAcademicYear', 'reportAcademicYear'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = opts;
+    });
+}
+
+async function loadBooksForSelect() {
+    const res = await axios.get('/api/books');
+    const books = res.data || [];
+    const el = document.getElementById('composeBook');
+    if (el) el.innerHTML = '<option value="">Select a book</option>' + books.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+}
+
+// ─── Compose ─────────────────────────────────────────────────────────────
+let composeRowSeq = 0;
+
+function addComposeLineRow() {
+    const rowId = ++composeRowSeq;
+    const tbody = document.getElementById('composeLineItems');
+    const tr = document.createElement('tr');
+    tr.dataset.rowId = rowId;
+    tr.innerHTML = `
+        <td class="p-2">
+            <input type="text" list="itemsDatalist" class="w-full border rounded px-2 py-1 line-item-name" oninput="onLineItemNameChange(${rowId})" placeholder="Search or type new item">
+            <input type="hidden" class="line-item-existing-id">
+        </td>
+        <td class="p-2"><input type="text" class="w-full border rounded px-2 py-1 line-item-unit" placeholder="kg, pcs..."></td>
+        <td class="p-2"><input type="number" step="0.001" min="0.001" value="1" class="w-full border rounded px-2 py-1 text-right line-item-qty" oninput="recomputeComposeLine(${rowId})"></td>
+        <td class="p-2"><input type="number" step="0.01" min="0" value="0" class="w-full border rounded px-2 py-1 text-right line-item-price" oninput="recomputeComposeLine(${rowId})"></td>
+        <td class="p-2 text-right line-item-subtotal">TSh 0</td>
+        <td class="p-2 text-center"><button type="button" onclick="removeComposeLineRow(${rowId})" class="text-red-500 hover:text-red-700">&times;</button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function removeComposeLineRow(rowId) {
+    document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`)?.remove();
+    recomputeComposeGrandTotal();
+}
+
+function onLineItemNameChange(rowId) {
+    const tr = document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`);
+    const name = tr.querySelector('.line-item-name').value.trim().toLowerCase();
+    const match = itemsCache.find(i => i.name.toLowerCase() === name);
+    const idField = tr.querySelector('.line-item-existing-id');
+    const unitField = tr.querySelector('.line-item-unit');
+    if (match) {
+        idField.value = match.id;
+        unitField.value = match.unit_type;
+    } else {
+        idField.value = '';
+    }
+}
+
+function recomputeComposeLine(rowId) {
+    const tr = document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`);
+    const qty = parseFloat(tr.querySelector('.line-item-qty').value) || 0;
+    const price = parseFloat(tr.querySelector('.line-item-price').value) || 0;
+    tr.querySelector('.line-item-subtotal').textContent = 'TSh ' + fmt(qty * price);
+    recomputeComposeGrandTotal();
+}
+
+function recomputeComposeGrandTotal() {
+    const rows = [...document.querySelectorAll('#composeLineItems tr')];
+    const total = rows.reduce((sum, tr) => {
+        const qty = parseFloat(tr.querySelector('.line-item-qty').value) || 0;
+        const price = parseFloat(tr.querySelector('.line-item-price').value) || 0;
+        return sum + (qty * price);
+    }, 0);
+    document.getElementById('composeGrandTotal').textContent = 'TSh ' + fmt(total);
+}
+
+async function proposeNewCategory() {
+    const name = prompt('New category name:');
+    if (!name || !name.trim()) return;
+    try {
+        const res = await axios.post(`${EBASE}/expense-categories`, { name: name.trim() });
+        showDarasaToast({ type: 'success', message: res.data.category.status === 'approved' ? 'Category added.' : 'Category proposed - pending main accountant approval.' });
+        await loadCategoriesForSelects();
+        if (res.data.category.status === 'approved') {
+            document.getElementById('composeCategory').value = res.data.category.id;
         }
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to propose category.' });
+    }
+}
 
-        function formatMoneyForInput(value) {
-            const n = parseMoneyInput(value);
-            return n.toLocaleString('en-TZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+async function submitExpense() {
+    const rows = [...document.querySelectorAll('#composeLineItems tr')];
+    if (!rows.length) {
+        showDarasaToast({ type: 'error', message: 'Add at least one line item.' });
+        return;
+    }
+
+    const lineItems = rows.map(tr => {
+        const existingId = tr.querySelector('.line-item-existing-id').value;
+        const name = tr.querySelector('.line-item-name').value.trim();
+        const unit = tr.querySelector('.line-item-unit').value.trim();
+        const qty = parseFloat(tr.querySelector('.line-item-qty').value) || 0;
+        const price = parseFloat(tr.querySelector('.line-item-price').value) || 0;
+        const data = { quantity: qty, unit_price: price };
+        if (existingId) {
+            data.expense_item_id = parseInt(existingId, 10);
+        } else {
+            data.new_item_name = name;
+            data.new_item_unit_type = unit;
         }
+        return data;
+    });
 
-        function attachMoneyFormatting(inputId) {
-            const el = document.getElementById(inputId);
-            if (!el) return;
-            el.setAttribute('inputmode', 'decimal');
-            el.addEventListener('focus', () => { el.value = String(el.value || '').replace(/,/g, ''); });
-            el.addEventListener('blur', () => { if (el.value !== '') el.value = formatMoneyForInput(el.value); });
-        }
+    const payload = {
+        expense_category_id: document.getElementById('composeCategory').value,
+        book_id: document.getElementById('composeBook').value || null,
+        academic_year_id: document.getElementById('composeAcademicYear').value,
+        transaction_date: document.getElementById('composeDate').value,
+        title: document.getElementById('composeTitle').value || null,
+        description: document.getElementById('composeDescription').value || null,
+        line_items: lineItems,
+    };
 
-        document.addEventListener('DOMContentLoaded', function() {
-            loadBooks();
-            loadExpenses();
-            initializeDatePickers();
-            updateSummary(); // Load initial summary
+    if (!payload.expense_category_id || !payload.academic_year_id || !payload.transaction_date) {
+        showDarasaToast({ type: 'error', message: 'Category, academic year, and date are required.' });
+        return;
+    }
 
-            document.getElementById('transaction_date').valueAsDate = new Date();
+    try {
+        await axios.post(`${EBASE}/expense-submissions`, payload);
+        showDarasaToast({ type: 'success', message: IS_MAIN_ACCOUNTANT ? 'Expense recorded.' : 'Submitted for approval.' });
+        resetComposeForm();
+        loadItemsCache();
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to save expense.' });
+    }
+}
 
-            document.getElementById('book_id').addEventListener('change', updateBookBalanceAndFeeEstimate);
-            document.getElementById('amount').addEventListener('input', updateBookBalanceAndFeeEstimate);
+function resetComposeForm() {
+    document.getElementById('composeLineItems').innerHTML = '';
+    document.getElementById('composeTitle').value = '';
+    document.getElementById('composeDescription').value = '';
+    document.getElementById('composeGrandTotal').textContent = 'TSh 0';
+    addComposeLineRow();
+}
 
-            // Money input formatting (commas)
-            attachMoneyFormatting('amount');
-            attachMoneyFormatting('edit_amount');
+// ─── Review Queue ────────────────────────────────────────────────────────
+async function loadReviewQueue() {
+    const box = document.getElementById('reviewQueueBox');
+    const catBox = document.getElementById('pendingCategoriesBox');
+    try {
+        const res = await axios.get(`${EBASE}/expense-submissions-queue`);
+        const submissions = res.data.submissions || [];
+        const priceHistory = res.data.price_history || {};
+        const pendingCategories = res.data.pending_categories || [];
 
-            function estimateBankFeeFromBook(book, amount) {
-                if (!book || book.is_cash_book || !book.bank_fees_enabled || !book.bank_fee_particular_id) return 0;
-                const a = parseMoneyInput(amount);
-                if (isNaN(a) || a <= 0) return 0;
-                const tiers = book.bank_fee_tiers || [];
-                for (const t of tiers) {
-                    const from = parseFloat(t.amount_from);
-                    const to = (t.amount_to === null || t.amount_to === undefined || t.amount_to === '') ? null : parseFloat(t.amount_to);
-                    if (a < from) continue;
-                    if (to !== null && !isNaN(to) && a > to) continue;
-                    return parseFloat(t.fee_amount) || 0;
-                }
-                return 0;
-            }
+        catBox.innerHTML = pendingCategories.length
+            ? '<div class="bg-white rounded-lg shadow p-4"><h3 class="font-semibold mb-2">Pending categories</h3>' +
+                pendingCategories.map(c => `
+                    <div class="flex justify-between items-center border-t py-2">
+                        <span>${c.name}</span>
+                        <div class="flex gap-2">
+                            <button onclick="decideCategory(${c.id}, 'approve')" class="text-xs bg-emerald-600 text-white px-2 py-1 rounded">Approve</button>
+                            <button onclick="decideCategory(${c.id}, 'deny')" class="text-xs bg-red-500 text-white px-2 py-1 rounded">Deny</button>
+                        </div>
+                    </div>
+                `).join('') + '</div>'
+            : '';
 
-            function updateBookBalanceAndFeeEstimate() {
-                const selectedBook = books.find(b => b.id == document.getElementById('book_id').value);
-                const amt = document.getElementById('amount').value;
-                const wrap = document.getElementById('bank-fee-estimate-wrap');
-                const feeEl = document.getElementById('est-bank-fee');
-                if (selectedBook) {
-                    const balance = parseFloat(selectedBook.opening_balance || 0) +
-                                  parseFloat(selectedBook.total_debits || 0) -
-                                  parseFloat(selectedBook.total_credits || 0);
-                    document.getElementById('book-balance').textContent = 'TSH ' + balance.toLocaleString();
-                    const fee = estimateBankFeeFromBook(selectedBook, amt);
-                    if (fee > 0) {
-                        wrap.style.display = 'block';
-                        feeEl.textContent = 'TSH ' + fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                    } else {
-                        wrap.style.display = 'none';
-                    }
-                } else {
-                    document.getElementById('book-balance').textContent = 'TSH 0';
-                    wrap.style.display = 'none';
-                }
-            }
+        box.innerHTML = submissions.length
+            ? submissions.map(sub => renderQueueCard(sub, priceHistory)).join('')
+            : '<p class="text-gray-400 text-center py-6">Nothing pending review.</p>';
+    } catch (e) {
+        box.innerHTML = '<p class="text-red-600">Could not load the review queue.</p>';
+    }
+}
 
-            document.getElementById('expense-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                createExpense();
-            });
+async function decideCategory(id, action) {
+    try {
+        await axios.post(`${EBASE}/expense-categories/${id}/${action}`, {});
+        showDarasaToast({ type: 'success', message: `Category ${action === 'approve' ? 'approved' : 'denied'}.` });
+        loadReviewQueue();
+        loadCategoriesForSelects();
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to decide category.' });
+    }
+}
+
+function renderQueueCard(sub, priceHistoryMap) {
+    const total = (sub.line_items || []).reduce((s, l) => s + parseFloat(l.line_total), 0);
+    const lineRows = (sub.line_items || []).map(li => {
+        const hist = priceHistoryMap[li.expense_item_id] || [];
+        const histHtml = hist.length
+            ? '<div class="text-xs text-gray-400 mt-1">Last: ' + hist.slice(0, 3).map(h => `${h.date} TSh ${fmt(h.unit_price)}${h.category ? ' (' + h.category + ')' : ''}`).join(' · ') + '</div>'
+            : '<div class="text-xs text-gray-300 mt-1">No prior price history.</div>';
+        return `
+            <tr data-line-id="${li.id}">
+                <td class="p-2 align-top">${li.item_name_snapshot}${histHtml}</td>
+                <td class="p-2 align-top"><input type="text" class="w-20 border rounded px-1 py-0.5 text-xs review-unit" value="${li.unit_type_snapshot}"></td>
+                <td class="p-2 align-top"><input type="number" step="0.001" class="w-20 border rounded px-1 py-0.5 text-xs text-right review-qty" value="${li.quantity}"></td>
+                <td class="p-2 align-top"><input type="number" step="0.01" class="w-24 border rounded px-1 py-0.5 text-xs text-right review-price" value="${li.unit_price}"></td>
+                <td class="p-2 align-top text-center">
+                    <select class="review-status text-xs border rounded px-1 py-0.5">
+                        <option value="approved" selected>Approve</option>
+                        <option value="denied">Deny</option>
+                    </select>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    return `
+    <div class="bg-white rounded-lg shadow p-4 mb-4" data-submission-id="${sub.id}">
+        <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
+            <div>
+                <p class="font-semibold">${sub.submission_number} — ${sub.category?.name || ''}</p>
+                <p class="text-xs text-gray-500">${sub.transaction_date} · ${sub.title || 'No title'} · Book: ${sub.book?.name || 'Not set'}</p>
+            </div>
+            <p class="font-bold text-gray-900">TSh ${fmt(total)}</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm mb-3">
+                <thead class="bg-gray-50"><tr><th class="p-2 text-left">Item</th><th class="p-2 text-left">Unit</th><th class="p-2 text-right">Qty</th><th class="p-2 text-right">Price</th><th class="p-2 text-center">Decision</th></tr></thead>
+                <tbody>${lineRows}</tbody>
+            </table>
+        </div>
+        <textarea class="w-full border rounded px-2 py-1 text-sm mb-2 review-note" placeholder="Decision note (required, visible to all accountants at this school)" rows="2"></textarea>
+        <div class="flex gap-2">
+            <button onclick="submitReview(${sub.id}, 'approve')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded text-sm">Save Decision</button>
+            <button onclick="submitReview(${sub.id}, 'deny')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-sm">Deny All</button>
+        </div>
+    </div>`;
+}
+
+async function submitReview(submissionId, overallDecision) {
+    const card = document.querySelector(`[data-submission-id="${submissionId}"]`);
+    const note = card.querySelector('.review-note').value.trim();
+    if (!note) {
+        showDarasaToast({ type: 'error', message: 'A decision note is required.' });
+        return;
+    }
+
+    const lineItems = [...card.querySelectorAll('tr[data-line-id]')].map(tr => ({
+        id: parseInt(tr.dataset.lineId, 10),
+        status: overallDecision === 'deny' ? 'denied' : tr.querySelector('.review-status').value,
+        unit_price: parseFloat(tr.querySelector('.review-price').value) || 0,
+        quantity: parseFloat(tr.querySelector('.review-qty').value) || 0,
+    }));
+
+    try {
+        await axios.post(`${EBASE}/expense-submissions/${submissionId}/review`, {
+            decision_note: note,
+            overall_decision: overallDecision,
+            line_items: lineItems,
         });
+        showDarasaToast({ type: 'success', message: 'Decision saved.' });
+        loadReviewQueue();
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to save decision.' });
+    }
+}
 
-        function initializeDatePickers() {
-            flatpickr("#filter-from", {
-                dateFormat: "Y-m-d",
-                maxDate: "today"
-            });
+// ─── Categories & Budget ─────────────────────────────────────────────────
+let selectedBudgetCategoryId = null;
 
-            flatpickr("#filter-to", {
-                dateFormat: "Y-m-d",
-                maxDate: "today"
-            });
+async function loadCategoryListForBudget() {
+    const box = document.getElementById('categoryListBox');
+    try {
+        const res = await axios.get(`${EBASE}/expense-categories`);
+        const categories = res.data.categories || [];
+        box.innerHTML = categories.map(c => `
+            <button type="button" onclick="selectBudgetCategory(${c.id}, '${c.name.replace(/'/g, "\\'")}')"
+                class="w-full text-left px-3 py-2 rounded text-sm hover:bg-rose-50 flex justify-between items-center ${c.status !== 'approved' ? 'opacity-50' : ''}">
+                <span>${c.name}</span>
+                ${c.status !== 'approved' ? `<span class="text-xs text-amber-600">${c.status}</span>` : ''}
+            </button>
+        `).join('') || '<p class="text-gray-400 text-sm">No categories yet.</p>';
+    } catch (e) {
+        box.innerHTML = '<p class="text-red-600 text-sm">Could not load categories.</p>';
+    }
+}
 
-            flatpickr("#summary-from-date", {
-                dateFormat: "Y-m-d",
-                maxDate: "today"
-            });
+function selectBudgetCategory(id, name) {
+    selectedBudgetCategoryId = id;
+    document.getElementById('chartCategory').value = id;
+    loadChart();
+}
 
-            flatpickr("#summary-to-date", {
-                dateFormat: "Y-m-d",
-                maxDate: "today"
-            });
+async function loadChart() {
+    const categoryId = document.getElementById('chartCategory').value;
+    const academicYearId = document.getElementById('chartAcademicYear').value;
+    if (!academicYearId) return;
+
+    const params = new URLSearchParams({ academic_year_id: academicYearId });
+    if (categoryId) params.set('category_id', categoryId);
+    const from = document.getElementById('chartFrom').value;
+    const to = document.getElementById('chartTo').value;
+    if (from) params.set('from_date', from);
+    if (to) params.set('to_date', to);
+
+    try {
+        const res = await axios.get(`${EBASE}/expense-plans/chart?${params.toString()}`);
+        document.getElementById('chartHiddenMsg').classList.add('hidden');
+        document.getElementById('chartCanvasWrap').classList.remove('hidden');
+        document.getElementById('chartExpected').textContent = 'TSh ' + fmt(res.data.expected_amount);
+        document.getElementById('chartActual').textContent = 'TSh ' + fmt(res.data.actual_amount);
+        renderExpenseChart(res.data.timeline || []);
+
+        if (categoryId) {
+            document.getElementById('planAmount').value = '';
+            document.getElementById('planFrom').value = '';
+            document.getElementById('planTo').value = '';
         }
-
-        function updateSummary() {
-            const fromDate = document.getElementById('summary-from-date').value;
-            const toDate = document.getElementById('summary-to-date').value;
-
-            let url = '/api/expenses/summary';
-            const params = [];
-            if (fromDate) params.push('from_date=' + fromDate);
-            if (toDate) params.push('to_date=' + toDate);
-            if (params.length > 0) url += '?' + params.join('&');
-
-            axios.get(url)
-                .then(response => {
-                    const data = response.data;
-                    document.getElementById('pending-count').textContent = data.pending_count || 0;
-                    document.getElementById('pending-amount').textContent = (data.pending_amount || 0).toLocaleString();
-                    document.getElementById('processed-count').textContent = data.processed_count || 0;
-                    document.getElementById('processed-amount').textContent = (data.processed_amount || 0).toLocaleString();
-                    document.getElementById('total-count').textContent = data.total_count || 0;
-                    document.getElementById('total-amount').textContent = (data.total_amount || 0).toLocaleString();
-                })
-                .catch(error => {
-                    console.error('Error loading summary:', error);
-                });
+    } catch (e) {
+        if (e.response?.status === 403) {
+            document.getElementById('chartHiddenMsg').classList.remove('hidden');
+            document.getElementById('chartCanvasWrap').classList.add('hidden');
+            document.getElementById('chartExpected').textContent = 'TSh 0';
+            document.getElementById('chartActual').textContent = 'TSh 0';
+        } else {
+            showDarasaToast({ type: 'error', message: 'Could not load chart data.' });
         }
+    }
+}
 
-        function clearSummaryFilter() {
-            document.getElementById('summary-from-date').value = '';
-            document.getElementById('summary-to-date').value = '';
-            updateSummary();
+let expenseChartInstance = null;
+let chartsScriptLoading = false;
+
+function renderExpenseChart(timeline) {
+    if (typeof Chart === 'undefined') {
+        if (!chartsScriptLoading) {
+            chartsScriptLoading = true;
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+            script.onload = () => renderExpenseChart(timeline);
+            document.head.appendChild(script);
         }
+        return;
+    }
 
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    if (expenseChartInstance) expenseChartInstance.destroy();
+    expenseChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: timeline.map(t => t.label),
+            datasets: [{
+                label: 'Actual spend',
+                data: timeline.map(t => t.amount),
+                backgroundColor: '#e11d48',
+            }],
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } },
+        },
+    });
+}
 
-        function loadBooks() {
-            axios.get('/api/books')
-                .then(response => {
-                    books = Array.isArray(response.data) ? response.data :
-                            (response.data.books?.data || response.data.books || response.data);
-                    const bookSelect = document.getElementById('book_id');
-                    const filterBook = document.getElementById('filter-book');
+async function savePlan() {
+    const categoryId = document.getElementById('chartCategory').value;
+    if (!categoryId) {
+        showDarasaToast({ type: 'error', message: 'Select a specific category first (not "All categories").' });
+        return;
+    }
+    const payload = {
+        academic_year_id: document.getElementById('planAcademicYear').value,
+        expected_amount: document.getElementById('planAmount').value,
+        from_date: document.getElementById('planFrom').value,
+        to_date: document.getElementById('planTo').value,
+    };
+    try {
+        await axios.post(`${EBASE}/expense-categories/${categoryId}/plan`, payload);
+        showDarasaToast({ type: 'success', message: 'Plan saved.' });
+        loadChart();
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to save plan.' });
+    }
+}
 
-                    bookSelect.innerHTML = '<option value="">-- Select Book --</option>';
-                    filterBook.innerHTML = '<option value="">All Books</option>';
+async function toggleBudgetVisibility() {
+    const categoryId = document.getElementById('chartCategory').value;
+    if (!categoryId) {
+        showDarasaToast({ type: 'error', message: 'Select a specific category first.' });
+        return;
+    }
+    try {
+        await axios.post(`${EBASE}/expense-categories/${categoryId}/toggle-budget-visibility`, {});
+        showDarasaToast({ type: 'success', message: 'Visibility updated.' });
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to update visibility.' });
+    }
+}
 
-                    if (Array.isArray(books)) {
-                        books.forEach(book => {
-                            const option = `<option value="${book.id}">${book.name}</option>`;
-                            bookSelect.innerHTML += option;
-                            filterBook.innerHTML += option;
-                        });
-                    } else {
-                        console.error('Books data is not an array:', books);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error loading books:', error);
-                    alert('Failed to load books. Please refresh the page.');
-                });
-        }
+// ─── Item Catalog ────────────────────────────────────────────────────────
+async function loadCatalog() {
+    const box = document.getElementById('catalogTableBox');
+    const search = document.getElementById('catalogSearch').value;
+    try {
+        const res = await axios.get(`${EBASE}/expense-items?search=${encodeURIComponent(search)}`);
+        const items = res.data.items || [];
+        box.innerHTML = items.length
+            ? `<table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-2 text-left">Name</th><th class="p-2 text-left">Unit type</th></tr></thead><tbody>${
+                items.map(i => `<tr class="border-t"><td class="p-2">${i.name}</td><td class="p-2">${i.unit_type}</td></tr>`).join('')
+            }</tbody></table>`
+            : '<p class="text-gray-400 text-sm text-center py-4">No items found.</p>';
+    } catch (e) {
+        box.innerHTML = '<p class="text-red-600 text-sm">Could not load items.</p>';
+    }
+}
 
-        function loadExpenses(page = 1) {
-            currentPage = page;
-            let url = '/api/expenses?page=' + page;
+async function showAddCatalogItem() {
+    const name = prompt('Item name:');
+    if (!name || !name.trim()) return;
+    const unitType = prompt('Unit type (e.g. kg, pieces, litres):');
+    if (!unitType || !unitType.trim()) return;
+    try {
+        await axios.post(`${EBASE}/expense-items`, { name: name.trim(), unit_type: unitType.trim() });
+        showDarasaToast({ type: 'success', message: 'Item added.' });
+        loadCatalog();
+        loadItemsCache();
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to add item.' });
+    }
+}
 
-            const status = document.getElementById('filter-status').value;
-            const bookId = document.getElementById('filter-book').value;
-            const fromDate = document.getElementById('filter-from').value;
-            const toDate = document.getElementById('filter-to').value;
+// ─── Reports & Log ───────────────────────────────────────────────────────
+async function loadLog() {
+    const box = document.getElementById('logBox');
+    try {
+        const res = await axios.get(`${EBASE}/expense-submissions-log`);
+        const submissions = res.data.data || [];
+        box.innerHTML = submissions.length
+            ? submissions.map(s => `
+                <div class="border-t py-3">
+                    <div class="flex justify-between flex-wrap gap-1">
+                        <p class="font-medium">${s.submission_number} — ${s.category?.name || ''} — TSh ${fmt(s.total_amount)}</p>
+                        <span class="text-xs px-2 py-0.5 rounded-full ${s.status === 'denied' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${s.status.replace('_', ' ')}</span>
+                    </div>
+                    <p class="text-xs text-gray-500">${s.transaction_date} · decided ${s.decided_at || ''}</p>
+                    ${s.decision_note ? `<p class="text-sm text-gray-700 mt-1 italic">"${s.decision_note}"</p>` : ''}
+                </div>
+            `).join('')
+            : '<p class="text-gray-400 text-center py-6">No decisions yet.</p>';
+    } catch (e) {
+        box.innerHTML = '<p class="text-red-600">Could not load the log.</p>';
+    }
+}
 
-            if (status) url += '&status=' + status;
-            if (bookId) url += '&book_id=' + bookId;
-            if (fromDate) url += '&from_date=' + fromDate;
-            if (toDate) url += '&to_date=' + toDate;
+function downloadReport(type) {
+    const params = new URLSearchParams({
+        academic_year_id: document.getElementById('reportAcademicYear').value,
+    });
+    const category = document.getElementById('reportCategory').value;
+    const from = document.getElementById('reportFrom').value;
+    const to = document.getElementById('reportTo').value;
+    if (category) params.set('category_id', category);
+    if (from) params.set('from_date', from);
+    if (to) params.set('to_date', to);
 
-            axios.get(url)
-                .then(response => {
-                    const data = response.data;
+    if (!params.get('academic_year_id')) {
+        showDarasaToast({ type: 'error', message: 'Select an academic year first.' });
+        return;
+    }
 
-                    // Update summary cards with filtered data
-                    document.getElementById('pending-count').textContent = data.summary.pending_count || 0;
-                    document.getElementById('pending-amount').textContent = (data.summary.total_pending || 0).toLocaleString();
-                    document.getElementById('processed-count').textContent = data.summary.processed_count || 0;
-                    document.getElementById('processed-amount').textContent = (data.summary.total_processed || 0).toLocaleString();
-                    document.getElementById('total-count').textContent = data.summary.total_count || 0;
-                    document.getElementById('total-amount').textContent = (data.summary.total_amount || 0).toLocaleString();
+    window.location = `${EBASE}/expense-submissions-report/${type}?${params.toString()}`;
+}
 
-                    displayExpenses(data.expenses.data);
-                    displayPagination(data.expenses);
-                })
-                .catch(error => {
-                    console.error('Error loading expenses:', error);
-                    alert('Error loading expenses');
-                });
-        }
-
-        function displayExpenses(expenses) {
-            const tbody = document.getElementById('expenses-table');
-
-            if (expenses.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">No expenses found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = expenses.map(expense => {
-                const statusColors = {
-                    pending: 'bg-yellow-100 text-yellow-800',
-                    processed: 'bg-green-100 text-green-800',
-                    cancelled: 'bg-red-100 text-red-800'
-                };
-
-                let actions = '';
-                if (expense.status === 'pending') {
-                    actions = `
-                        <button onclick="processExpense(${expense.id})" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 mr-2">
-                            Process
-                        </button>
-                        <button onclick="editExpense(${expense.id})" class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
-                            Edit
-                        </button>
-                    `;
-                } else if (expense.status === 'processed') {
-                    actions = `
-                        <button onclick="editExpense(${expense.id})" class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 mr-2">
-                            Edit
-                        </button>
-                        <button onclick="cancelExpense(${expense.id})" class="bg-amber-500 text-white px-3 py-1 rounded text-sm hover:bg-amber-600" title="Reverse vouchers but keep the record for audit">
-                            Cancel
-                        </button>
-                    `;
-                } else {
-                    actions = `<span class="text-gray-400 text-sm">Cancelled (kept on record)</span>`;
-                }
-
-                return `
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-4 py-3">#${expense.id}</td>
-                        <td class="px-4 py-3 font-semibold">${expense.expense_name}</td>
-                        <td class="px-4 py-3">${new Date(expense.transaction_date).toLocaleDateString()}</td>
-                        <td class="px-4 py-3">${expense.book?.name || 'N/A'}</td>
-                        <td class="px-4 py-3 font-bold">TSH ${parseFloat(expense.amount).toLocaleString()}</td>
-                        <td class="px-4 py-3 text-sm">${expense.bank_fee_amount != null ? 'TSH ' + parseFloat(expense.bank_fee_amount).toLocaleString() : '—'}</td>
-                        <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded text-xs font-semibold ${statusColors[expense.status]}">${expense.status.toUpperCase()}</span>
-                        </td>
-                        <td class="px-4 py-3">${actions}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function displayPagination(paginationData) {
-            const paginationDiv = document.getElementById('pagination');
-            if (paginationData.last_page <= 1) {
-                paginationDiv.innerHTML = '';
-                return;
-            }
-
-            let html = '<div class="flex justify-center gap-2">';
-            for (let i = 1; i <= paginationData.last_page; i++) {
-                const active = i === paginationData.current_page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700';
-                html += `<button onclick="loadExpenses(${i})" class="${active} px-4 py-2 rounded hover:bg-blue-500 hover:text-white transition">${i}</button>`;
-            }
-            html += '</div>';
-            paginationDiv.innerHTML = html;
-        }
-
-        function createExpense() {
-            const status = document.getElementById('status').value;
-            const data = {
-                expense_name: document.getElementById('expense_name').value,
-                transaction_date: document.getElementById('transaction_date').value,
-                book_id: document.getElementById('book_id').value,
-                amount: parseMoneyInput(document.getElementById('amount').value),
-                description: document.getElementById('description').value,
-            };
-
-            // Create as pending first
-            axios.post('/api/expenses', data)
-                .then(response => {
-                    const expense = response.data;
-
-                    // If user selected "processed", process it immediately
-                    if (status === 'processed') {
-                        return axios.post(`/api/expenses/${expense.id}/process`);
-                    }
-
-                    return Promise.resolve(response);
-                })
-                .then(response => {
-                    alert('Expense created successfully!');
-                    document.getElementById('expense-form').reset();
-                    document.getElementById('transaction_date').valueAsDate = new Date();
-                    document.getElementById('book-balance').textContent = 'TSH 0';
-                    loadExpenses();
-                    updateSummary(); // Refresh summary cards
-                })
-                .catch(error => {
-                    console.error('Error creating expense:', error);
-                    if (error.response && error.response.data.message) {
-                        alert(error.response.data.message);
-                    } else {
-                        alert('Error creating expense');
-                    }
-                });
-        }
-
-        function processExpense(id) {
-            if (!confirm('Are you sure you want to process this expense? This will deduct money from the book and CANNOT be undone.')) {
-                return;
-            }
-
-            axios.post(`/api/expenses/${id}/process`)
-                .then(response => {
-                    alert('Expense processed successfully!');
-                    loadExpenses(currentPage);
-                    updateSummary(); // Refresh summary cards
-                })
-                .catch(error => {
-                    console.error('Error processing expense:', error);
-                    if (error.response && error.response.data.message) {
-                        alert(error.response.data.message);
-                    } else if (error.response && error.response.data.error) {
-                        alert(error.response.data.error);
-                    } else {
-                        alert('Error processing expense');
-                    }
-                });
-        }
-
-        function cancelExpense(id) {
-            const reason = prompt('Reason for cancelling this expense (kept on the audit record):');
-            if (reason === null) return;
-            if (!reason.trim()) {
-                alert('A reason is required.');
-                return;
-            }
-
-            axios.post(`/api/expenses/${id}/cancel`, { reason: reason.trim() })
-                .then(() => {
-                    alert('Expense cancelled. The record is kept for audit; vouchers were reversed.');
-                    loadExpenses(currentPage);
-                    updateSummary();
-                })
-                .catch(error => {
-                    console.error('Error cancelling expense:', error);
-                    const msg = error.response?.data?.error || error.response?.data?.message || 'Error cancelling expense';
-                    alert(msg);
-                });
-        }
-
-        function populateEditBookSelect(selectedId) {
-            const sel = document.getElementById('edit_book_id');
-            sel.innerHTML = '<option value="">-- Select Book --</option>';
-            books.forEach(b => {
-                const o = document.createElement('option');
-                o.value = b.id;
-                o.textContent = b.name;
-                if (String(b.id) === String(selectedId)) o.selected = true;
-                sel.appendChild(o);
-            });
-        }
-
-        function openEditExpenseModal() {
-            const modal = document.getElementById('edit-expense-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function closeEditExpenseModal() {
-            const modal = document.getElementById('edit-expense-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        async function editExpense(id) {
-            try {
-                const res = await axios.get(`/api/expenses/${id}`);
-                const e = res.data;
-                document.getElementById('edit_expense_id').value = e.id;
-                document.getElementById('edit_expense_name').value = e.expense_name || '';
-                document.getElementById('edit_transaction_date').value = (e.transaction_date || '').slice(0, 10);
-                document.getElementById('edit_amount').value = formatMoneyForInput(e.amount);
-                document.getElementById('edit_description').value = e.description || '';
-
-                const isProcessed = e.status === 'processed';
-                const bookSel = document.getElementById('edit_book_id');
-                populateEditBookSelect(e.book_id);
-                bookSel.disabled = isProcessed;
-                document.getElementById('edit-book-locked-note').classList.toggle('hidden', !isProcessed);
-
-                const hint = document.getElementById('edit-expense-status-hint');
-                if (e.status === 'pending') {
-                    hint.textContent = 'Pending — changes apply before money is deducted from the book.';
-                } else if (isProcessed) {
-                    hint.textContent = 'Processed — vouchers will be rebuilt with the new amount (book stays the same).';
-                } else {
-                    hint.textContent = 'This expense is cancelled and cannot be edited.';
-                    alert('Cancelled expenses cannot be edited.');
-                    return;
-                }
-
-                openEditExpenseModal();
-            } catch (err) {
-                console.error(err);
-                alert(err.response?.data?.error || err.response?.data?.message || 'Could not load expense');
-            }
-        }
-
-        async function saveEditExpense(event) {
-            event.preventDefault();
-            const id = document.getElementById('edit_expense_id').value;
-            const bookSel = document.getElementById('edit_book_id');
-            const payload = {
-                expense_name: document.getElementById('edit_expense_name').value.trim(),
-                transaction_date: document.getElementById('edit_transaction_date').value,
-                book_id: bookSel.disabled ? bookSel.value : (bookSel.value || null),
-                amount: parseMoneyInput(document.getElementById('edit_amount').value),
-                description: document.getElementById('edit_description').value.trim() || null,
-            };
-
-            if (!payload.book_id) {
-                alert('Please select a book.');
-                return;
-            }
-            if (!payload.amount || payload.amount <= 0) {
-                alert('Enter a valid amount.');
-                return;
-            }
-
-            try {
-                await axios.put(`/api/expenses/${id}`, payload);
-                alert('Expense updated successfully.');
-                closeEditExpenseModal();
-                loadExpenses(currentPage);
-                updateSummary();
-            } catch (err) {
-                console.error(err);
-                alert(err.response?.data?.error || err.response?.data?.message || 'Error updating expense');
-            }
-        }
-
-        function clearFilters() {
-            document.getElementById('filter-status').value = '';
-            document.getElementById('filter-book').value = '';
-            document.getElementById('filter-from').value = '';
-            document.getElementById('filter-to').value = '';
-            loadExpenses();
-        }
-    </script>
+// ─── Page init ───────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    document.getElementById('composeDate').value = new Date().toISOString().slice(0, 10);
+    await Promise.all([loadItemsCache(), loadCategoriesForSelects(), loadAcademicYearsForSelects(), loadBooksForSelect()]);
+    addComposeLineRow();
+});
+</script>
 @endpush

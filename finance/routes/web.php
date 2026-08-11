@@ -11,7 +11,10 @@ use App\Http\Controllers\BookFeeCategoryController;
 use App\Http\Controllers\BookMonthlyCutController;
 use App\Http\Controllers\BookTransactionController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ExpenseCategoryPlanController;
+use App\Http\Controllers\ExpenseItemController;
+use App\Http\Controllers\ExpenseSubmissionController;
 use App\Http\Controllers\FeeItemController;
 use App\Http\Controllers\HeadmasterManagementController;
 use App\Http\Controllers\InvoiceController;
@@ -431,16 +434,41 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::put('api/bank-accounts/{id}', [BankAccountController::class, 'update'])->name('api.bank-accounts.update');
         Route::delete('api/bank-accounts/{id}', [BankAccountController::class, 'destroy'])->name('api.bank-accounts.destroy');
 
-        // Expense routes
-        Route::get('api/expenses/summary', [ExpenseController::class, 'summary'])->name('api.expenses.summary');
-        Route::get('api/expenses/analytics', [ExpenseController::class, 'analytics'])->name('api.expenses.analytics');
-        Route::get('api/expenses', [ExpenseController::class, 'index'])->name('api.expenses.index');
-        Route::post('api/expenses', [ExpenseController::class, 'store'])->name('api.expenses.store');
-        Route::get('api/expenses/{id}', [ExpenseController::class, 'show'])->name('api.expenses.show');
-        Route::put('api/expenses/{id}', [ExpenseController::class, 'update'])->name('api.expenses.update');
-        Route::delete('api/expenses/{id}', [ExpenseController::class, 'destroy'])->name('api.expenses.destroy');
-        Route::post('api/expenses/{id}/process', [ExpenseController::class, 'process'])->name('api.expenses.process');
-        Route::post('api/expenses/{id}/cancel', [ExpenseController::class, 'cancel'])->name('api.expenses.cancel');
+        // Expense planning + item-based approval workflow (replaces the old
+        // single-amount Expenses module - see legacy_expenses/App\Models\Expense
+        // for the retired predecessor, kept read-only for historical reference).
+        Route::get('api/expense-categories', [ExpenseCategoryController::class, 'index'])->name('api.expense-categories.index');
+        Route::post('api/expense-categories', [ExpenseCategoryController::class, 'store'])->name('api.expense-categories.store');
+        Route::get('api/expense-categories/{category}/plan', [ExpenseCategoryPlanController::class, 'show'])->name('api.expense-category-plans.show');
+        Route::get('api/expense-plans/chart', [ExpenseCategoryPlanController::class, 'chart'])->name('api.expense-plans.chart');
+
+        Route::get('api/expense-items', [ExpenseItemController::class, 'index'])->name('api.expense-items.index');
+        Route::post('api/expense-items', [ExpenseItemController::class, 'store'])->name('api.expense-items.store');
+        Route::get('api/expense-items/{item}/price-history', [ExpenseItemController::class, 'priceHistory'])->name('api.expense-items.price-history');
+
+        Route::get('api/expense-submissions', [ExpenseSubmissionController::class, 'index'])->name('api.expense-submissions.index');
+        Route::post('api/expense-submissions', [ExpenseSubmissionController::class, 'store'])->name('api.expense-submissions.store');
+        Route::get('api/expense-submissions/{submission}', [ExpenseSubmissionController::class, 'show'])->name('api.expense-submissions.show');
+        Route::put('api/expense-submissions/{submission}', [ExpenseSubmissionController::class, 'update'])->name('api.expense-submissions.update');
+        Route::get('api/expense-submissions-log', [ExpenseSubmissionController::class, 'schoolWideLog'])->name('api.expense-submissions.log');
+        Route::get('api/expense-submissions-analytics', [ExpenseSubmissionController::class, 'analytics'])->name('api.expense-submissions.analytics');
+
+        Route::middleware('is.main.accountant')->group(function () {
+            Route::get('api/expense-categories/pending', [ExpenseCategoryController::class, 'pendingList'])->name('api.expense-categories.pending');
+            Route::put('api/expense-categories/{category}', [ExpenseCategoryController::class, 'update'])->name('api.expense-categories.update');
+            Route::post('api/expense-categories/{category}/approve', [ExpenseCategoryController::class, 'approve'])->name('api.expense-categories.approve');
+            Route::post('api/expense-categories/{category}/deny', [ExpenseCategoryController::class, 'deny'])->name('api.expense-categories.deny');
+
+            Route::post('api/expense-categories/{category}/plan', [ExpenseCategoryPlanController::class, 'store'])->name('api.expense-category-plans.store');
+            Route::put('api/expense-category-plans/{plan}', [ExpenseCategoryPlanController::class, 'update'])->name('api.expense-category-plans.update');
+            Route::post('api/expense-categories/{category}/toggle-budget-visibility', [ExpenseCategoryPlanController::class, 'toggleVisibility'])->name('api.expense-category-plans.toggle-visibility');
+
+            Route::get('api/expense-submissions-queue', [ExpenseSubmissionController::class, 'pendingQueue'])->name('api.expense-submissions.queue');
+            Route::post('api/expense-submissions/{submission}/review', [ExpenseSubmissionController::class, 'review'])->name('api.expense-submissions.review');
+            Route::post('api/expense-submissions/{submission}/cancel', [ExpenseSubmissionController::class, 'cancel'])->name('api.expense-submissions.cancel');
+            Route::get('api/expense-submissions-report/pdf', [ExpenseSubmissionController::class, 'exportPdf'])->name('api.expense-submissions.report.pdf');
+            Route::get('api/expense-submissions-report/csv', [ExpenseSubmissionController::class, 'exportCsv'])->name('api.expense-submissions.report.csv');
+        });
 
         // Book Transactions (Deposits & Withdrawals) routes
         Route::get('api/book-transactions/{bookId}', [BookTransactionController::class, 'index'])->name('api.book-transactions.index');
