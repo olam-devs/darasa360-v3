@@ -463,5 +463,17 @@ New central `app_error_logs` table + `App\Models\Central\AppErrorLog::record(?sc
 
 **Verified on live**: a real thrown exception written via `AppErrorLog::record()` produced a correct row (school_id, context, message, meta all present) - test row deleted after confirming. Both migrations (central `app_error_logs` table, tenant FK-drop) applied cleanly on live and sandbox; live confirmed via `laravel.log` grep to have zero new errors after the fix deployed (the only log entries from this incident are the three original pre-fix crashes, all timestamped before the deploy).
 
+### Follow-up same day: SMS credit true-up + clearer, non-retry-encouraging failure messages
+
+Two direct follow-up requests from the user after the FK fix above.
+
+**1. True up the credit count.** LITTLE DOVES showed 100/100 SMS credits remaining despite 3 real messages having gone out during the incident (crashed on save, never logged, never deducted). Backfilled 3 real `SmsLog` rows on live using the actual `message_id`/message text/timestamp from each of the 3 pre-fix `laravel.log` entries (`sent_by` set to the correct tenant user id this time, 1), then called `School::deductSmsCredits(3)`. Confirmed: `assigned=100, used=3, remaining=97` - now accurately reflects reality.
+
+**2. Clearer failure messaging - explicitly told not to say "try again" while something is actually broken.** Every real send failure (gateway unreachable, or the gateway itself rejected the message) across all three SMS send paths (`sendSms`, `sendBulkSms`, `sendOverdueReminders`) now uses one consistent message via a new `sendFailureMessage()` helper: states plainly that the message could not be sent, explicitly says not to retry it, and names the escalation path (`devs@olamtec.co.tz`) if it keeps happening - replacing the previous "please try again" wording, which is exactly the framing that led to 3 real duplicate sends earlier the same day. Gateway-rejected responses (not just thrown exceptions) are now also captured to `AppErrorLog`, matching the exception paths. Frontend result banner now distinguishes a real technical failure (red "Error") from a clean business-logic skip like "already paid, no thank-you message" (amber "Nothing sent") - previously both looked identical.
+
+**Real, unrelated bug discovered while checking this, not fixed in this pass**: the Overdue Payments page's SMS-reminder result screen (`overdue.blade.php`) reads `result.success_count`/`result.skipped_count` from the response - fields `SmsController::sendOverdueReminders()` has never actually returned (it returns `sent`/`failed`). This mismatch predates today's changes entirely; the result display there has likely shown blank/undefined counts since the feature was built. Spawned as a separate background task rather than fixed inline, to keep this incident's fix properly scoped.
+
+**Deploy status**: committed and pushed to `main`; live deploy blocked mid-attempt by a `vda6000.is.cc` whole-host outage (SSH connection timed out, HTTPS also unreachable - the same recurring pattern documented elsewhere in this file, not caused by this change). Will deploy (code-only, no new migration) as soon as the host is reachable again.
+
 ## Credentials & server access
 See Claude memory (`project_darasa_finance.md`) for: SSH key setup, DB credentials (sandbox + live), the scoped DirectAdmin API login key used by the apps themselves, and login credentials for each portal. Not duplicated here.
