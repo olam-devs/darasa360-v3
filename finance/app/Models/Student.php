@@ -38,6 +38,7 @@ class Student extends BaseModel
     protected $casts = [
         'admission_date' => 'date',
         'advance_balance' => 'decimal:2',
+        'portal_password_set_at' => 'datetime',
     ];
 
     // Relationships
