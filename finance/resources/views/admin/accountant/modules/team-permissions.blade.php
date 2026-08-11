@@ -26,11 +26,13 @@
 @push('scripts')
     <script>
         axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
+        const accountantPermissionsIndexUrl = '{{ route('accountant.api.accountant-permissions.index') }}';
+        const accountantPermissionsUpdateUrlBase = '{{ url('/accountant/api/accountant-permissions') }}';
 
         async function loadTeamPermissions() {
             const box = document.getElementById('teamPermissionsTable');
             try {
-                const res = await axios.get('/api/accountant-permissions');
+                const res = await axios.get(accountantPermissionsIndexUrl);
                 const accountants = res.data.accountants || [];
                 if (!accountants.length) {
                     box.innerHTML = '<p class="text-slate-500">No other accountants at this school yet.</p>';
@@ -56,7 +58,7 @@
 
         async function saveTeamPermissions(accountantId) {
             try {
-                await axios.put(`/api/accountant-permissions/${accountantId}`, {
+                await axios.put(`${accountantPermissionsUpdateUrlBase}/${accountantId}`, {
                     can_edit_history: document.getElementById('edit_' + accountantId).checked,
                     can_view_logs: document.getElementById('logs_' + accountantId).checked,
                 });
