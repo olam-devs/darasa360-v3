@@ -572,7 +572,12 @@ class SmsController extends Controller
             'message' => 'required|string',
             'thank_you_message' => 'nullable|string', // Optional thank you message for fully paid students
             'phone_number' => 'required|in:phone_1,phone_2,both',
+            // When true, `message` goes to every selected student as-is,
+            // regardless of fee balance - no fee-reminder/thank-you fork,
+            // no skip. For general announcements, not payment reminders.
+            'general_message' => 'sometimes|boolean',
         ]);
+        $isGeneralMessage = (bool) ($validated['general_message'] ?? false);
 
         $students = Student::whereIn('id', $validated['student_ids'])
             ->with(['particulars', 'schoolClass'])
@@ -614,23 +619,33 @@ class SmsController extends Controller
         $totalSmsUsed = 0;
 
         foreach ($students as $student) {
-            // Calculate student's total balance across all academic years
-            $totalBalance = $student->particulars->sum(function($p) {
-                return ($p->pivot->sales ?? 0) - ($p->pivot->credit ?? 0);
-            });
+            if ($isGeneralMessage) {
+                // General mode: send the composed message to everyone
+                // selected, as-is - no balance check, no skip. A student
+                // with no particulars assigned has a balance of exactly
+                // TSh 0 (correctly, via replacePlaceholders() below), same
+                // as a genuinely paid-up student - neither should block a
+                // message that isn't about fees at all.
+                $messageToSend = $validated['message'];
+            } else {
+                // Calculate student's total balance across all academic years
+                $totalBalance = $student->particulars->sum(function($p) {
+                    return ($p->pivot->sales ?? 0) - ($p->pivot->credit ?? 0);
+                });
 
-            // Determine which message to use based on payment status
-            $isFullyPaid = $totalBalance <= 0;
+                // Determine which message to use based on payment status
+                $isFullyPaid = $totalBalance <= 0;
 
-            // If student is fully paid and no thank you message provided, skip
-            if ($isFullyPaid && empty($validated['thank_you_message'])) {
-                $skipped++;
-                $errors[] = "{$student->name}: Fully paid (balance TSh 0) and no thank-you message was provided, so nothing was sent";
-                continue;
+                // If student is fully paid and no thank you message provided, skip
+                if ($isFullyPaid && empty($validated['thank_you_message'])) {
+                    $skipped++;
+                    $errors[] = "{$student->name}: Fully paid (balance TSh 0) and no thank-you message was provided, so nothing was sent";
+                    continue;
+                }
+
+                // Use appropriate message: thank you for fully paid, reminder for others
+                $messageToSend = $isFullyPaid ? $validated['thank_you_message'] : $validated['message'];
             }
-
-            // Use appropriate message: thank you for fully paid, reminder for others
-            $messageToSend = $isFullyPaid ? $validated['thank_you_message'] : $validated['message'];
 
             // Determine which phone numbers to send to
             $phoneNumbers = [];

@@ -120,6 +120,21 @@
                     <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 class="mb-4 text-lg font-semibold text-slate-900">Compose message</h2>
 
+                        <!-- Message Type -->
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Message type</label>
+                            <div class="flex gap-3">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="message_mode" value="reminder" checked onchange="onMessageModeChange()" class="mr-2">
+                                    <span>Fee reminder (skips fully-paid parents unless you add a thank-you note)</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="message_mode" value="general" onchange="onMessageModeChange()" class="mr-2">
+                                    <span>General message (sends to everyone selected, regardless of balance)</span>
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Phone Number Selection -->
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 mb-2">Send to which phone?</label>
@@ -178,7 +193,7 @@
                         <!-- Message Input -->
                         <div class="mb-4">
                             <div class="flex justify-between items-center mb-2">
-                                <label class="block text-sm font-medium text-gray-700">Payment Reminder Message (for students with balance)</label>
+                                <label id="message-text-label" class="block text-sm font-medium text-gray-700">Payment Reminder Message (for students with balance)</label>
                                 <button type="button" onclick="openSaveTemplateModal()" class="text-sm font-medium text-slate-700 hover:text-slate-900">
                                     Save as template
                                 </button>
@@ -200,7 +215,7 @@
                         </div>
 
                         <!-- Thank You Message Input -->
-                        <div class="mb-4">
+                        <div class="mb-4" id="thank-you-section">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="block text-sm font-medium text-slate-700">Thank you message (fully paid students) — optional</label>
                                 <span class="text-xs text-gray-500">Leave empty to skip fully paid students</span>
@@ -380,6 +395,20 @@ let selectedStudents = [];
                 sw.classList.remove(...inactive);
                 en.classList.remove(...active);
                 en.classList.add(...inactive);
+            }
+        }
+
+        function onMessageModeChange() {
+            const mode = document.querySelector('input[name="message_mode"]:checked').value;
+            const label = document.getElementById('message-text-label');
+            const thankYouSection = document.getElementById('thank-you-section');
+
+            if (mode === 'general') {
+                label.textContent = 'Message (sent to everyone you selected, as-is)';
+                thankYouSection.classList.add('hidden');
+            } else {
+                label.textContent = 'Payment Reminder Message (for students with balance)';
+                thankYouSection.classList.remove('hidden');
             }
         }
 
@@ -731,6 +760,7 @@ let selectedStudents = [];
 
             const thankYouMessage = document.getElementById('thank-you-text').value.trim();
             const phoneNumber = document.querySelector('input[name="phone_number"]:checked').value;
+            const messageMode = document.querySelector('input[name="message_mode"]:checked').value;
 
             const btn = document.getElementById('send-btn');
             btn.disabled = true;
@@ -743,8 +773,14 @@ let selectedStudents = [];
                     phone_number: phoneNumber
                 };
 
-                // Add thank you message if provided
-                if (thankYouMessage) {
+                if (messageMode === 'general') {
+                    // General message: send this same text to everyone
+                    // selected, regardless of fee balance - no thank-you
+                    // fork, no skip.
+                    payload.general_message = true;
+                } else if (thankYouMessage) {
+                    // Fee-reminder mode: thank-you message stays optional,
+                    // still opt-in per the original design.
                     payload.thank_you_message = thankYouMessage;
                 }
 
