@@ -32,7 +32,7 @@ return new class extends Migration
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
 
-            $table->index(['expense_category_id', 'academic_year_id']);
+            $table->index(['expense_category_id', 'academic_year_id'], 'expense_category_plans_category_year_idx');
         });
     }
 
