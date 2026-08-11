@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Book;
+use App\Models\BookFeeCategory;
 use App\Models\PayrollDeductionType;
 use App\Models\PayrollEntry;
 use App\Models\PayrollEntryDeduction;
@@ -223,6 +224,7 @@ class PayrollController extends Controller
             'deductions.*.type'   => 'required_with:deductions|in:fixed,percentage,insurance,penalty,other',
             'deductions.*.amount' => 'required_with:deductions|numeric|min:0',
             'deductions.*.note'   => 'nullable|string',
+            'book_fee_category_id' => 'nullable|exists:book_fee_categories,id',
         ]);
 
         DB::beginTransaction();
@@ -259,6 +261,49 @@ class PayrollController extends Controller
                 'created_by'            => auth()->id(),
             ]);
 
+            // Optional transaction fee — the accountant explicitly picks one
+            // of the book's configured BookFeeCategory options (same
+            // mechanism Withdrawals and Expenses use); leaving it unset cuts
+            // no fee at all. Fee is based on net_salary, the amount actually
+            // leaving the book, matching how Withdrawals base it on the
+            // withdrawal amount.
+            $feeVoucher = null;
+            $feeAmount = null;
+            $feeCategoryId = null;
+
+            if (!empty($validated['book_fee_category_id'])) {
+                $feeCategory = BookFeeCategory::where('book_id', $validated['book_id'])
+                    ->where('is_active', true)
+                    ->find($validated['book_fee_category_id']);
+
+                if ($feeCategory) {
+                    $fee = $feeCategory->resolveFeeForAmount($netSalary);
+                    if ($fee > 0) {
+                        $feeVoucher = Voucher::create([
+                            'date'                  => $validated['payment_date'],
+                            'student_id'             => null,
+                            'particular_id'          => $feeCategory->particular_id,
+                            'book_id'                => $validated['book_id'],
+                            'voucher_type'           => 'Payment',
+                            'debit'                  => 0,
+                            'credit'                 => $fee,
+                            'payment_by_receipt_to'  => 'Bank Transaction Fee',
+                            'notes'                  => sprintf(
+                                'Transaction fee (%s) for payroll — %s (%s), net TSh %s. Linked voucher #%s.',
+                                $feeCategory->name,
+                                $staff->name,
+                                $period,
+                                number_format($netSalary, 2),
+                                $voucher->voucher_number
+                            ),
+                            'created_by' => auth()->id(),
+                        ]);
+                        $feeAmount = $fee;
+                        $feeCategoryId = $feeCategory->id;
+                    }
+                }
+            }
+
             // Create payroll entry
             $payroll = PayrollEntry::create([
                 'staff_id'         => $validated['staff_id'],
@@ -276,6 +321,9 @@ class PayrollController extends Controller
                 'reference_number' => $validated['reference_number'] ?? null,
                 'notes'            => $validated['notes'] ?? null,
                 'created_by'       => auth()->id(),
+                'bank_fee_voucher_id'  => $feeVoucher?->id,
+                'bank_fee_amount'      => $feeAmount,
+                'bank_fee_category_id' => $feeCategoryId,
             ]);
 
             // Save individual deductions
@@ -293,9 +341,10 @@ class PayrollController extends Controller
             DB::commit();
 
             return response()->json([
-                'payroll'   => $payroll->load(['staff', 'deductions', 'book']),
+                'payroll'   => $payroll->load(['staff', 'deductions', 'book', 'bankFeeCategory']),
                 'net_salary' => $netSalary,
-                'message'   => "Payroll processed. Net salary: TSH " . number_format($netSalary, 0),
+                'message'   => "Payroll processed. Net salary: TSH " . number_format($netSalary, 0)
+                    . ($feeAmount ? " (+ TSH " . number_format($feeAmount, 0) . " transaction fee)" : ""),
             ], 201);
 
         } catch (\Exception $e) {
@@ -306,7 +355,7 @@ class PayrollController extends Controller
 
     public function showPayroll($id)
     {
-        $payroll = PayrollEntry::with(['staff', 'book', 'deductions.deductionType', 'voucher'])->findOrFail($id);
+        $payroll = PayrollEntry::with(['staff', 'book', 'deductions.deductionType', 'voucher', 'bankFeeCategory'])->findOrFail($id);
         return response()->json($payroll);
     }
 
@@ -352,6 +401,19 @@ class PayrollController extends Controller
                 ]);
             }
 
+            // Keep the linked transaction-fee voucher's amount in sync -
+            // it was originally resolved off net_salary, which just changed.
+            if ($payroll->bank_fee_voucher_id && $payroll->bank_fee_category_id) {
+                $feeCategory = BookFeeCategory::find($payroll->bank_fee_category_id);
+                $newFee = $feeCategory ? $feeCategory->resolveFeeForAmount($netSalary) : 0.0;
+
+                Voucher::where('id', $payroll->bank_fee_voucher_id)->update([
+                    'date'   => $validated['payment_date'],
+                    'credit' => $newFee,
+                ]);
+                $payroll->update(['bank_fee_amount' => $newFee]);
+            }
+
             DB::commit();
 
             return response()->json($payroll->fresh(['staff', 'book', 'deductions', 'voucher']));
@@ -368,6 +430,9 @@ class PayrollController extends Controller
         DB::beginTransaction();
         try {
             $payroll->deductions()->delete();
+            if ($payroll->bank_fee_voucher_id) {
+                Voucher::find($payroll->bank_fee_voucher_id)?->delete();
+            }
             if ($payroll->voucher_id) {
                 Voucher::find($payroll->voucher_id)?->delete();
             }

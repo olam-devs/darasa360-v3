@@ -223,7 +223,7 @@
                 </div>
                 <div>
                     <label class="block font-bold mb-1 text-sm">Book <span class="text-red-500">*</span></label>
-                    <select id="payroll_book_id" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                    <select id="payroll_book_id" required onchange="loadPayrollFeeCategories()" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
                         <option value="">Select Book…</option>
                     </select>
                 </div>
@@ -239,6 +239,13 @@
                 <div>
                     <label class="block font-bold mb-1 text-sm">Reference Number</label>
                     <input type="text" id="payroll_reference" placeholder="Transaction ref" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Transaction Fee (optional)</label>
+                    <select id="payroll_fee_category" onchange="recalcNet()" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                        <option value="">-- No fee --</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Select a book's transaction fee category to auto-cut it alongside this payroll payment.</p>
                 </div>
             </div>
 
@@ -578,6 +585,9 @@ async function showPayrollDetail(id) {
             msg += `\nTotal Deductions: ${fmt(e.total_deductions)}`;
         }
         msg += `\nNet Pay: ${fmt(e.net_salary)}`;
+        if (e.bank_fee_amount) {
+            msg += `\n\nTransaction fee (${e.bank_fee_category?.name || 'category'}): ${fmt(e.bank_fee_amount)}`;
+        }
         alert(msg);
     } catch (err) {
         alert('Could not load details.');
@@ -617,6 +627,7 @@ async function showProcessPayrollModal() {
     allBooks.forEach(b => {
         bookSel.innerHTML += `<option value="${b.id}">${b.name}</option>`;
     });
+    document.getElementById('payroll_fee_category').innerHTML = '<option value="">-- No fee --</option>';
 
     // Populate quick-deduction template
     const qSel = document.getElementById('quick-deduction-type');
@@ -642,6 +653,7 @@ async function showProcessPayrollModal() {
 function closeProcessPayrollModal() {
     document.getElementById('processPayrollModal').classList.add('hidden');
     document.getElementById('processPayrollForm').reset();
+    document.getElementById('payroll_fee_category').innerHTML = '<option value="">-- No fee --</option>';
     document.getElementById('deductionRows').innerHTML = '';
     deductionRowCount = 0;
     recalcNet();
@@ -662,6 +674,30 @@ function onStaffSelected() {
     if (sal) {
         document.getElementById('payroll_gross').value = parseFloat(sal);
         recalcNet();
+    }
+}
+
+/**
+ * Same "Transaction Fee Category" pattern already used by Withdrawals and
+ * Expenses - purely optional, populated from that book's configured
+ * BookFeeCategory options. Leaving it on "-- No fee --" cuts nothing.
+ */
+async function loadPayrollFeeCategories() {
+    const bookId = document.getElementById('payroll_book_id').value;
+    const feeSel = document.getElementById('payroll_fee_category');
+    feeSel.innerHTML = '<option value="">-- No fee --</option>';
+    if (!bookId) return;
+    try {
+        const res = await axios.get(`${API_BASE}/books/${bookId}/fee-categories`);
+        const list = (Array.isArray(res.data) ? res.data : []).filter(c => c.is_active);
+        list.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = c.code ? `${c.name} (${c.code})` : c.name;
+            feeSel.appendChild(opt);
+        });
+    } catch (e) {
+        console.error('Failed to load fee categories', e);
     }
 }
 
@@ -774,6 +810,7 @@ async function submitProcessPayrollForm(event) {
         payment_method: document.getElementById('payroll_payment_method').value,
         reference_number: document.getElementById('payroll_reference').value || null,
         notes: document.getElementById('payroll_notes').value || null,
+        book_fee_category_id: document.getElementById('payroll_fee_category').value || null,
         deductions,
     };
 

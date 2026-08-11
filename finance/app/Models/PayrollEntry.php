@@ -27,6 +27,9 @@ class PayrollEntry extends BaseModel
         'notes',
         'created_by',
         'approved_by',
+        'bank_fee_voucher_id',
+        'bank_fee_amount',
+        'bank_fee_category_id',
     ];
 
     protected $casts = [
@@ -34,6 +37,7 @@ class PayrollEntry extends BaseModel
         'total_deductions' => 'decimal:2',
         'net_salary'       => 'decimal:2',
         'payment_date'     => 'date',
+        'bank_fee_amount'  => 'decimal:2',
     ];
 
     // Relationships
@@ -50,6 +54,16 @@ class PayrollEntry extends BaseModel
     public function voucher()
     {
         return $this->belongsTo(Voucher::class);
+    }
+
+    public function bankFeeVoucher()
+    {
+        return $this->belongsTo(Voucher::class, 'bank_fee_voucher_id');
+    }
+
+    public function bankFeeCategory()
+    {
+        return $this->belongsTo(BookFeeCategory::class, 'bank_fee_category_id');
     }
 
     public function deductions()
