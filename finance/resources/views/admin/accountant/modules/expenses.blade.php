@@ -20,6 +20,10 @@
             class="expense-tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-rose-600 text-white border-rose-600">
             Compose
         </button>
+        <button onclick="switchExpenseTab('mysubmissions')" id="etab-mysubmissions"
+            class="expense-tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-white text-gray-600 border-gray-300 hover:bg-rose-50">
+            My Submissions
+        </button>
         @if($isMainAccountant)
         <button onclick="switchExpenseTab('review')" id="etab-review"
             class="expense-tab-btn px-5 py-2 text-sm font-semibold rounded-t border border-b-0 bg-white text-gray-600 border-gray-300 hover:bg-rose-50">
@@ -85,9 +89,9 @@
                         <tr>
                             <th class="p-2 text-left">Item</th>
                             <th class="p-2 text-left w-24">Unit</th>
-                            <th class="p-2 text-right w-24">Qty</th>
-                            <th class="p-2 text-right w-32">Unit Price</th>
-                            <th class="p-2 text-right w-32">Subtotal</th>
+                            <th class="p-2 text-right w-32">Price per unit</th>
+                            <th class="p-2 text-right w-24">Quantity</th>
+                            <th class="p-2 text-right w-32">Total Price</th>
                             <th class="p-2 w-10"></th>
                         </tr>
                     </thead>
@@ -110,6 +114,14 @@
         </div>
     </div>
 
+    <!-- My Submissions Tab -->
+    <div id="epanel-mysubmissions" class="hidden">
+        <div class="bg-white rounded-lg shadow p-6 max-w-3xl">
+            <h3 class="font-semibold mb-4">My Submissions</h3>
+            <div id="mySubsBox"><p class="text-gray-400 text-center py-6">Loading…</p></div>
+        </div>
+    </div>
+
     <!-- Review Queue Tab -->
     @if($isMainAccountant)
     <div id="epanel-review" class="hidden">
@@ -123,7 +135,10 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-1">
                 <div class="bg-white rounded-lg shadow p-4">
-                    <h3 class="font-semibold mb-3">Categories</h3>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold">Categories</h3>
+                        <button type="button" onclick="openAddCategoryModal()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1 rounded">+ Add</button>
+                    </div>
                     <div id="categoryListBox"><p class="text-gray-400 text-sm">Loading…</p></div>
                 </div>
             </div>
@@ -148,11 +163,13 @@
                         </div>
                     </div>
                     <div class="flex gap-6 mb-4">
+                        @if($isMainAccountant)
                         <div><p class="text-xs text-gray-500">Expected</p><p class="text-xl font-bold text-blue-600" id="chartExpected">TSh 0</p></div>
+                        @endif
                         <div><p class="text-xs text-gray-500">Actual</p><p class="text-xl font-bold text-rose-600" id="chartActual">TSh 0</p></div>
                     </div>
                     <div id="chartCanvasWrap"><canvas id="expenseChart" height="220"></canvas></div>
-                    <p id="chartHiddenMsg" class="hidden text-sm text-gray-500 italic mt-4">The main accountant hasn't made this category's budget visible to other accountants.</p>
+                    <p id="chartHiddenMsg" class="hidden text-sm text-gray-500 italic mt-4">Budget data is only visible to the main accountant.</p>
                 </div>
 
                 @if($isMainAccountant)
@@ -164,10 +181,7 @@
                         <div><label class="block text-xs text-gray-500 mb-1">From</label><input type="date" id="planFrom" class="w-full border rounded px-2 py-1.5 text-sm"></div>
                         <div><label class="block text-xs text-gray-500 mb-1">To</label><input type="date" id="planTo" class="w-full border rounded px-2 py-1.5 text-sm"></div>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="savePlan()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm">Save plan</button>
-                        <button onclick="toggleBudgetVisibility()" class="bg-gray-200 hover:bg-gray-300 px-4 py-1.5 rounded text-sm">Toggle visibility to others</button>
-                    </div>
+                    <button onclick="savePlan()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm">Save plan</button>
                 </div>
                 @endif
             </div>
@@ -212,17 +226,50 @@
 
     <datalist id="itemsDatalist"></datalist>
 </div>
+
+<!-- Category Modal (add / rename) -->
+<div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center hidden" onclick="if(event.target===this)closeCategoryModal()">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4">
+        <h3 class="font-semibold text-gray-800 mb-4" id="categoryModalTitle">New Category</h3>
+        <input type="hidden" id="categoryModalId">
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
+            <input type="text" id="categoryModalName" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. Transport &amp; Fuel"
+                onkeydown="if(event.key==='Enter')submitCategoryModal()">
+        </div>
+        <div class="flex gap-2 justify-end">
+            <button type="button" onclick="closeCategoryModal()" class="px-4 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200">Cancel</button>
+            <button type="button" onclick="submitCategoryModal()" class="px-4 py-2 text-sm rounded bg-rose-600 text-white hover:bg-rose-700">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Catalog Item Modal -->
+<div id="catalogItemModal" class="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center hidden" onclick="if(event.target===this)closeCatalogItemModal()">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-96 max-w-full mx-4">
+        <h3 class="font-semibold text-gray-800 mb-4">Add Catalog Item</h3>
+        <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+            <input type="text" id="catalogItemName" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. Exercise Books (80 pages)">
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Unit Type</label>
+            <input type="text" id="catalogItemUnit" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. pieces, litres, kg"
+                onkeydown="if(event.key==='Enter')submitCatalogItemModal()">
+        </div>
+        <div class="flex gap-2 justify-end">
+            <button type="button" onclick="closeCatalogItemModal()" class="px-4 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200">Cancel</button>
+            <button type="button" onclick="submitCatalogItemModal()" class="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">Add Item</button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
 
-// Expense routes live in the same non-/accountant-prefixed route group as
-// ledgers/vouchers/etc (Route::middleware(['finance.portal'])), not the
-// accountant.-prefixed group Team Permissions uses - matches how every
-// other page in this group (e.g. ledgers.blade.php's /api/ledgers/... links)
-// already calls its own API.
 const EBASE = '{{ url('/api') }}';
 const IS_MAIN_ACCOUNTANT = @json($isMainAccountant);
 
@@ -231,7 +278,9 @@ function fmt(n) {
 }
 
 // ─── Tabs ────────────────────────────────────────────────────────────────
-const EXPENSE_TABS = IS_MAIN_ACCOUNTANT ? ['compose', 'review', 'budget', 'catalog', 'reports'] : ['compose', 'budget', 'catalog', 'reports'];
+const EXPENSE_TABS = IS_MAIN_ACCOUNTANT
+    ? ['compose', 'mysubmissions', 'review', 'budget', 'catalog', 'reports']
+    : ['compose', 'mysubmissions', 'budget', 'catalog', 'reports'];
 
 function switchExpenseTab(name) {
     EXPENSE_TABS.forEach(t => {
@@ -245,6 +294,7 @@ function switchExpenseTab(name) {
     active.classList.add('bg-rose-600', 'text-white', 'border-rose-600');
     active.classList.remove('bg-white', 'text-gray-600', 'border-gray-300');
 
+    if (name === 'mysubmissions') loadMySubmissions();
     if (name === 'review') loadReviewQueue();
     if (name === 'budget') { loadCategoryListForBudget(); loadChart(); }
     if (name === 'catalog') loadCatalog();
@@ -252,8 +302,8 @@ function switchExpenseTab(name) {
 }
 
 // ─── Shared caches ───────────────────────────────────────────────────────
-let itemsCache = []; // {id, name, unit_type}
-let categoriesCache = []; // approved only, for selects
+let itemsCache = [];
+let categoriesCache = [];
 
 async function loadItemsCache() {
     const res = await axios.get(`${EBASE}/expense-items`);
@@ -297,12 +347,6 @@ function booksOptionsHtml(selectedId) {
     return booksCache.map(b => `<option value="${b.id}" ${selectedId && String(b.id) === String(selectedId) ? 'selected' : ''}>${b.name}</option>`).join('');
 }
 
-/**
- * Populates a "Transaction Fee" select with the chosen book's configured fee
- * categories - same GET /api/books/{book}/fee-categories the Books
- * management withdraw modal already uses, so the main accountant sees the
- * same fee options here that they'd see when withdrawing directly.
- */
 async function loadFeeCategoriesForSelect(bookSelectEl, feeSelectEl, selectedFeeCategoryId) {
     if (!bookSelectEl || !feeSelectEl) return;
     const bookId = bookSelectEl.value;
@@ -337,8 +381,8 @@ function addComposeLineRow() {
             <input type="hidden" class="line-item-existing-id">
         </td>
         <td class="p-2"><input type="text" class="w-full border rounded px-2 py-1 line-item-unit" placeholder="kg, pcs..."></td>
-        <td class="p-2"><input type="number" step="0.001" min="0.001" value="1" class="w-full border rounded px-2 py-1 text-right line-item-qty" oninput="recomputeComposeLine(${rowId})"></td>
         <td class="p-2"><input type="number" step="0.01" min="0" value="0" class="w-full border rounded px-2 py-1 text-right line-item-price" oninput="recomputeComposeLine(${rowId})"></td>
+        <td class="p-2"><input type="number" step="0.001" min="0.001" value="1" class="w-full border rounded px-2 py-1 text-right line-item-qty" oninput="recomputeComposeLine(${rowId})"></td>
         <td class="p-2 text-right line-item-subtotal">TSh 0</td>
         <td class="p-2 text-center"><button type="button" onclick="removeComposeLineRow(${rowId})" class="text-red-500 hover:text-red-700">&times;</button></td>
     `;
@@ -356,9 +400,14 @@ function onLineItemNameChange(rowId) {
     const match = itemsCache.find(i => i.name.toLowerCase() === name);
     const idField = tr.querySelector('.line-item-existing-id');
     const unitField = tr.querySelector('.line-item-unit');
+    const priceField = tr.querySelector('.line-item-price');
     if (match) {
         idField.value = match.id;
         unitField.value = match.unit_type;
+        if (IS_MAIN_ACCOUNTANT && match.last_price != null) {
+            priceField.value = match.last_price;
+            recomputeComposeLine(rowId);
+        }
     } else {
         idField.value = '';
     }
@@ -382,19 +431,8 @@ function recomputeComposeGrandTotal() {
     document.getElementById('composeGrandTotal').textContent = 'TSh ' + fmt(total);
 }
 
-async function proposeNewCategory() {
-    const name = prompt('New category name:');
-    if (!name || !name.trim()) return;
-    try {
-        const res = await axios.post(`${EBASE}/expense-categories`, { name: name.trim() });
-        showDarasaToast({ type: 'success', message: res.data.category.status === 'approved' ? 'Category added.' : 'Category proposed - pending main accountant approval.' });
-        await loadCategoriesForSelects();
-        if (res.data.category.status === 'approved') {
-            document.getElementById('composeCategory').value = res.data.category.id;
-        }
-    } catch (e) {
-        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to propose category.' });
-    }
+function proposeNewCategory() {
+    openAddCategoryModal();
 }
 
 async function submitExpense() {
@@ -455,6 +493,44 @@ function resetComposeForm() {
     addComposeLineRow();
 }
 
+// ─── My Submissions ──────────────────────────────────────────────────────
+async function loadMySubmissions() {
+    const box = document.getElementById('mySubsBox');
+    try {
+        const res = await axios.get(`${EBASE}/expense-submissions?mine=1&per_page=50`);
+        const submissions = res.data.data || [];
+        if (!submissions.length) {
+            box.innerHTML = '<p class="text-gray-400 text-center py-6">No submissions yet.</p>';
+            return;
+        }
+        box.innerHTML = submissions.map(s => {
+            const statusBadge = s.status === 'approved'
+                ? '<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Approved</span>'
+                : s.status === 'denied'
+                    ? '<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">Denied</span>'
+                    : '<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pending</span>';
+            return `
+                <div class="border-t py-3">
+                    <div class="flex justify-between flex-wrap gap-1 items-start">
+                        <div>
+                            <p class="font-medium">${s.submission_number} — ${s.category?.name || ''}</p>
+                            <p class="text-xs text-gray-500">${s.transaction_date}${s.title ? ' · ' + s.title : ''}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <p class="font-bold text-gray-900">TSh ${fmt(s.total_amount)}</p>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    ${s.decision_note ? `<p class="text-sm mt-1 text-gray-600 italic">"${s.decision_note}"</p>` : ''}
+                    ${s.decided_at ? `<p class="text-xs text-gray-400 mt-0.5">Decided ${s.decided_at}</p>` : ''}
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        box.innerHTML = '<p class="text-red-600">Could not load submissions.</p>';
+    }
+}
+
 // ─── Review Queue ────────────────────────────────────────────────────────
 async function loadReviewQueue() {
     const box = document.getElementById('reviewQueueBox');
@@ -482,8 +558,6 @@ async function loadReviewQueue() {
             ? submissions.map(sub => renderQueueCard(sub, priceHistory)).join('')
             : '<p class="text-gray-400 text-center py-6">Nothing pending review.</p>';
 
-        // Pre-load fee category options for any card whose submitter already
-        // picked a book, so the select isn't just blank until touched.
         box.querySelectorAll('.review-book').forEach(sel => {
             if (sel.value) {
                 loadFeeCategoriesForSelect(sel, sel.closest('[data-submission-id]').querySelector('.review-fee-category'));
@@ -505,6 +579,15 @@ async function decideCategory(id, action) {
     }
 }
 
+function recomputeReviewLine(input) {
+    const tr = input.closest('tr[data-line-id]');
+    if (!tr) return;
+    const price = parseFloat(tr.querySelector('.review-price').value) || 0;
+    const qty = parseFloat(tr.querySelector('.review-qty').value) || 0;
+    const totalEl = tr.querySelector('.review-line-total');
+    if (totalEl) totalEl.textContent = 'TSh ' + fmt(price * qty);
+}
+
 function renderQueueCard(sub, priceHistoryMap) {
     const total = (sub.line_items || []).reduce((s, l) => s + parseFloat(l.line_total), 0);
     const lineRows = (sub.line_items || []).map(li => {
@@ -512,12 +595,14 @@ function renderQueueCard(sub, priceHistoryMap) {
         const histHtml = hist.length
             ? '<div class="text-xs text-gray-400 mt-1">Last: ' + hist.slice(0, 3).map(h => `${h.date} TSh ${fmt(h.unit_price)}${h.category ? ' (' + h.category + ')' : ''}`).join(' · ') + '</div>'
             : '<div class="text-xs text-gray-300 mt-1">No prior price history.</div>';
+        const lineTotal = (parseFloat(li.unit_price) * parseFloat(li.quantity)).toFixed(2);
         return `
             <tr data-line-id="${li.id}">
                 <td class="p-2 align-top">${li.item_name_snapshot}${histHtml}</td>
                 <td class="p-2 align-top"><input type="text" class="w-20 border rounded px-1 py-0.5 text-xs review-unit" value="${li.unit_type_snapshot}"></td>
-                <td class="p-2 align-top"><input type="number" step="0.001" class="w-20 border rounded px-1 py-0.5 text-xs text-right review-qty" value="${li.quantity}"></td>
-                <td class="p-2 align-top"><input type="number" step="0.01" class="w-24 border rounded px-1 py-0.5 text-xs text-right review-price" value="${li.unit_price}"></td>
+                <td class="p-2 align-top"><input type="number" step="0.01" class="w-24 border rounded px-1 py-0.5 text-xs text-right review-price" value="${li.unit_price}" oninput="recomputeReviewLine(this)"></td>
+                <td class="p-2 align-top"><input type="number" step="0.001" class="w-20 border rounded px-1 py-0.5 text-xs text-right review-qty" value="${li.quantity}" oninput="recomputeReviewLine(this)"></td>
+                <td class="p-2 align-top text-right review-line-total">TSh ${fmt(lineTotal)}</td>
                 <td class="p-2 align-top text-center">
                     <select class="review-status text-xs border rounded px-1 py-0.5">
                         <option value="approved" selected>Approve</option>
@@ -552,7 +637,14 @@ function renderQueueCard(sub, priceHistoryMap) {
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm mb-3">
-                <thead class="bg-gray-50"><tr><th class="p-2 text-left">Item</th><th class="p-2 text-left">Unit</th><th class="p-2 text-right">Qty</th><th class="p-2 text-right">Price</th><th class="p-2 text-center">Decision</th></tr></thead>
+                <thead class="bg-gray-50"><tr>
+                    <th class="p-2 text-left">Item</th>
+                    <th class="p-2 text-left">Unit</th>
+                    <th class="p-2 text-right">Price per unit</th>
+                    <th class="p-2 text-right">Quantity</th>
+                    <th class="p-2 text-right">Total</th>
+                    <th class="p-2 text-center">Decision</th>
+                </tr></thead>
                 <tbody>${lineRows}</tbody>
             </table>
         </div>
@@ -601,6 +693,58 @@ async function submitReview(submissionId, overallDecision) {
     }
 }
 
+// ─── Category Modal ──────────────────────────────────────────────────────
+let categoryModalMode = 'add';
+
+function openAddCategoryModal() {
+    categoryModalMode = 'add';
+    document.getElementById('categoryModalTitle').textContent = 'New Category';
+    document.getElementById('categoryModalId').value = '';
+    document.getElementById('categoryModalName').value = '';
+    document.getElementById('categoryModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('categoryModalName').focus(), 50);
+}
+
+function openRenameCategoryModal(id, currentName) {
+    categoryModalMode = 'rename';
+    document.getElementById('categoryModalTitle').textContent = 'Rename Category';
+    document.getElementById('categoryModalId').value = id;
+    document.getElementById('categoryModalName').value = currentName;
+    document.getElementById('categoryModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('categoryModalName').focus(), 50);
+}
+
+function closeCategoryModal() {
+    document.getElementById('categoryModal').classList.add('hidden');
+}
+
+async function submitCategoryModal() {
+    const name = document.getElementById('categoryModalName').value.trim();
+    if (!name) return;
+    const id = document.getElementById('categoryModalId').value;
+
+    try {
+        if (categoryModalMode === 'add') {
+            const res = await axios.post(`${EBASE}/expense-categories`, { name });
+            showDarasaToast({ type: 'success', message: res.data.category.status === 'approved' ? 'Category added.' : 'Category proposed — pending approval.' });
+            await loadCategoriesForSelects();
+            loadCategoryListForBudget();
+            if (res.data.category.status === 'approved') {
+                const sel = document.getElementById('composeCategory');
+                if (sel) sel.value = res.data.category.id;
+            }
+        } else {
+            await axios.put(`${EBASE}/expense-categories/${id}`, { name });
+            showDarasaToast({ type: 'success', message: 'Category renamed.' });
+            await loadCategoriesForSelects();
+            loadCategoryListForBudget();
+        }
+        closeCategoryModal();
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed.' });
+    }
+}
+
 // ─── Categories & Budget ─────────────────────────────────────────────────
 let selectedBudgetCategoryId = null;
 
@@ -609,13 +753,26 @@ async function loadCategoryListForBudget() {
     try {
         const res = await axios.get(`${EBASE}/expense-categories`);
         const categories = res.data.categories || [];
-        box.innerHTML = categories.map(c => `
-            <button type="button" onclick="selectBudgetCategory(${c.id}, '${c.name.replace(/'/g, "\\'")}')"
-                class="w-full text-left px-3 py-2 rounded text-sm hover:bg-rose-50 flex justify-between items-center ${c.status !== 'approved' ? 'opacity-50' : ''}">
-                <span>${c.name}</span>
-                ${c.status !== 'approved' ? `<span class="text-xs text-amber-600">${c.status}</span>` : ''}
-            </button>
-        `).join('') || '<p class="text-gray-400 text-sm">No categories yet.</p>';
+        if (!categories.length) {
+            box.innerHTML = '<p class="text-gray-400 text-sm">No categories yet.</p>';
+            return;
+        }
+        box.innerHTML = categories.map(c => {
+            const nameEsc = c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const renameBtn = IS_MAIN_ACCOUNTANT
+                ? `<button type="button" onclick="openRenameCategoryModal(${c.id}, '${nameEsc}')" class="text-gray-400 hover:text-gray-700 px-1 py-1 text-base leading-none flex-shrink-0" title="Rename">✎</button>`
+                : '';
+            return `
+                <div class="flex items-center gap-1 ${c.status !== 'approved' ? 'opacity-60' : ''}">
+                    <button type="button" onclick="selectBudgetCategory(${c.id}, '${nameEsc}')"
+                        class="flex-1 text-left px-3 py-2 rounded text-sm hover:bg-rose-50 flex justify-between items-center min-w-0">
+                        <span class="truncate">${c.name}</span>
+                        ${c.status !== 'approved' ? `<span class="text-xs text-amber-600 flex-shrink-0 ml-1">${c.status}</span>` : ''}
+                    </button>
+                    ${renameBtn}
+                </div>
+            `;
+        }).join('');
     } catch (e) {
         box.innerHTML = '<p class="text-red-600 text-sm">Could not load categories.</p>';
     }
@@ -643,20 +800,35 @@ async function loadChart() {
         const res = await axios.get(`${EBASE}/expense-plans/chart?${params.toString()}`);
         document.getElementById('chartHiddenMsg').classList.add('hidden');
         document.getElementById('chartCanvasWrap').classList.remove('hidden');
-        document.getElementById('chartExpected').textContent = 'TSh ' + fmt(res.data.expected_amount);
-        document.getElementById('chartActual').textContent = 'TSh ' + fmt(res.data.actual_amount);
-        renderExpenseChart(res.data.timeline || []);
 
-        if (categoryId) {
-            document.getElementById('planAmount').value = '';
-            document.getElementById('planFrom').value = '';
-            document.getElementById('planTo').value = '';
+        if (IS_MAIN_ACCOUNTANT) {
+            document.getElementById('chartExpected').textContent = 'TSh ' + fmt(res.data.expected_amount);
+        }
+        document.getElementById('chartActual').textContent = 'TSh ' + fmt(res.data.actual_amount);
+
+        renderExpenseChart(res.data.timeline || [], res.data.planned_per_bucket || 0);
+
+        // Auto-fill plan form from current plan when a category is selected.
+        if (categoryId && IS_MAIN_ACCOUNTANT) {
+            const plan = res.data.current_plan;
+            if (plan) {
+                document.getElementById('planAmount').value = plan.expected_amount;
+                document.getElementById('planFrom').value = plan.from_date;
+                document.getElementById('planTo').value = plan.to_date;
+                if (plan.academic_year_id) {
+                    document.getElementById('planAcademicYear').value = plan.academic_year_id;
+                }
+            } else {
+                document.getElementById('planAmount').value = '';
+                document.getElementById('planFrom').value = '';
+                document.getElementById('planTo').value = '';
+            }
         }
     } catch (e) {
         if (e.response?.status === 403) {
             document.getElementById('chartHiddenMsg').classList.remove('hidden');
             document.getElementById('chartCanvasWrap').classList.add('hidden');
-            document.getElementById('chartExpected').textContent = 'TSh 0';
+            if (IS_MAIN_ACCOUNTANT) document.getElementById('chartExpected').textContent = 'TSh 0';
             document.getElementById('chartActual').textContent = 'TSh 0';
         } else {
             showDarasaToast({ type: 'error', message: 'Could not load chart data.' });
@@ -667,13 +839,13 @@ async function loadChart() {
 let expenseChartInstance = null;
 let chartsScriptLoading = false;
 
-function renderExpenseChart(timeline) {
+function renderExpenseChart(timeline, plannedPerBucket) {
     if (typeof Chart === 'undefined') {
         if (!chartsScriptLoading) {
             chartsScriptLoading = true;
             const script = document.createElement('script');
             script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-            script.onload = () => renderExpenseChart(timeline);
+            script.onload = () => renderExpenseChart(timeline, plannedPerBucket);
             document.head.appendChild(script);
         }
         return;
@@ -681,19 +853,39 @@ function renderExpenseChart(timeline) {
 
     const ctx = document.getElementById('expenseChart').getContext('2d');
     if (expenseChartInstance) expenseChartInstance.destroy();
+
+    const datasets = [{
+        label: 'Actual spend',
+        data: timeline.map(t => t.amount),
+        backgroundColor: '#e11d48',
+        borderRadius: 4,
+        order: 2,
+    }];
+
+    if (IS_MAIN_ACCOUNTANT && plannedPerBucket > 0) {
+        datasets.push({
+            label: 'Planned (per period)',
+            data: timeline.map(() => plannedPerBucket),
+            type: 'line',
+            borderColor: '#2563eb',
+            backgroundColor: 'transparent',
+            borderDash: [6, 4],
+            borderWidth: 2,
+            pointRadius: 3,
+            tension: 0,
+            order: 1,
+        });
+    }
+
     expenseChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: timeline.map(t => t.label),
-            datasets: [{
-                label: 'Actual spend',
-                data: timeline.map(t => t.amount),
-                backgroundColor: '#e11d48',
-            }],
+            datasets,
         },
         options: {
             responsive: true,
-            plugins: { legend: { display: false } },
+            plugins: { legend: { display: datasets.length > 1 } },
             scales: { y: { beginAtZero: true } },
         },
     });
@@ -720,17 +912,33 @@ async function savePlan() {
     }
 }
 
-async function toggleBudgetVisibility() {
-    const categoryId = document.getElementById('chartCategory').value;
-    if (!categoryId) {
-        showDarasaToast({ type: 'error', message: 'Select a specific category first.' });
+// ─── Add Catalog Item Modal ──────────────────────────────────────────────
+function showAddCatalogItem() {
+    document.getElementById('catalogItemName').value = '';
+    document.getElementById('catalogItemUnit').value = '';
+    document.getElementById('catalogItemModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('catalogItemName').focus(), 50);
+}
+
+function closeCatalogItemModal() {
+    document.getElementById('catalogItemModal').classList.add('hidden');
+}
+
+async function submitCatalogItemModal() {
+    const name = document.getElementById('catalogItemName').value.trim();
+    const unitType = document.getElementById('catalogItemUnit').value.trim();
+    if (!name || !unitType) {
+        showDarasaToast({ type: 'error', message: 'Both name and unit type are required.' });
         return;
     }
     try {
-        await axios.post(`${EBASE}/expense-categories/${categoryId}/toggle-budget-visibility`, {});
-        showDarasaToast({ type: 'success', message: 'Visibility updated.' });
+        await axios.post(`${EBASE}/expense-items`, { name, unit_type: unitType });
+        showDarasaToast({ type: 'success', message: 'Item added.' });
+        closeCatalogItemModal();
+        loadCatalog();
+        loadItemsCache();
     } catch (e) {
-        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to update visibility.' });
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to add item.' });
     }
 }
 
@@ -748,21 +956,6 @@ async function loadCatalog() {
             : '<p class="text-gray-400 text-sm text-center py-4">No items found.</p>';
     } catch (e) {
         box.innerHTML = '<p class="text-red-600 text-sm">Could not load items.</p>';
-    }
-}
-
-async function showAddCatalogItem() {
-    const name = prompt('Item name:');
-    if (!name || !name.trim()) return;
-    const unitType = prompt('Unit type (e.g. kg, pieces, litres):');
-    if (!unitType || !unitType.trim()) return;
-    try {
-        await axios.post(`${EBASE}/expense-items`, { name: name.trim(), unit_type: unitType.trim() });
-        showDarasaToast({ type: 'success', message: 'Item added.' });
-        loadCatalog();
-        loadItemsCache();
-    } catch (e) {
-        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to add item.' });
     }
 }
 

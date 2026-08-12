@@ -74,29 +74,33 @@ class ExpenseCategoryPlanController extends Controller
         ]);
 
         $categoryId = $validated['category_id'] ?? null;
-
-        if ($categoryId) {
-            $category = ExpenseCategory::findOrFail($categoryId);
-            if (!$this->canViewBudget($request, $category)) {
-                return response()->json(['error' => 'The main accountant has not made this category\'s budget visible to other accountants.'], 403);
-            }
-        }
+        $isMain = (bool) ($request->user()->is_main_accountant ?? false);
 
         $fromDate = $validated['from_date'] ?? now()->startOfYear()->toDateString();
         $toDate = $validated['to_date'] ?? now()->toDateString();
 
+        // Budget figures are main-accountant-only.
         $expectedAmount = 0.0;
-        if ($categoryId) {
-            $expectedAmount = (float) ExpenseCategoryPlan::where('expense_category_id', $categoryId)
-                ->where('academic_year_id', $validated['academic_year_id'])
-                ->whereDate('from_date', '<=', $toDate)
-                ->whereDate('to_date', '>=', $fromDate)
-                ->sum('expected_amount');
-        } else {
-            $expectedAmount = (float) ExpenseCategoryPlan::where('academic_year_id', $validated['academic_year_id'])
-                ->whereDate('from_date', '<=', $toDate)
-                ->whereDate('to_date', '>=', $fromDate)
-                ->sum('expected_amount');
+        $currentPlan = null;
+        if ($isMain) {
+            if ($categoryId) {
+                $expectedAmount = (float) ExpenseCategoryPlan::where('expense_category_id', $categoryId)
+                    ->where('academic_year_id', $validated['academic_year_id'])
+                    ->whereDate('from_date', '<=', $toDate)
+                    ->whereDate('to_date', '>=', $fromDate)
+                    ->sum('expected_amount');
+
+                // Return plan details so the edit form can auto-populate.
+                $currentPlan = ExpenseCategoryPlan::where('expense_category_id', $categoryId)
+                    ->where('academic_year_id', $validated['academic_year_id'])
+                    ->orderByDesc('from_date')
+                    ->first(['id', 'expected_amount', 'from_date', 'to_date', 'academic_year_id']);
+            } else {
+                $expectedAmount = (float) ExpenseCategoryPlan::where('academic_year_id', $validated['academic_year_id'])
+                    ->whereDate('from_date', '<=', $toDate)
+                    ->whereDate('to_date', '>=', $fromDate)
+                    ->sum('expected_amount');
+            }
         }
 
         $lineItemsQuery = ExpenseLineItem::query()
@@ -121,10 +125,18 @@ class ExpenseCategoryPlanController extends Controller
             fn (ExpenseLineItem $line) => $line->line_total,
         );
 
+        // Distribute expected evenly across timeline buckets for the planned line.
+        $bucketCount = count($timeline);
+        $plannedPerBucket = ($isMain && $expectedAmount > 0 && $bucketCount > 0)
+            ? round($expectedAmount / $bucketCount, 2)
+            : 0;
+
         return response()->json([
             'expected_amount' => $expectedAmount,
             'actual_amount' => $actualAmount,
             'timeline' => $timeline,
+            'planned_per_bucket' => $plannedPerBucket,
+            'current_plan' => $currentPlan,
         ]);
     }
 

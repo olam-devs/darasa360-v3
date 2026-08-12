@@ -15,9 +15,20 @@ class ExpenseItemController extends Controller
             $query->where('name', 'like', '%'.$search.'%');
         }
 
-        return response()->json([
-            'items' => $query->limit(50)->get(['id', 'name', 'unit_type']),
-        ]);
+        $isMain = (bool) ($request->user()->is_main_accountant ?? false);
+        $items = $query->limit(200)->get(['id', 'name', 'unit_type']);
+
+        // For the main accountant, include last approved price per item so the
+        // compose form can auto-fill unit price when a known item is selected.
+        if ($isMain) {
+            $items = $items->map(function (ExpenseItem $item) {
+                $last = $item->priceHistory(1)->first();
+                $item->last_price = $last ? (float) $last['unit_price'] : null;
+                return $item;
+            });
+        }
+
+        return response()->json(['items' => $items]);
     }
 
     /**

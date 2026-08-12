@@ -44,6 +44,9 @@ class ExpenseSubmissionController extends Controller
         if ($toDate = $request->get('to_date')) {
             $query->where('transaction_date', '<=', $toDate);
         }
+        if ($request->boolean('mine')) {
+            $query->where('submitted_by', auth()->id());
+        }
 
         return response()->json($query->paginate($request->get('per_page', 15)));
     }
