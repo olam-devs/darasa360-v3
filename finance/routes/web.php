@@ -462,6 +462,7 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::middleware('is.main.accountant')->group(function () {
             Route::get('api/expense-categories/pending', [ExpenseCategoryController::class, 'pendingList'])->name('api.expense-categories.pending');
             Route::put('api/expense-categories/{category}', [ExpenseCategoryController::class, 'update'])->name('api.expense-categories.update');
+            Route::delete('api/expense-categories/{category}', [ExpenseCategoryController::class, 'destroy'])->name('api.expense-categories.destroy');
             Route::post('api/expense-categories/{category}/approve', [ExpenseCategoryController::class, 'approve'])->name('api.expense-categories.approve');
             Route::post('api/expense-categories/{category}/deny', [ExpenseCategoryController::class, 'deny'])->name('api.expense-categories.deny');
 

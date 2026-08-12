@@ -51,27 +51,38 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
                     <div class="flex gap-2">
-                        <select id="composeCategory" class="flex-1 border-2 border-gray-300 rounded px-3 py-2 text-sm"></select>
-                        <button type="button" onclick="proposeNewCategory()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded whitespace-nowrap">+ New</button>
+                        <div class="flex-1">
+                            <input type="text" id="composeCategoryInput" list="categoriesDatalist"
+                                class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"
+                                placeholder="Search or type category name..."
+                                oninput="onComposeCategoryInput()" autocomplete="off">
+                            <input type="hidden" id="composeCategory">
+                            <p id="composeCategoryWarning" class="hidden text-xs text-amber-600 mt-1"></p>
+                        </div>
+                        <button type="button" onclick="proposeNewCategory()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded whitespace-nowrap self-start">+ New</button>
                     </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
                     <select id="composeAcademicYear" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"></select>
                 </div>
+                @if($isMainAccountant)
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Book</label>
                     <select id="composeBook" onchange="loadFeeCategoriesForSelect(document.getElementById('composeBook'), document.getElementById('composeFeeCategory'))" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"></select>
                 </div>
+                @endif
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
                     <input type="date" id="composeDate" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm">
                 </div>
+                @if($isMainAccountant)
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Transaction Fee (optional)</label>
                     <select id="composeFeeCategory" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"><option value="">-- No fee --</option></select>
-                    <p class="text-xs text-gray-500 mt-1">Select a category to auto-cut that book's transaction fee for this expense.</p>
+                    <p class="text-xs text-gray-500 mt-1">Auto-cuts the book's transaction fee for this expense.</p>
                 </div>
+                @endif
             </div>
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Title (optional)</label>
@@ -89,8 +100,8 @@
                         <tr>
                             <th class="p-2 text-left">Item</th>
                             <th class="p-2 text-left w-24">Unit</th>
-                            <th class="p-2 text-right w-32">Price per unit</th>
-                            <th class="p-2 text-right w-24">Quantity</th>
+                            <th class="p-2 text-right w-36">Price per unit</th>
+                            <th class="p-2 text-right w-28">Quantity</th>
                             <th class="p-2 text-right w-32">Total Price</th>
                             <th class="p-2 w-10"></th>
                         </tr>
@@ -105,6 +116,11 @@
                     <p class="text-sm text-gray-500">Total</p>
                     <p class="text-2xl font-bold text-gray-900" id="composeGrandTotal">TSh 0</p>
                 </div>
+            </div>
+
+            <div id="composeEditingBanner" class="hidden mb-3 bg-amber-50 border border-amber-200 rounded px-3 py-2 text-sm text-amber-700">
+                Editing mode — modify the items and click Update to save changes to the pending submission.
+                <button type="button" onclick="cancelEdit()" class="ml-2 underline text-amber-800">Cancel edit</button>
             </div>
 
             <button type="button" onclick="submitExpense()" id="composeSubmitBtn"
@@ -135,10 +151,12 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="lg:col-span-1">
                 <div class="bg-white rounded-lg shadow p-4">
-                    <div class="flex justify-between items-center mb-3">
+                    <div class="flex justify-between items-center mb-2">
                         <h3 class="font-semibold">Categories</h3>
                         <button type="button" onclick="openAddCategoryModal()" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1 rounded">+ Add</button>
                     </div>
+                    <input type="text" id="categorySearch" oninput="filterCategoryList()" placeholder="Search categories…"
+                        class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-2">
                     <div id="categoryListBox"><p class="text-gray-400 text-sm">Loading…</p></div>
                 </div>
             </div>
@@ -164,7 +182,7 @@
                     </div>
                     <div class="flex gap-6 mb-4">
                         @if($isMainAccountant)
-                        <div><p class="text-xs text-gray-500">Expected</p><p class="text-xl font-bold text-blue-600" id="chartExpected">TSh 0</p></div>
+                        <div><p class="text-xs text-gray-500">Budget</p><p class="text-xl font-bold text-blue-600" id="chartExpected">TSh 0</p></div>
                         @endif
                         <div><p class="text-xs text-gray-500">Actual</p><p class="text-xl font-bold text-rose-600" id="chartActual">TSh 0</p></div>
                     </div>
@@ -205,7 +223,7 @@
     <!-- Reports & Log Tab -->
     <div id="epanel-reports" class="hidden">
         <div class="bg-white rounded-lg shadow p-4 mb-4">
-            <h3 class="font-semibold mb-3">Decision log (school-wide)</h3>
+            <h3 class="font-semibold mb-3">Decision log (school-wide) <span class="text-xs font-normal text-gray-500">— click any row to see item details</span></h3>
             <div id="logBox"><p class="text-gray-400 text-sm">Loading…</p></div>
         </div>
 
@@ -225,6 +243,7 @@
     </div>
 
     <datalist id="itemsDatalist"></datalist>
+    <datalist id="categoriesDatalist"></datalist>
 </div>
 
 <!-- Category Modal (add / rename) -->
@@ -234,8 +253,8 @@
         <input type="hidden" id="categoryModalId">
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
-            <input type="text" id="categoryModalName" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. Transport &amp; Fuel"
-                onkeydown="if(event.key==='Enter')submitCategoryModal()">
+            <input type="text" id="categoryModalName" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"
+                placeholder="e.g. Transport &amp; Fuel" onkeydown="if(event.key==='Enter')submitCategoryModal()">
         </div>
         <div class="flex gap-2 justify-end">
             <button type="button" onclick="closeCategoryModal()" class="px-4 py-2 text-sm rounded bg-gray-100 hover:bg-gray-200">Cancel</button>
@@ -264,6 +283,24 @@
     </div>
 </div>
 
+<!-- Submission Detail Modal (My Submissions + Log) -->
+<div id="submissionDetailModal" class="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center hidden" onclick="if(event.target===this)closeSubmissionDetailModal()">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h3 class="font-semibold text-gray-800 text-lg" id="detailModalTitle">Expense Detail</h3>
+                <p class="text-sm text-gray-500 mt-0.5" id="detailModalSubtitle"></p>
+            </div>
+            <button type="button" onclick="closeSubmissionDetailModal()" class="text-gray-400 hover:text-gray-700 text-2xl leading-none ml-4">&times;</button>
+        </div>
+        <div id="detailModalBody"><p class="text-gray-400">Loading…</p></div>
+        <div id="detailModalEditSection" class="hidden mt-4 pt-4 border-t">
+            <p class="text-sm text-amber-600 mb-3">This submission is pending. You can edit and resubmit.</p>
+            <button type="button" onclick="loadSubmissionForEdit()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">Edit this submission</button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -272,6 +309,7 @@ axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[nam
 
 const EBASE = '{{ url('/api') }}';
 const IS_MAIN_ACCOUNTANT = @json($isMainAccountant);
+const DEFAULT_SUBMIT_BTN_TEXT = IS_MAIN_ACCOUNTANT ? 'Approve & Record' : 'Submit for Approval';
 
 function fmt(n) {
     return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n || 0);
@@ -315,12 +353,17 @@ async function loadItemsCache() {
 async function loadCategoriesForSelects() {
     const res = await axios.get(`${EBASE}/expense-categories?approved_only=1`);
     categoriesCache = res.data.categories || [];
+
+    // Compose: datalist (searchable text input)
+    const dl = document.getElementById('categoriesDatalist');
+    if (dl) dl.innerHTML = categoriesCache.map(c => `<option value="${c.name}"></option>`).join('');
+
+    // Chart + report: regular selects
     const opts = categoriesCache.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    ['composeCategory', 'chartCategory', 'reportCategory'].forEach(id => {
+    ['chartCategory', 'reportCategory'].forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
-        const keepFirst = id === 'chartCategory' || id === 'reportCategory';
-        el.innerHTML = (keepFirst ? el.querySelector('option')?.outerHTML || '' : '') + opts;
+        el.innerHTML = (el.querySelector('option')?.outerHTML || '') + opts;
     });
 }
 
@@ -337,6 +380,7 @@ async function loadAcademicYearsForSelects() {
 let booksCache = [];
 
 async function loadBooksForSelect() {
+    if (!IS_MAIN_ACCOUNTANT) return;
     const res = await axios.get('/api/books');
     booksCache = res.data || [];
     const el = document.getElementById('composeBook');
@@ -369,24 +413,55 @@ async function loadFeeCategoriesForSelect(bookSelectEl, feeSelectEl, selectedFee
 
 // ─── Compose ─────────────────────────────────────────────────────────────
 let composeRowSeq = 0;
+let editingSubmissionId = null;
 
-function addComposeLineRow() {
+function onComposeCategoryInput() {
+    const val = document.getElementById('composeCategoryInput').value.trim().toLowerCase();
+    const match = categoriesCache.find(c => c.name.toLowerCase() === val);
+    const hiddenInput = document.getElementById('composeCategory');
+    const warning = document.getElementById('composeCategoryWarning');
+
+    if (match) {
+        hiddenInput.value = match.id;
+        // Show warning if category has a plan but it's expired
+        if (!IS_MAIN_ACCOUNTANT && match.latest_plan_to_date && match.has_active_plan == 0) {
+            warning.textContent = `⚠ This category's budget plan expired on ${match.latest_plan_to_date}. The main accountant must update it.`;
+            warning.classList.remove('hidden');
+        } else {
+            warning.classList.add('hidden');
+        }
+    } else {
+        hiddenInput.value = '';
+        warning.classList.add('hidden');
+    }
+}
+
+function addComposeLineRow(prefill) {
     const rowId = ++composeRowSeq;
     const tbody = document.getElementById('composeLineItems');
     const tr = document.createElement('tr');
     tr.dataset.rowId = rowId;
     tr.innerHTML = `
         <td class="p-2">
-            <input type="text" list="itemsDatalist" class="w-full border rounded px-2 py-1 line-item-name" oninput="onLineItemNameChange(${rowId})" placeholder="Search or type new item">
+            <input type="text" list="itemsDatalist" class="w-full border rounded px-2 py-1 line-item-name text-sm" oninput="onLineItemNameChange(${rowId})" placeholder="Search or type new item" autocomplete="off">
             <input type="hidden" class="line-item-existing-id">
         </td>
-        <td class="p-2"><input type="text" class="w-full border rounded px-2 py-1 line-item-unit" placeholder="kg, pcs..."></td>
-        <td class="p-2"><input type="number" step="0.01" min="0" value="0" class="w-full border rounded px-2 py-1 text-right line-item-price" oninput="recomputeComposeLine(${rowId})"></td>
-        <td class="p-2"><input type="number" step="0.001" min="0.001" value="1" class="w-full border rounded px-2 py-1 text-right line-item-qty" oninput="recomputeComposeLine(${rowId})"></td>
-        <td class="p-2 text-right line-item-subtotal">TSh 0</td>
+        <td class="p-2"><input type="text" class="w-full border rounded px-2 py-1 line-item-unit text-sm" placeholder="unit"></td>
+        <td class="p-2 text-right"><input type="number" step="0.01" min="0" value="0" class="w-full border rounded px-2 py-1 text-right line-item-price text-sm" oninput="recomputeComposeLine(${rowId})"></td>
+        <td class="p-2 text-right"><input type="number" step="0.001" min="0.001" value="1" class="w-full border rounded px-2 py-1 text-right line-item-qty text-sm" oninput="recomputeComposeLine(${rowId})"></td>
+        <td class="p-2 text-right line-item-subtotal text-sm">TSh 0</td>
         <td class="p-2 text-center"><button type="button" onclick="removeComposeLineRow(${rowId})" class="text-red-500 hover:text-red-700">&times;</button></td>
     `;
     tbody.appendChild(tr);
+
+    if (prefill) {
+        tr.querySelector('.line-item-name').value = prefill.item_name_snapshot;
+        tr.querySelector('.line-item-existing-id').value = prefill.expense_item_id || '';
+        tr.querySelector('.line-item-unit').value = prefill.unit_type_snapshot;
+        tr.querySelector('.line-item-price').value = prefill.unit_price;
+        tr.querySelector('.line-item-qty').value = prefill.quantity;
+        recomputeComposeLine(rowId);
+    }
 }
 
 function removeComposeLineRow(rowId) {
@@ -435,10 +510,30 @@ function proposeNewCategory() {
     openAddCategoryModal();
 }
 
+function cancelEdit() {
+    editingSubmissionId = null;
+    document.getElementById('composeEditingBanner').classList.add('hidden');
+    document.getElementById('composeSubmitBtn').textContent = DEFAULT_SUBMIT_BTN_TEXT;
+    resetComposeForm();
+}
+
 async function submitExpense() {
     const rows = [...document.querySelectorAll('#composeLineItems tr')];
     if (!rows.length) {
         showDarasaToast({ type: 'error', message: 'Add at least one line item.' });
+        return;
+    }
+
+    const categoryId = document.getElementById('composeCategory').value;
+    if (!categoryId) {
+        showDarasaToast({ type: 'error', message: 'Select a category.' });
+        return;
+    }
+
+    // Block if category plan is expired
+    const selectedCat = categoriesCache.find(c => String(c.id) === String(categoryId));
+    if (!IS_MAIN_ACCOUNTANT && selectedCat?.latest_plan_to_date && selectedCat?.has_active_plan == 0) {
+        showDarasaToast({ type: 'error', message: "This category's plan has expired. The main accountant must extend it." });
         return;
     }
 
@@ -459,24 +554,35 @@ async function submitExpense() {
     });
 
     const payload = {
-        expense_category_id: document.getElementById('composeCategory').value,
-        book_id: document.getElementById('composeBook').value || null,
+        expense_category_id: categoryId,
         academic_year_id: document.getElementById('composeAcademicYear').value,
         transaction_date: document.getElementById('composeDate').value,
         title: document.getElementById('composeTitle').value || null,
         description: document.getElementById('composeDescription').value || null,
-        book_fee_category_id: document.getElementById('composeFeeCategory').value || null,
         line_items: lineItems,
     };
 
-    if (!payload.expense_category_id || !payload.academic_year_id || !payload.transaction_date) {
-        showDarasaToast({ type: 'error', message: 'Category, academic year, and date are required.' });
+    if (IS_MAIN_ACCOUNTANT) {
+        payload.book_id = document.getElementById('composeBook')?.value || null;
+        payload.book_fee_category_id = document.getElementById('composeFeeCategory')?.value || null;
+    }
+
+    if (!payload.academic_year_id || !payload.transaction_date) {
+        showDarasaToast({ type: 'error', message: 'Academic year and date are required.' });
         return;
     }
 
     try {
-        await axios.post(`${EBASE}/expense-submissions`, payload);
-        showDarasaToast({ type: 'success', message: IS_MAIN_ACCOUNTANT ? 'Expense recorded.' : 'Submitted for approval.' });
+        if (editingSubmissionId) {
+            await axios.put(`${EBASE}/expense-submissions/${editingSubmissionId}`, payload);
+            showDarasaToast({ type: 'success', message: 'Submission updated.' });
+            editingSubmissionId = null;
+            document.getElementById('composeEditingBanner').classList.add('hidden');
+            document.getElementById('composeSubmitBtn').textContent = DEFAULT_SUBMIT_BTN_TEXT;
+        } else {
+            await axios.post(`${EBASE}/expense-submissions`, payload);
+            showDarasaToast({ type: 'success', message: IS_MAIN_ACCOUNTANT ? 'Expense recorded.' : 'Submitted for approval.' });
+        }
         resetComposeForm();
         loadItemsCache();
     } catch (e) {
@@ -486,10 +592,14 @@ async function submitExpense() {
 
 function resetComposeForm() {
     document.getElementById('composeLineItems').innerHTML = '';
+    document.getElementById('composeCategoryInput').value = '';
+    document.getElementById('composeCategory').value = '';
+    document.getElementById('composeCategoryWarning').classList.add('hidden');
     document.getElementById('composeTitle').value = '';
     document.getElementById('composeDescription').value = '';
     document.getElementById('composeGrandTotal').textContent = 'TSh 0';
-    document.getElementById('composeFeeCategory').innerHTML = '<option value="">-- No fee --</option>';
+    const feeEl = document.getElementById('composeFeeCategory');
+    if (feeEl) feeEl.innerHTML = '<option value="">-- No fee --</option>';
     addComposeLineRow();
 }
 
@@ -504,30 +614,136 @@ async function loadMySubmissions() {
             return;
         }
         box.innerHTML = submissions.map(s => {
-            const statusBadge = s.status === 'approved'
+            const badge = s.status === 'approved'
                 ? '<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Approved</span>'
                 : s.status === 'denied'
                     ? '<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">Denied</span>'
                     : '<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pending</span>';
             return `
-                <div class="border-t py-3">
+                <button type="button" onclick="openSubmissionDetail(${s.id}, ${s.status === 'pending' ? 'true' : 'false'})"
+                    class="w-full text-left border-t py-3 hover:bg-gray-50 px-1">
                     <div class="flex justify-between flex-wrap gap-1 items-start">
                         <div>
-                            <p class="font-medium">${s.submission_number} — ${s.category?.name || ''}</p>
+                            <p class="font-medium text-sm">${s.submission_number} — ${s.category?.name || ''}</p>
                             <p class="text-xs text-gray-500">${s.transaction_date}${s.title ? ' · ' + s.title : ''}</p>
                         </div>
                         <div class="flex items-center gap-2">
-                            <p class="font-bold text-gray-900">TSh ${fmt(s.total_amount)}</p>
-                            ${statusBadge}
+                            <p class="font-bold text-sm text-gray-900">TSh ${fmt(s.total_amount)}</p>
+                            ${badge}
                         </div>
                     </div>
-                    ${s.decision_note ? `<p class="text-sm mt-1 text-gray-600 italic">"${s.decision_note}"</p>` : ''}
+                    ${s.decision_note ? `<p class="text-sm mt-1 text-gray-600 italic text-left">"${s.decision_note}"</p>` : ''}
                     ${s.decided_at ? `<p class="text-xs text-gray-400 mt-0.5">Decided ${s.decided_at}</p>` : ''}
-                </div>
+                </button>
             `;
         }).join('');
     } catch (e) {
         box.innerHTML = '<p class="text-red-600">Could not load submissions.</p>';
+    }
+}
+
+// ─── Submission Detail Modal ─────────────────────────────────────────────
+let currentDetailSubmissionId = null;
+let currentDetailAllowEdit = false;
+
+async function openSubmissionDetail(id, allowEdit = false) {
+    currentDetailSubmissionId = id;
+    currentDetailAllowEdit = allowEdit;
+
+    const modal = document.getElementById('submissionDetailModal');
+    const body = document.getElementById('detailModalBody');
+    const editSection = document.getElementById('detailModalEditSection');
+
+    modal.classList.remove('hidden');
+    body.innerHTML = '<p class="text-gray-400 py-4">Loading…</p>';
+    editSection.classList.add('hidden');
+
+    try {
+        const res = await axios.get(`${EBASE}/expense-submissions/${id}`);
+        const sub = res.data.submission;
+
+        document.getElementById('detailModalTitle').textContent = sub.submission_number;
+        document.getElementById('detailModalSubtitle').textContent =
+            `${sub.category?.name || ''} · ${sub.transaction_date}${sub.title ? ' · ' + sub.title : ''}`;
+
+        const badge = sub.status === 'approved'
+            ? '<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Approved</span>'
+            : sub.status === 'denied'
+                ? '<span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">Denied</span>'
+                : '<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pending</span>';
+
+        const items = sub.line_items || [];
+        const itemRows = items.map(li => `
+            <tr class="border-t">
+                <td class="p-2 text-sm">${li.item_name_snapshot}</td>
+                <td class="p-2 text-sm">${li.unit_type_snapshot}</td>
+                <td class="p-2 text-right text-sm">TSh ${fmt(li.unit_price)}</td>
+                <td class="p-2 text-right text-sm">${li.quantity}</td>
+                <td class="p-2 text-right text-sm font-medium">TSh ${fmt(li.line_total)}</td>
+            </tr>
+        `).join('');
+
+        body.innerHTML = `
+            <div class="flex items-center gap-3 mb-3">${badge}${sub.submitted_by_name ? `<span class="text-xs text-gray-500">by ${sub.submitted_by_name}</span>` : ''}</div>
+            ${sub.description ? `<p class="text-sm text-gray-600 mb-3">${sub.description}</p>` : ''}
+            ${sub.decision_note ? `<div class="bg-gray-50 rounded p-3 mb-3 text-sm"><strong>Decision note:</strong> "${sub.decision_note}"</div>` : ''}
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100 text-xs"><tr>
+                        <th class="p-2 text-left">Item</th>
+                        <th class="p-2 text-left">Unit</th>
+                        <th class="p-2 text-right">Price/unit</th>
+                        <th class="p-2 text-right">Qty</th>
+                        <th class="p-2 text-right">Total</th>
+                    </tr></thead>
+                    <tbody>${itemRows}</tbody>
+                    <tfoot><tr class="border-t-2 font-bold bg-gray-50">
+                        <td colspan="4" class="p-2 text-right text-sm">Grand Total</td>
+                        <td class="p-2 text-right text-sm">TSh ${fmt(sub.total_amount)}</td>
+                    </tr></tfoot>
+                </table>
+            </div>
+        `;
+
+        if (allowEdit && sub.status === 'pending') {
+            editSection.classList.remove('hidden');
+        }
+    } catch (e) {
+        body.innerHTML = '<p class="text-red-600">Could not load submission details.</p>';
+    }
+}
+
+function closeSubmissionDetailModal() {
+    document.getElementById('submissionDetailModal').classList.add('hidden');
+}
+
+async function loadSubmissionForEdit() {
+    if (!currentDetailSubmissionId) return;
+    try {
+        const res = await axios.get(`${EBASE}/expense-submissions/${currentDetailSubmissionId}`);
+        const sub = res.data.submission;
+
+        closeSubmissionDetailModal();
+        switchExpenseTab('compose');
+
+        // Pre-fill compose form
+        editingSubmissionId = sub.id;
+
+        const catMatch = categoriesCache.find(c => c.id === sub.expense_category_id);
+        document.getElementById('composeCategoryInput').value = catMatch?.name || '';
+        document.getElementById('composeCategory').value = sub.expense_category_id;
+        document.getElementById('composeAcademicYear').value = sub.academic_year_id;
+        document.getElementById('composeDate').value = sub.transaction_date;
+        document.getElementById('composeTitle').value = sub.title || '';
+        document.getElementById('composeDescription').value = sub.description || '';
+
+        document.getElementById('composeLineItems').innerHTML = '';
+        (sub.line_items || []).forEach(li => addComposeLineRow(li));
+
+        document.getElementById('composeEditingBanner').classList.remove('hidden');
+        document.getElementById('composeSubmitBtn').textContent = 'Update Submission';
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: 'Could not load submission for editing.' });
     }
 }
 
@@ -598,11 +814,11 @@ function renderQueueCard(sub, priceHistoryMap) {
         const lineTotal = (parseFloat(li.unit_price) * parseFloat(li.quantity)).toFixed(2);
         return `
             <tr data-line-id="${li.id}">
-                <td class="p-2 align-top">${li.item_name_snapshot}${histHtml}</td>
+                <td class="p-2 align-top text-sm">${li.item_name_snapshot}${histHtml}</td>
                 <td class="p-2 align-top"><input type="text" class="w-20 border rounded px-1 py-0.5 text-xs review-unit" value="${li.unit_type_snapshot}"></td>
-                <td class="p-2 align-top"><input type="number" step="0.01" class="w-24 border rounded px-1 py-0.5 text-xs text-right review-price" value="${li.unit_price}" oninput="recomputeReviewLine(this)"></td>
-                <td class="p-2 align-top"><input type="number" step="0.001" class="w-20 border rounded px-1 py-0.5 text-xs text-right review-qty" value="${li.quantity}" oninput="recomputeReviewLine(this)"></td>
-                <td class="p-2 align-top text-right review-line-total">TSh ${fmt(lineTotal)}</td>
+                <td class="p-2 align-top text-right"><input type="number" step="0.01" class="w-24 border rounded px-1 py-0.5 text-xs text-right review-price" value="${li.unit_price}" oninput="recomputeReviewLine(this)"></td>
+                <td class="p-2 align-top text-right"><input type="number" step="0.001" class="w-20 border rounded px-1 py-0.5 text-xs text-right review-qty" value="${li.quantity}" oninput="recomputeReviewLine(this)"></td>
+                <td class="p-2 align-top text-right review-line-total text-sm">TSh ${fmt(lineTotal)}</td>
                 <td class="p-2 align-top text-center">
                     <select class="review-status text-xs border rounded px-1 py-0.5">
                         <option value="approved" selected>Approve</option>
@@ -618,7 +834,7 @@ function renderQueueCard(sub, priceHistoryMap) {
         <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
             <div>
                 <p class="font-semibold">${sub.submission_number} — ${sub.category?.name || ''}</p>
-                <p class="text-xs text-gray-500">${sub.transaction_date} · ${sub.title || 'No title'}</p>
+                <p class="text-xs text-gray-500">${sub.transaction_date} · ${sub.title || 'No title'}${sub.submitted_by_name ? ' · by <strong>' + sub.submitted_by_name + '</strong>' : ''}</p>
             </div>
             <p class="font-bold text-gray-900">TSh ${fmt(total)}</p>
         </div>
@@ -648,7 +864,7 @@ function renderQueueCard(sub, priceHistoryMap) {
                 <tbody>${lineRows}</tbody>
             </table>
         </div>
-        <textarea class="w-full border rounded px-2 py-1 text-sm mb-2 review-note" placeholder="Decision note (required, visible to all accountants at this school)" rows="2"></textarea>
+        <textarea class="w-full border rounded px-2 py-1 text-sm mb-2 review-note" placeholder="Decision note (required, visible to all accountants)" rows="2"></textarea>
         <div class="flex gap-2">
             <button onclick="submitReview(${sub.id}, 'approve')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded text-sm">Save Decision</button>
             <button onclick="submitReview(${sub.id}, 'deny')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-sm">Deny All</button>
@@ -663,14 +879,12 @@ async function submitReview(submissionId, overallDecision) {
         showDarasaToast({ type: 'error', message: 'A decision note is required.' });
         return;
     }
-
     const bookId = card.querySelector('.review-book').value || null;
     if (overallDecision === 'approve' && !bookId) {
         showDarasaToast({ type: 'error', message: 'Select which book the money comes from before approving.' });
         return;
     }
     const feeCategoryId = card.querySelector('.review-fee-category').value || null;
-
     const lineItems = [...card.querySelectorAll('tr[data-line-id]')].map(tr => ({
         id: parseInt(tr.dataset.lineId, 10),
         status: overallDecision === 'deny' ? 'denied' : tr.querySelector('.review-status').value,
@@ -680,11 +894,8 @@ async function submitReview(submissionId, overallDecision) {
 
     try {
         await axios.post(`${EBASE}/expense-submissions/${submissionId}/review`, {
-            decision_note: note,
-            overall_decision: overallDecision,
-            book_id: bookId,
-            book_fee_category_id: feeCategoryId,
-            line_items: lineItems,
+            decision_note: note, overall_decision: overallDecision,
+            book_id: bookId, book_fee_category_id: feeCategoryId, line_items: lineItems,
         });
         showDarasaToast({ type: 'success', message: 'Decision saved.' });
         loadReviewQueue();
@@ -722,7 +933,6 @@ async function submitCategoryModal() {
     const name = document.getElementById('categoryModalName').value.trim();
     if (!name) return;
     const id = document.getElementById('categoryModalId').value;
-
     try {
         if (categoryModalMode === 'add') {
             const res = await axios.post(`${EBASE}/expense-categories`, { name });
@@ -730,8 +940,8 @@ async function submitCategoryModal() {
             await loadCategoriesForSelects();
             loadCategoryListForBudget();
             if (res.data.category.status === 'approved') {
-                const sel = document.getElementById('composeCategory');
-                if (sel) sel.value = res.data.category.id;
+                document.getElementById('composeCategoryInput').value = name;
+                document.getElementById('composeCategory').value = res.data.category.id;
             }
         } else {
             await axios.put(`${EBASE}/expense-categories/${id}`, { name });
@@ -745,41 +955,78 @@ async function submitCategoryModal() {
     }
 }
 
+async function deleteCategory(id, name) {
+    if (!confirm(`Delete category "${name}"? This cannot be undone.`)) return;
+    try {
+        await axios.delete(`${EBASE}/expense-categories/${id}`);
+        showDarasaToast({ type: 'success', message: 'Category deleted.' });
+        await loadCategoriesForSelects();
+        loadCategoryListForBudget();
+        if (document.getElementById('chartCategory').value === String(id)) {
+            document.getElementById('chartCategory').value = '';
+            loadChart();
+        }
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to delete.' });
+    }
+}
+
 // ─── Categories & Budget ─────────────────────────────────────────────────
-let selectedBudgetCategoryId = null;
+let allCategoriesForBudget = [];
 
 async function loadCategoryListForBudget() {
     const box = document.getElementById('categoryListBox');
     try {
         const res = await axios.get(`${EBASE}/expense-categories`);
-        const categories = res.data.categories || [];
-        if (!categories.length) {
-            box.innerHTML = '<p class="text-gray-400 text-sm">No categories yet.</p>';
-            return;
-        }
-        box.innerHTML = categories.map(c => {
-            const nameEsc = c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            const renameBtn = IS_MAIN_ACCOUNTANT
-                ? `<button type="button" onclick="openRenameCategoryModal(${c.id}, '${nameEsc}')" class="text-gray-400 hover:text-gray-700 px-1 py-1 text-base leading-none flex-shrink-0" title="Rename">✎</button>`
-                : '';
-            return `
-                <div class="flex items-center gap-1 ${c.status !== 'approved' ? 'opacity-60' : ''}">
-                    <button type="button" onclick="selectBudgetCategory(${c.id}, '${nameEsc}')"
-                        class="flex-1 text-left px-3 py-2 rounded text-sm hover:bg-rose-50 flex justify-between items-center min-w-0">
-                        <span class="truncate">${c.name}</span>
-                        ${c.status !== 'approved' ? `<span class="text-xs text-amber-600 flex-shrink-0 ml-1">${c.status}</span>` : ''}
-                    </button>
-                    ${renameBtn}
-                </div>
-            `;
-        }).join('');
+        allCategoriesForBudget = res.data.categories || [];
+        renderCategoryList();
     } catch (e) {
         box.innerHTML = '<p class="text-red-600 text-sm">Could not load categories.</p>';
     }
 }
 
+function filterCategoryList() {
+    renderCategoryList();
+}
+
+function renderCategoryList() {
+    const box = document.getElementById('categoryListBox');
+    const q = (document.getElementById('categorySearch')?.value || '').toLowerCase();
+    const categories = q
+        ? allCategoriesForBudget.filter(c => c.name.toLowerCase().includes(q))
+        : allCategoriesForBudget;
+
+    if (!categories.length) {
+        box.innerHTML = '<p class="text-gray-400 text-sm">No categories found.</p>';
+        return;
+    }
+
+    box.innerHTML = categories.map(c => {
+        const nameEsc = c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        const isExpired = c.latest_plan_to_date && !c.has_active_plan;
+        const planTag = isExpired
+            ? `<span class="text-xs text-red-500 flex-shrink-0 ml-1" title="Plan expired ${c.latest_plan_to_date}">expired</span>`
+            : (c.status !== 'approved' ? `<span class="text-xs text-amber-600 flex-shrink-0 ml-1">${c.status}</span>` : '');
+        const renameBtn = IS_MAIN_ACCOUNTANT
+            ? `<button type="button" onclick="openRenameCategoryModal(${c.id}, '${nameEsc}')" class="text-gray-400 hover:text-blue-600 px-1 py-1 text-sm leading-none flex-shrink-0" title="Rename">✎</button>`
+            : '';
+        const deleteBtn = IS_MAIN_ACCOUNTANT
+            ? `<button type="button" onclick="deleteCategory(${c.id}, '${nameEsc}')" class="text-gray-300 hover:text-red-500 px-1 py-1 text-sm leading-none flex-shrink-0" title="Delete">✕</button>`
+            : '';
+
+        return `
+            <div class="flex items-center gap-0.5 ${c.status !== 'approved' ? 'opacity-60' : ''}">
+                <button type="button" onclick="selectBudgetCategory(${c.id}, '${nameEsc}')"
+                    class="flex-1 text-left px-2 py-1.5 rounded text-sm hover:bg-rose-50 flex items-center gap-1 min-w-0">
+                    <span class="truncate">${c.name}</span>${planTag}
+                </button>
+                ${renameBtn}${deleteBtn}
+            </div>
+        `;
+    }).join('');
+}
+
 function selectBudgetCategory(id, name) {
-    selectedBudgetCategoryId = id;
     document.getElementById('chartCategory').value = id;
     loadChart();
 }
@@ -808,16 +1055,13 @@ async function loadChart() {
 
         renderExpenseChart(res.data.timeline || [], res.data.planned_per_bucket || 0);
 
-        // Auto-fill plan form from current plan when a category is selected.
         if (categoryId && IS_MAIN_ACCOUNTANT) {
             const plan = res.data.current_plan;
             if (plan) {
                 document.getElementById('planAmount').value = plan.expected_amount;
                 document.getElementById('planFrom').value = plan.from_date;
                 document.getElementById('planTo').value = plan.to_date;
-                if (plan.academic_year_id) {
-                    document.getElementById('planAcademicYear').value = plan.academic_year_id;
-                }
+                if (plan.academic_year_id) document.getElementById('planAcademicYear').value = plan.academic_year_id;
             } else {
                 document.getElementById('planAmount').value = '';
                 document.getElementById('planFrom').value = '';
@@ -854,35 +1098,29 @@ function renderExpenseChart(timeline, plannedPerBucket) {
     const ctx = document.getElementById('expenseChart').getContext('2d');
     if (expenseChartInstance) expenseChartInstance.destroy();
 
-    const datasets = [{
+    const datasets = [];
+
+    if (IS_MAIN_ACCOUNTANT && plannedPerBucket > 0) {
+        datasets.push({
+            label: 'Budget',
+            data: timeline.map(() => plannedPerBucket),
+            backgroundColor: '#93c5fd',
+            borderRadius: 4,
+            order: 2,
+        });
+    }
+
+    datasets.push({
         label: 'Actual spend',
         data: timeline.map(t => t.amount),
         backgroundColor: '#e11d48',
         borderRadius: 4,
-        order: 2,
-    }];
-
-    if (IS_MAIN_ACCOUNTANT && plannedPerBucket > 0) {
-        datasets.push({
-            label: 'Planned (per period)',
-            data: timeline.map(() => plannedPerBucket),
-            type: 'line',
-            borderColor: '#2563eb',
-            backgroundColor: 'transparent',
-            borderDash: [6, 4],
-            borderWidth: 2,
-            pointRadius: 3,
-            tension: 0,
-            order: 1,
-        });
-    }
+        order: 1,
+    });
 
     expenseChartInstance = new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels: timeline.map(t => t.label),
-            datasets,
-        },
+        data: { labels: timeline.map(t => t.label), datasets },
         options: {
             responsive: true,
             plugins: { legend: { display: datasets.length > 1 } },
@@ -894,7 +1132,7 @@ function renderExpenseChart(timeline, plannedPerBucket) {
 async function savePlan() {
     const categoryId = document.getElementById('chartCategory').value;
     if (!categoryId) {
-        showDarasaToast({ type: 'error', message: 'Select a specific category first (not "All categories").' });
+        showDarasaToast({ type: 'error', message: 'Select a specific category first.' });
         return;
     }
     const payload = {
@@ -907,12 +1145,13 @@ async function savePlan() {
         await axios.post(`${EBASE}/expense-categories/${categoryId}/plan`, payload);
         showDarasaToast({ type: 'success', message: 'Plan saved.' });
         loadChart();
+        loadCategoryListForBudget();
     } catch (e) {
         showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to save plan.' });
     }
 }
 
-// ─── Add Catalog Item Modal ──────────────────────────────────────────────
+// ─── Catalog Item Modal ──────────────────────────────────────────────────
 function showAddCatalogItem() {
     document.getElementById('catalogItemName').value = '';
     document.getElementById('catalogItemUnit').value = '';
@@ -967,14 +1206,15 @@ async function loadLog() {
         const submissions = res.data.data || [];
         box.innerHTML = submissions.length
             ? submissions.map(s => `
-                <div class="border-t py-3">
+                <button type="button" onclick="openSubmissionDetail(${s.id})"
+                    class="w-full text-left border-t py-3 hover:bg-gray-50 px-1">
                     <div class="flex justify-between flex-wrap gap-1">
-                        <p class="font-medium">${s.submission_number} — ${s.category?.name || ''} — TSh ${fmt(s.total_amount)}</p>
+                        <p class="font-medium text-sm">${s.submission_number} — ${s.category?.name || ''} — TSh ${fmt(s.total_amount)}</p>
                         <span class="text-xs px-2 py-0.5 rounded-full ${s.status === 'denied' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${s.status.replace('_', ' ')}</span>
                     </div>
-                    <p class="text-xs text-gray-500">${s.transaction_date} · decided ${s.decided_at || ''}</p>
-                    ${s.decision_note ? `<p class="text-sm text-gray-700 mt-1 italic">"${s.decision_note}"</p>` : ''}
-                </div>
+                    <p class="text-xs text-gray-500">${s.transaction_date} · decided ${s.decided_at || ''}${s.submitted_by_name ? ' · by ' + s.submitted_by_name : ''}</p>
+                    ${s.decision_note ? `<p class="text-sm text-gray-700 mt-1 italic text-left">"${s.decision_note}"</p>` : ''}
+                </button>
             `).join('')
             : '<p class="text-gray-400 text-center py-6">No decisions yet.</p>';
     } catch (e) {
@@ -983,21 +1223,17 @@ async function loadLog() {
 }
 
 function downloadReport(type) {
-    const params = new URLSearchParams({
-        academic_year_id: document.getElementById('reportAcademicYear').value,
-    });
+    const params = new URLSearchParams({ academic_year_id: document.getElementById('reportAcademicYear').value });
     const category = document.getElementById('reportCategory').value;
     const from = document.getElementById('reportFrom').value;
     const to = document.getElementById('reportTo').value;
     if (category) params.set('category_id', category);
     if (from) params.set('from_date', from);
     if (to) params.set('to_date', to);
-
     if (!params.get('academic_year_id')) {
         showDarasaToast({ type: 'error', message: 'Select an academic year first.' });
         return;
     }
-
     window.location = `${EBASE}/expense-submissions-report/${type}?${params.toString()}`;
 }
 

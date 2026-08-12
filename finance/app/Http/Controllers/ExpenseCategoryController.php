@@ -4,12 +4,36 @@ namespace App\Http\Controllers;
 
 use App\Models\ExpenseCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ExpenseCategoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ExpenseCategory::query()->orderBy('name');
+        $today = now()->toDateString();
+        $activeYearId = (int) DB::table('academic_years')->where('is_active', 1)->value('id');
+
+        $query = ExpenseCategory::query()
+            ->withCount(['submissions as submission_count' => fn ($q) => $q->where('status', 'approved')])
+            ->orderByDesc('submission_count')
+            ->orderBy('name');
+
+        if ($activeYearId) {
+            $query->addSelect(DB::raw(
+                "EXISTS (
+                    SELECT 1 FROM expense_category_plans ecp
+                    WHERE ecp.expense_category_id = expense_categories.id
+                    AND ecp.academic_year_id = {$activeYearId}
+                    AND ecp.from_date <= '{$today}'
+                    AND ecp.to_date >= '{$today}'
+                ) as has_active_plan"
+            ))->addSelect(DB::raw(
+                "(SELECT MAX(ecp2.to_date) FROM expense_category_plans ecp2
+                  WHERE ecp2.expense_category_id = expense_categories.id
+                  AND ecp2.academic_year_id = {$activeYearId}
+                ) as latest_plan_to_date"
+            ));
+        }
 
         if ($request->boolean('approved_only')) {
             $query->approved();
@@ -18,11 +42,6 @@ class ExpenseCategoryController extends Controller
         return response()->json(['categories' => $query->get()]);
     }
 
-    /**
-     * Any accountant may propose a category. Auto-approved if the proposer
-     * is this school's main accountant, otherwise sits pending until one
-     * reviews it.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -99,5 +118,24 @@ class ExpenseCategoryController extends Controller
         $category->update(['name' => $validated['name']]);
 
         return response()->json(['category' => $category]);
+    }
+
+    public function destroy(ExpenseCategory $category)
+    {
+        $hasApproved = $category->submissions()->where('status', 'approved')->exists();
+        if ($hasApproved) {
+            return response()->json(['error' => 'Cannot delete: this category has approved expenses recorded against it.'], 422);
+        }
+
+        $hasPending = $category->submissions()->whereIn('status', ['pending', 'partially_approved'])->exists();
+        if ($hasPending) {
+            return response()->json(['error' => 'Cannot delete: there are pending submissions in this category. Decide them first.'], 422);
+        }
+
+        $category->plans()->delete();
+        $category->submissions()->delete();
+        $category->delete();
+
+        return response()->json(['message' => 'Category deleted.']);
     }
 }

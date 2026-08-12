@@ -53,9 +53,12 @@ class ExpenseSubmissionController extends Controller
 
     public function show(ExpenseSubmission $submission)
     {
-        return response()->json([
-            'submission' => $submission->load(['lineItems.item', 'category', 'book', 'academicYear']),
-        ]);
+        $submission->load(['lineItems.item', 'category', 'book', 'academicYear']);
+        if ($submission->submitted_by) {
+            $acc = \App\Models\Central\SchoolAccountant::find($submission->submitted_by);
+            $submission->submitted_by_name = $acc?->name ?? 'Unknown';
+        }
+        return response()->json(['submission' => $submission]);
     }
 
     /**
@@ -88,6 +91,23 @@ class ExpenseSubmissionController extends Controller
 
         $user = $request->user();
         $isMain = (bool) ($user->is_main_accountant ?? false);
+
+        // If the category has a budget plan but it has expired, block non-main accountants.
+        if (!$isMain) {
+            $hasAnyPlan = $category->plans()
+                ->where('academic_year_id', $validated['academic_year_id'])
+                ->exists();
+            if ($hasAnyPlan) {
+                $hasActivePlan = $category->plans()
+                    ->where('academic_year_id', $validated['academic_year_id'])
+                    ->whereDate('from_date', '<=', now())
+                    ->whereDate('to_date', '>=', now())
+                    ->exists();
+                if (!$hasActivePlan) {
+                    return response()->json(['error' => 'This category\'s budget plan has expired. The main accountant must extend the plan before you can submit.'], 422);
+                }
+            }
+        }
 
         if ($isMain && empty($validated['book_id'])) {
             return response()->json(['error' => 'A book is required to record this expense.'], 422);
@@ -174,9 +194,33 @@ class ExpenseSubmissionController extends Controller
             'transaction_date' => 'sometimes|date',
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string',
+            'line_items' => 'sometimes|array|min:1',
+            'line_items.*.expense_item_id' => 'nullable|exists:expense_items,id',
+            'line_items.*.new_item_name' => 'nullable|string|max:255',
+            'line_items.*.new_item_unit_type' => 'nullable|string|max:100',
+            'line_items.*.quantity' => 'required_with:line_items|numeric|min:0.001',
+            'line_items.*.unit_price' => 'required_with:line_items|numeric|min:0',
         ]);
 
-        $submission->update($validated);
+        DB::transaction(function () use ($submission, $validated, $user) {
+            $submission->update(collect($validated)->except('line_items')->toArray());
+
+            if (isset($validated['line_items'])) {
+                $submission->lineItems()->delete();
+                foreach ($validated['line_items'] as $lineData) {
+                    $item = $this->resolveOrCreateItem($lineData, $user->id);
+                    $submission->lineItems()->create([
+                        'expense_item_id' => $item->id,
+                        'item_name_snapshot' => $item->name,
+                        'unit_type_snapshot' => $item->unit_type,
+                        'quantity' => $lineData['quantity'],
+                        'unit_price' => $lineData['unit_price'],
+                        'status' => 'pending',
+                    ]);
+                }
+                $submission->recomputeTotal();
+            }
+        });
 
         return response()->json(['submission' => $submission->fresh(['lineItems', 'category'])]);
     }
@@ -312,6 +356,14 @@ class ExpenseSubmissionController extends Controller
             return [$id => $item ? $item->priceHistory() : collect()];
         });
 
+        $submitterIds = $submissions->pluck('submitted_by')->filter()->unique()->values();
+        $submitterNames = \App\Models\Central\SchoolAccountant::whereIn('id', $submitterIds)
+            ->pluck('name', 'id');
+        $submissions = $submissions->map(function ($s) use ($submitterNames) {
+            $s->submitted_by_name = $submitterNames[$s->submitted_by] ?? 'Unknown';
+            return $s;
+        });
+
         return response()->json([
             'submissions' => $submissions,
             'price_history' => $priceHistory,
@@ -325,10 +377,18 @@ class ExpenseSubmissionController extends Controller
      */
     public function schoolWideLog(Request $request)
     {
-        $submissions = ExpenseSubmission::with(['category', 'lineItems'])
+        $submissions = ExpenseSubmission::with(['category', 'lineItems.item'])
             ->whereNotNull('decided_at')
             ->orderByDesc('decided_at')
             ->paginate($request->get('per_page', 20));
+
+        $submitterIds = $submissions->pluck('submitted_by')->filter()->unique()->values();
+        $submitterNames = \App\Models\Central\SchoolAccountant::whereIn('id', $submitterIds)
+            ->pluck('name', 'id');
+        $submissions->through(function ($s) use ($submitterNames) {
+            $s->submitted_by_name = $submitterNames[$s->submitted_by] ?? 'Unknown';
+            return $s;
+        });
 
         return response()->json($submissions);
     }
@@ -409,18 +469,39 @@ class ExpenseSubmissionController extends Controller
         header('Content-Type: text/csv');
         header('Content-Disposition: attachment; filename="expense-report.csv"');
 
-        fputcsv($handle, ['Submission #', 'Date', 'Category', 'Title', 'Total (TSh)', 'Status', 'Decided At']);
+        fputcsv($handle, ['Submission #', 'Date', 'Category', 'Title', 'Status', 'Item', 'Unit', 'Price per Unit (TSh)', 'Quantity', 'Line Total (TSh)', 'Submission Total (TSh)', 'Decided At']);
 
         foreach ($submissions as $submission) {
-            fputcsv($handle, [
-                $submission->submission_number,
-                $submission->transaction_date,
-                $submission->category?->name,
-                $submission->title,
-                $submission->total_amount,
-                $submission->status,
-                $submission->decided_at,
-            ]);
+            $lineItems = $submission->lineItems;
+            if ($lineItems->isEmpty()) {
+                fputcsv($handle, [
+                    $submission->submission_number,
+                    $submission->transaction_date,
+                    $submission->category?->name,
+                    $submission->title,
+                    $submission->status,
+                    '', '', '', '', '',
+                    $submission->total_amount,
+                    $submission->decided_at,
+                ]);
+            } else {
+                foreach ($lineItems as $i => $li) {
+                    fputcsv($handle, [
+                        $i === 0 ? $submission->submission_number : '',
+                        $i === 0 ? $submission->transaction_date : '',
+                        $i === 0 ? $submission->category?->name : '',
+                        $i === 0 ? $submission->title : '',
+                        $i === 0 ? $submission->status : '',
+                        $li->item_name_snapshot,
+                        $li->unit_type_snapshot,
+                        $li->unit_price,
+                        $li->quantity,
+                        $li->line_total,
+                        $i === 0 ? $submission->total_amount : '',
+                        $i === 0 ? $submission->decided_at : '',
+                    ]);
+                }
+            }
         }
 
         fclose($handle);
@@ -439,7 +520,7 @@ class ExpenseSubmissionController extends Controller
 
     protected function filteredSubmissionsForReport(array $validated)
     {
-        $query = ExpenseSubmission::with('category')
+        $query = ExpenseSubmission::with(['category', 'lineItems.item'])
             ->where('academic_year_id', $validated['academic_year_id']);
 
         if (!empty($validated['category_id'])) {
