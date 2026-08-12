@@ -191,15 +191,12 @@
                 </div>
 
                 @if($isMainAccountant)
-                <div class="bg-white rounded-lg shadow p-4">
-                    <h3 class="font-semibold mb-3">Edit plan for selected category</h3>
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div><label class="block text-xs text-gray-500 mb-1">Expected amount (TSh)</label><input type="number" step="0.01" id="planAmount" class="w-full border rounded px-2 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs text-gray-500 mb-1">Academic year</label><select id="planAcademicYear" class="w-full border rounded px-2 py-1.5 text-sm"></select></div>
-                        <div><label class="block text-xs text-gray-500 mb-1">From</label><input type="date" id="planFrom" class="w-full border rounded px-2 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs text-gray-500 mb-1">To</label><input type="date" id="planTo" class="w-full border rounded px-2 py-1.5 text-sm"></div>
+                <div class="bg-white rounded-lg shadow p-4" id="budgetPlanPanel">
+                    <h3 class="font-semibold mb-1">Monthly budget plan</h3>
+                    <p class="text-xs text-gray-500 mb-3">Select a specific category and academic year above, then enter a budget for each month.</p>
+                    <div id="budgetPlanBox">
+                        <p class="text-gray-400 text-sm">Select a category above to set monthly budgets.</p>
                     </div>
-                    <button onclick="savePlan()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded text-sm">Save plan</button>
                 </div>
                 @endif
             </div>
@@ -367,11 +364,13 @@ async function loadCategoriesForSelects() {
     });
 }
 
+let academicYearsCache = [];
+
 async function loadAcademicYearsForSelects() {
     const res = await axios.get('/api/academic-years');
-    const years = res.data || [];
-    const opts = years.map(y => `<option value="${y.id}" ${y.is_current ? 'selected' : ''}>${y.name}</option>`).join('');
-    ['composeAcademicYear', 'chartAcademicYear', 'planAcademicYear', 'reportAcademicYear'].forEach(id => {
+    academicYearsCache = res.data || [];
+    const opts = academicYearsCache.map(y => `<option value="${y.id}" ${y.is_current ? 'selected' : ''}>${y.name}</option>`).join('');
+    ['composeAcademicYear', 'chartAcademicYear', 'reportAcademicYear'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = opts;
     });
@@ -1038,6 +1037,7 @@ async function loadChart() {
 
     const params = new URLSearchParams({ academic_year_id: academicYearId });
     if (categoryId) params.set('category_id', categoryId);
+    // Only send from/to if the user has explicitly set them (override only)
     const from = document.getElementById('chartFrom').value;
     const to = document.getElementById('chartTo').value;
     if (from) params.set('from_date', from);
@@ -1053,20 +1053,10 @@ async function loadChart() {
         }
         document.getElementById('chartActual').textContent = 'TSh ' + fmt(res.data.actual_amount);
 
-        renderExpenseChart(res.data.timeline || [], res.data.planned_per_bucket || 0);
+        renderExpenseChart(res.data.timeline || [], res.data.planned_per_bucket || []);
 
-        if (categoryId && IS_MAIN_ACCOUNTANT) {
-            const plan = res.data.current_plan;
-            if (plan) {
-                document.getElementById('planAmount').value = plan.expected_amount;
-                document.getElementById('planFrom').value = plan.from_date;
-                document.getElementById('planTo').value = plan.to_date;
-                if (plan.academic_year_id) document.getElementById('planAcademicYear').value = plan.academic_year_id;
-            } else {
-                document.getElementById('planAmount').value = '';
-                document.getElementById('planFrom').value = '';
-                document.getElementById('planTo').value = '';
-            }
+        if (IS_MAIN_ACCOUNTANT) {
+            loadBudgetPlanPanel(res.data.monthly_plans || []);
         }
     } catch (e) {
         if (e.response?.status === 403) {
@@ -1099,11 +1089,12 @@ function renderExpenseChart(timeline, plannedPerBucket) {
     if (expenseChartInstance) expenseChartInstance.destroy();
 
     const datasets = [];
+    const budgetArr = Array.isArray(plannedPerBucket) ? plannedPerBucket : [];
 
-    if (IS_MAIN_ACCOUNTANT && plannedPerBucket > 0) {
+    if (IS_MAIN_ACCOUNTANT && budgetArr.some(v => v > 0)) {
         datasets.push({
             label: 'Budget',
-            data: timeline.map(() => plannedPerBucket),
+            data: budgetArr,
             backgroundColor: '#93c5fd',
             borderRadius: 4,
             order: 2,
@@ -1129,25 +1120,119 @@ function renderExpenseChart(timeline, plannedPerBucket) {
     });
 }
 
-async function savePlan() {
+// ─── Monthly Budget Planning Panel ──────────────────────────────────────
+function getMonthsForYear(academicYear) {
+    const months = [];
+    if (!academicYear?.start_date || !academicYear?.end_date) return months;
+
+    // Parse as local dates (avoid UTC-offset shifting the day)
+    const [sy, sm] = academicYear.start_date.slice(0, 7).split('-').map(Number);
+    const [ey, em] = academicYear.end_date.slice(0, 7).split('-').map(Number);
+
+    let cy = sy, cm = sm;
+    while (cy < ey || (cy === ey && cm <= em)) {
+        const key = `${cy}-${String(cm).padStart(2, '0')}`;
+        const label = new Date(cy, cm - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+        months.push({ key, label });
+        cm++;
+        if (cm > 12) { cm = 1; cy++; }
+    }
+    return months;
+}
+
+function loadBudgetPlanPanel(monthlyPlans) {
+    if (!IS_MAIN_ACCOUNTANT) return;
+
+    const box = document.getElementById('budgetPlanBox');
     const categoryId = document.getElementById('chartCategory').value;
-    if (!categoryId) {
-        showDarasaToast({ type: 'error', message: 'Select a specific category first.' });
+    const academicYearId = document.getElementById('chartAcademicYear').value;
+
+    if (!categoryId || !academicYearId) {
+        box.innerHTML = '<p class="text-gray-400 text-sm">Select a specific category and academic year above to set monthly budgets.</p>';
         return;
     }
-    const payload = {
-        academic_year_id: document.getElementById('planAcademicYear').value,
-        expected_amount: document.getElementById('planAmount').value,
-        from_date: document.getElementById('planFrom').value,
-        to_date: document.getElementById('planTo').value,
-    };
+
+    const academicYear = academicYearsCache.find(y => String(y.id) === String(academicYearId));
+    const months = academicYear ? getMonthsForYear(academicYear) : [];
+
+    if (!months.length) {
+        box.innerHTML = '<p class="text-gray-400 text-sm">Could not determine the months for this academic year.</p>';
+        return;
+    }
+
+    const planMap = {};
+    (monthlyPlans || []).forEach(p => { planMap[p.month_key] = p.expected_amount; });
+
+    const rows = months.map(m => {
+        const val = planMap[m.key] != null ? planMap[m.key] : '';
+        return `
+            <tr data-month-key="${m.key}" class="border-t">
+                <td class="py-2 pr-3 text-sm font-medium text-gray-700 whitespace-nowrap">${m.label}</td>
+                <td class="py-2">
+                    <input type="number" step="1" min="0" value="${val}"
+                        class="w-full border rounded px-2 py-1 text-sm text-right budget-month-input"
+                        placeholder="— no budget —"
+                        oninput="updateBudgetTotal()">
+                </td>
+            </tr>`;
+    }).join('');
+
+    box.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="w-full mb-3">
+                <thead class="bg-gray-50 text-xs">
+                    <tr>
+                        <th class="py-2 pr-3 text-left font-medium text-gray-600">Month</th>
+                        <th class="py-2 text-right font-medium text-gray-600">Budget (TSh)</th>
+                    </tr>
+                </thead>
+                <tbody id="budgetMonthRows">${rows}</tbody>
+                <tfoot>
+                    <tr class="border-t-2">
+                        <td class="py-2 text-sm font-semibold">Total</td>
+                        <td class="py-2 text-right text-sm font-bold text-blue-600" id="budgetPlanTotal">TSh 0</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <button onclick="saveMonthlyPlans()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">
+            Save budget plans
+        </button>`;
+
+    updateBudgetTotal();
+}
+
+function updateBudgetTotal() {
+    const inputs = [...document.querySelectorAll('.budget-month-input')];
+    const total = inputs.reduce((sum, inp) => sum + (parseFloat(inp.value) || 0), 0);
+    const el = document.getElementById('budgetPlanTotal');
+    if (el) el.textContent = 'TSh ' + fmt(total);
+}
+
+async function saveMonthlyPlans() {
+    const categoryId = document.getElementById('chartCategory').value;
+    const academicYearId = document.getElementById('chartAcademicYear').value;
+    if (!categoryId || !academicYearId) return;
+
+    const rows = [...document.querySelectorAll('#budgetMonthRows tr[data-month-key]')];
+    const months = rows
+        .map(tr => ({
+            month_key: tr.dataset.monthKey,
+            expected_amount: parseFloat(tr.querySelector('.budget-month-input').value) || 0,
+        }))
+        .filter(m => m.expected_amount > 0);
+
     try {
-        await axios.post(`${EBASE}/expense-categories/${categoryId}/plan`, payload);
-        showDarasaToast({ type: 'success', message: 'Plan saved.' });
+        await axios.post(`${EBASE}/expense-categories/${categoryId}/monthly-plans`, {
+            academic_year_id: academicYearId,
+            months,
+        });
+        showDarasaToast({ type: 'success', message: 'Budget plans saved.' });
         loadChart();
         loadCategoryListForBudget();
     } catch (e) {
-        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to save plan.' });
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Failed to save budget plans.' });
     }
 }
 

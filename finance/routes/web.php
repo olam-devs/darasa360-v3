@@ -467,8 +467,8 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
             Route::post('api/expense-categories/{category}/deny', [ExpenseCategoryController::class, 'deny'])->name('api.expense-categories.deny');
 
             Route::post('api/expense-categories/{category}/plan', [ExpenseCategoryPlanController::class, 'store'])->name('api.expense-category-plans.store');
+            Route::post('api/expense-categories/{category}/monthly-plans', [ExpenseCategoryPlanController::class, 'storeMonthly'])->name('api.expense-category-plans.store-monthly');
             Route::put('api/expense-category-plans/{plan}', [ExpenseCategoryPlanController::class, 'update'])->name('api.expense-category-plans.update');
-            Route::post('api/expense-categories/{category}/toggle-budget-visibility', [ExpenseCategoryPlanController::class, 'toggleVisibility'])->name('api.expense-category-plans.toggle-visibility');
 
             Route::get('api/expense-submissions-queue', [ExpenseSubmissionController::class, 'pendingQueue'])->name('api.expense-submissions.queue');
             Route::post('api/expense-submissions/{submission}/review', [ExpenseSubmissionController::class, 'review'])->name('api.expense-submissions.review');
