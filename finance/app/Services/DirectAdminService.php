@@ -53,6 +53,20 @@ class DirectAdminService
                 'passwd2' => $dbPassword,
             ]);
 
+            // If the user already exists (stale from a prior failed/rolled-back attempt),
+            // retry with a randomised 2-char suffix so a clean provisioning run gets through.
+            if (!$this->isSuccess($response) && str_contains($response->body(), 'That+user+already+exists')) {
+                Log::warning("DirectAdmin: user '{$uniqueUser}' already exists, retrying with randomised suffix");
+                $uniqueUser = substr($uniqueUser, 0, 9) . substr(md5(uniqid()), 0, 2);
+                $response = $this->post('/CMD_API_DATABASES', [
+                    'action'  => 'create',
+                    'name'    => $nameWithoutPrefix,
+                    'user'    => $uniqueUser,
+                    'passwd'  => $dbPassword,
+                    'passwd2' => $dbPassword,
+                ]);
+            }
+
             if (!$this->isSuccess($response)) {
                 Log::error("DirectAdmin createDatabase failed: " . $response->body());
                 return false;
