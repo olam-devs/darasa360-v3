@@ -339,6 +339,7 @@ function switchExpenseTab(name) {
 // ─── Shared caches ───────────────────────────────────────────────────────
 let itemsCache = [];
 let categoriesCache = [];
+let _budgetPlanState = []; // [{type:'month',key,label,amount}|{type:'group',fromKey,toKey,fromLabel,toLabel,amount}]
 
 async function loadItemsCache() {
     const res = await axios.get(`${EBASE}/expense-items`);
@@ -1125,7 +1126,6 @@ function getMonthsForYear(academicYear) {
     const months = [];
     if (!academicYear?.start_date || !academicYear?.end_date) return months;
 
-    // Parse as local dates (avoid UTC-offset shifting the day)
     const [sy, sm] = academicYear.start_date.slice(0, 7).split('-').map(Number);
     const [ey, em] = academicYear.end_date.slice(0, 7).split('-').map(Number);
 
@@ -1140,50 +1140,108 @@ function getMonthsForYear(academicYear) {
     return months;
 }
 
-function loadBudgetPlanPanel(monthlyPlans) {
-    if (!IS_MAIN_ACCOUNTANT) return;
+function buildPlanState(allMonths, rawPlans) {
+    const monthAmounts = {};
+    const groups = [];
 
+    for (const p of rawPlans) {
+        if (p.type === 'month') {
+            monthAmounts[p.month_key] = p.expected_amount;
+        } else if (p.type === 'group') {
+            groups.push({ fromKey: p.from_month, toKey: p.to_month, amount: p.expected_amount });
+        }
+    }
+
+    // Mark all months that belong to a group
+    const groupedMonths = new Set();
+    for (const g of groups) {
+        let [gy, gm] = g.fromKey.split('-').map(Number);
+        const [ty, tm] = g.toKey.split('-').map(Number);
+        while (gy < ty || (gy === ty && gm <= tm)) {
+            groupedMonths.add(`${gy}-${String(gm).padStart(2, '0')}`);
+            gm++;
+            if (gm > 12) { gm = 1; gy++; }
+        }
+    }
+
+    const state = [];
+    for (const m of allMonths) {
+        if (groupedMonths.has(m.key)) {
+            const group = groups.find(g => g.fromKey === m.key);
+            if (group) {
+                const toMonth = allMonths.find(x => x.key === group.toKey);
+                state.push({
+                    type: 'group',
+                    fromKey: group.fromKey, toKey: group.toKey,
+                    fromLabel: m.label, toLabel: toMonth?.label || group.toKey,
+                    amount: group.amount,
+                });
+            }
+            // else: interior month of a group — skip (already added as part of the group entry)
+        } else {
+            state.push({ type: 'month', key: m.key, label: m.label, amount: monthAmounts[m.key] ?? '' });
+        }
+    }
+    return state;
+}
+
+function renderBudgetPlanTable() {
     const box = document.getElementById('budgetPlanBox');
-    const categoryId = document.getElementById('chartCategory').value;
-    const academicYearId = document.getElementById('chartAcademicYear').value;
 
-    if (!categoryId || !academicYearId) {
-        box.innerHTML = '<p class="text-gray-400 text-sm">Select a specific category and academic year above to set monthly budgets.</p>';
-        return;
-    }
-
-    const academicYear = academicYearsCache.find(y => String(y.id) === String(academicYearId));
-    const months = academicYear ? getMonthsForYear(academicYear) : [];
-
-    if (!months.length) {
-        box.innerHTML = '<p class="text-gray-400 text-sm">Could not determine the months for this academic year.</p>';
-        return;
-    }
-
-    const planMap = {};
-    (monthlyPlans || []).forEach(p => { planMap[p.month_key] = p.expected_amount; });
-
-    const rows = months.map(m => {
-        const val = planMap[m.key] != null ? planMap[m.key] : '';
+    const rows = _budgetPlanState.map((item, idx) => {
+        if (item.type === 'group') {
+            const fromShort = item.fromLabel.split(' ')[0];
+            const label = `${fromShort} – ${item.toLabel}`;
+            return `
+                <tr data-plan-idx="${idx}" class="border-t bg-indigo-50">
+                    <td class="py-2 pr-3 text-sm font-semibold text-indigo-800 whitespace-nowrap">
+                        <span class="mr-1 text-indigo-400 text-xs">▸▸</span>${label}
+                    </td>
+                    <td class="py-2">
+                        <input type="number" step="1" min="0" value="${item.amount || ''}"
+                            class="w-full border border-indigo-300 rounded px-2 py-1 text-sm text-right budget-month-input"
+                            placeholder="— no budget —" oninput="updateBudgetTotal()">
+                    </td>
+                    <td class="py-2 pl-2 whitespace-nowrap">
+                        <button onclick="ungroupPlan('${item.fromKey}')"
+                            class="text-xs text-red-500 hover:text-red-700 font-medium">Ungroup</button>
+                    </td>
+                </tr>`;
+        }
         return `
-            <tr data-month-key="${m.key}" class="border-t">
-                <td class="py-2 pr-3 text-sm font-medium text-gray-700 whitespace-nowrap">${m.label}</td>
-                <td class="py-2">
-                    <input type="number" step="1" min="0" value="${val}"
-                        class="w-full border rounded px-2 py-1 text-sm text-right budget-month-input"
-                        placeholder="— no budget —"
-                        oninput="updateBudgetTotal()">
+            <tr data-plan-idx="${idx}" class="border-t">
+                <td class="py-2 pr-3 text-sm text-gray-700 whitespace-nowrap">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" class="plan-month-cb" data-idx="${idx}" onchange="onPlanCheckChange()">
+                        ${item.label}
+                    </label>
                 </td>
+                <td class="py-2">
+                    <input type="number" step="1" min="0" value="${item.amount !== '' ? item.amount : ''}"
+                        class="w-full border rounded px-2 py-1 text-sm text-right budget-month-input"
+                        placeholder="— no budget —" oninput="updateBudgetTotal()">
+                </td>
+                <td class="py-2 pl-2"></td>
             </tr>`;
     }).join('');
 
     box.innerHTML = `
+        <div class="flex items-center gap-3 mb-3 min-h-[28px]">
+            <span id="groupBtnWrap" class="hidden">
+                <button onclick="groupSelectedMonths()"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-xs font-semibold">
+                    ▸▸ Group selected months
+                </button>
+            </span>
+            <span id="groupHint" class="hidden text-xs text-gray-400 italic">Select 2 or more consecutive months to group them</span>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full mb-3">
                 <thead class="bg-gray-50 text-xs">
                     <tr>
                         <th class="py-2 pr-3 text-left font-medium text-gray-600">Month</th>
                         <th class="py-2 text-right font-medium text-gray-600">Budget (TSh)</th>
+                        <th class="py-2"></th>
                     </tr>
                 </thead>
                 <tbody id="budgetMonthRows">${rows}</tbody>
@@ -1191,6 +1249,7 @@ function loadBudgetPlanPanel(monthlyPlans) {
                     <tr class="border-t-2">
                         <td class="py-2 text-sm font-semibold">Total</td>
                         <td class="py-2 text-right text-sm font-bold text-blue-600" id="budgetPlanTotal">TSh 0</td>
+                        <td></td>
                     </tr>
                 </tfoot>
             </table>
@@ -1203,6 +1262,32 @@ function loadBudgetPlanPanel(monthlyPlans) {
     updateBudgetTotal();
 }
 
+function loadBudgetPlanPanel(rawPlans) {
+    if (!IS_MAIN_ACCOUNTANT) return;
+
+    const box = document.getElementById('budgetPlanBox');
+    const categoryId = document.getElementById('chartCategory').value;
+    const academicYearId = document.getElementById('chartAcademicYear').value;
+
+    if (!categoryId || !academicYearId) {
+        _budgetPlanState = [];
+        box.innerHTML = '<p class="text-gray-400 text-sm">Select a specific category and academic year above to set monthly budgets.</p>';
+        return;
+    }
+
+    const academicYear = academicYearsCache.find(y => String(y.id) === String(academicYearId));
+    const allMonths = academicYear ? getMonthsForYear(academicYear) : [];
+
+    if (!allMonths.length) {
+        _budgetPlanState = [];
+        box.innerHTML = '<p class="text-gray-400 text-sm">Could not determine the months for this academic year.</p>';
+        return;
+    }
+
+    _budgetPlanState = buildPlanState(allMonths, rawPlans || []);
+    renderBudgetPlanTable();
+}
+
 function updateBudgetTotal() {
     const inputs = [...document.querySelectorAll('.budget-month-input')];
     const total = inputs.reduce((sum, inp) => sum + (parseFloat(inp.value) || 0), 0);
@@ -1210,23 +1295,96 @@ function updateBudgetTotal() {
     if (el) el.textContent = 'TSh ' + fmt(total);
 }
 
+function onPlanCheckChange() {
+    const checked = [...document.querySelectorAll('.plan-month-cb:checked')];
+    const wrap = document.getElementById('groupBtnWrap');
+    const hint = document.getElementById('groupHint');
+    if (!wrap) return;
+
+    if (checked.length < 2) {
+        wrap.classList.add('hidden');
+        hint?.classList.toggle('hidden', checked.length === 0);
+        return;
+    }
+
+    const indices = checked.map(cb => parseInt(cb.dataset.idx)).sort((a, b) => a - b);
+    const minIdx = indices[0], maxIdx = indices[indices.length - 1];
+    // All state entries between min and max must be type 'month', and all must be checked
+    const sliceItems = _budgetPlanState.slice(minIdx, maxIdx + 1);
+    const allMonths  = sliceItems.every(e => e.type === 'month');
+    const allChecked = allMonths && sliceItems.length === checked.length;
+
+    wrap.classList.toggle('hidden', !allChecked);
+    hint?.classList.toggle('hidden', allChecked || checked.length < 2);
+}
+
+function groupSelectedMonths() {
+    const checked = [...document.querySelectorAll('.plan-month-cb:checked')];
+    const indices = checked.map(cb => parseInt(cb.dataset.idx)).sort((a, b) => a - b);
+    const minIdx = indices[0], maxIdx = indices[indices.length - 1];
+
+    // Flush any typed amounts from DOM back to state before merging
+    document.querySelectorAll('#budgetMonthRows tr[data-plan-idx]').forEach(tr => {
+        const i = parseInt(tr.dataset.planIdx);
+        const inp = tr.querySelector('.budget-month-input');
+        if (!isNaN(i) && inp) _budgetPlanState[i].amount = parseFloat(inp.value) || '';
+    });
+
+    const monthsInGroup = _budgetPlanState.slice(minIdx, maxIdx + 1);
+    const groupEntry = {
+        type: 'group',
+        fromKey: monthsInGroup[0].key,
+        toKey: monthsInGroup[monthsInGroup.length - 1].key,
+        fromLabel: monthsInGroup[0].label,
+        toLabel: monthsInGroup[monthsInGroup.length - 1].label,
+        amount: '',
+    };
+    _budgetPlanState.splice(minIdx, maxIdx - minIdx + 1, groupEntry);
+    renderBudgetPlanTable();
+}
+
+function ungroupPlan(fromKey) {
+    const idx = _budgetPlanState.findIndex(e => e.type === 'group' && e.fromKey === fromKey);
+    if (idx === -1) return;
+
+    const group = _budgetPlanState[idx];
+    const academicYearId = document.getElementById('chartAcademicYear').value;
+    const academicYear = academicYearsCache.find(y => String(y.id) === String(academicYearId));
+    const allMonths = academicYear ? getMonthsForYear(academicYear) : [];
+
+    const monthEntries = allMonths
+        .filter(m => m.key >= group.fromKey && m.key <= group.toKey)
+        .map(m => ({ type: 'month', key: m.key, label: m.label, amount: '' }));
+
+    _budgetPlanState.splice(idx, 1, ...monthEntries);
+    renderBudgetPlanTable();
+}
+
 async function saveMonthlyPlans() {
     const categoryId = document.getElementById('chartCategory').value;
     const academicYearId = document.getElementById('chartAcademicYear').value;
     if (!categoryId || !academicYearId) return;
 
-    const rows = [...document.querySelectorAll('#budgetMonthRows tr[data-month-key]')];
-    const months = rows
-        .map(tr => ({
-            month_key: tr.dataset.monthKey,
-            expected_amount: parseFloat(tr.querySelector('.budget-month-input').value) || 0,
-        }))
-        .filter(m => m.expected_amount > 0);
+    // Sync DOM amounts to state
+    document.querySelectorAll('#budgetMonthRows tr[data-plan-idx]').forEach(tr => {
+        const i = parseInt(tr.dataset.planIdx);
+        const inp = tr.querySelector('.budget-month-input');
+        if (!isNaN(i) && inp) _budgetPlanState[i].amount = parseFloat(inp.value) || 0;
+    });
+
+    const months = _budgetPlanState
+        .filter(e => e.type === 'month' && e.amount > 0)
+        .map(e => ({ month_key: e.key, expected_amount: e.amount }));
+
+    const groups = _budgetPlanState
+        .filter(e => e.type === 'group' && e.amount > 0)
+        .map(e => ({ from_month: e.fromKey, to_month: e.toKey, expected_amount: e.amount }));
 
     try {
         await axios.post(`${EBASE}/expense-categories/${categoryId}/monthly-plans`, {
             academic_year_id: academicYearId,
             months,
+            groups,
         });
         showDarasaToast({ type: 'success', message: 'Budget plans saved.' });
         loadChart();
