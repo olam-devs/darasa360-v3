@@ -57,4 +57,42 @@ class DateBucketer
 
         return array_values($buckets);
     }
+
+    /**
+     * Same as bucket() but takes pre-normalised ['date'=>'YYYY-MM-DD','amount'=>float] pairs.
+     *
+     * @param  iterable<array{date:string,amount:float}>  $pairs
+     * @return array<int, array{label: string, amount: float}>
+     */
+    public static function bucketFromPairs(string $fromDate, string $toDate, iterable $pairs): array
+    {
+        $daily = self::isDaily($fromDate, $toDate);
+        $buckets = [];
+
+        $current = new DateTime($fromDate);
+        $end = new DateTime($toDate);
+        while ($current <= $end) {
+            $key = $daily ? $current->format('Y-m-d') : $current->format('Y-m');
+            if (!isset($buckets[$key])) {
+                $buckets[$key] = [
+                    'label'  => $daily ? $current->format('M d') : $current->format('M Y'),
+                    'amount' => 0.0,
+                ];
+            }
+            $current->modify($daily ? '+1 day' : '+1 month');
+        }
+
+        foreach ($pairs as $pair) {
+            $dateValue = (string) ($pair['date'] ?? '');
+            if (! $dateValue) {
+                continue;
+            }
+            $key = $daily ? date('Y-m-d', strtotime($dateValue)) : date('Y-m', strtotime($dateValue));
+            if (isset($buckets[$key])) {
+                $buckets[$key]['amount'] += (float) ($pair['amount'] ?? 0);
+            }
+        }
+
+        return array_values($buckets);
+    }
 }

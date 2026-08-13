@@ -151,19 +151,34 @@ class ExpenseCategoryPlanController extends Controller
         }
 
         // --- Actual spend ---
-        $lineItems = ExpenseLineItem::query()
-            ->where('status', 'approved')
-            ->whereHas('submission', function ($q) use ($categoryId, $validated, $fromDate, $toDate) {
-                $q->where('academic_year_id', $validated['academic_year_id'])
-                    ->whereBetween('transaction_date', [$fromDate, $toDate]);
-                if ($categoryId) {
-                    $q->where('expense_category_id', $categoryId);
-                }
-            })
-            ->with('submission:id,transaction_date')
-            ->get(['id', 'expense_submission_id', 'line_total']);
+        // System payroll category: aggregate net_salary from payroll_entries.
+        $isPayrollCategory = $categoryId
+            && ExpenseCategory::where('id', $categoryId)->where('is_system', true)->exists();
 
-        $actualAmount = (float) $lineItems->sum('line_total');
+        if ($isPayrollCategory) {
+            $actualPairs = $this->getPayrollPairs($fromDate, $toDate);
+        } else {
+            $lineItems = ExpenseLineItem::query()
+                ->where('status', 'approved')
+                ->whereHas('submission', function ($q) use ($categoryId, $validated, $fromDate, $toDate) {
+                    $q->where('academic_year_id', $validated['academic_year_id'])
+                        ->whereBetween('transaction_date', [$fromDate, $toDate]);
+                    if ($categoryId) {
+                        $q->where('expense_category_id', $categoryId);
+                    }
+                })
+                ->with('submission:id,transaction_date')
+                ->get(['id', 'expense_submission_id', 'line_total']);
+
+            $actualPairs = $lineItems->map(fn ($l) => [
+                'date'   => is_string($l->submission?->transaction_date)
+                    ? $l->submission->transaction_date
+                    : ($l->submission?->transaction_date?->toDateString() ?? ''),
+                'amount' => (float) $l->line_total,
+            ])->filter(fn ($p) => $p['date'] !== '')->values();
+        }
+
+        $actualAmount = $actualPairs->sum('amount');
 
         $isDaily = DateBucketer::isDaily($fromDate, $toDate);
 
@@ -172,16 +187,15 @@ class ExpenseCategoryPlanController extends Controller
         );
 
         if ($isDaily) {
-            $timeline         = DateBucketer::bucket($fromDate, $toDate, $lineItems,
-                fn ($l) => $l->submission?->transaction_date, fn ($l) => $l->line_total);
+            // Daily view: simple day buckets, no group awareness.
+            $timeline = DateBucketer::bucketFromPairs($fromDate, $toDate, $actualPairs);
             $plannedPerBucket = array_fill(0, count($timeline), 0);
         } elseif ($hasGroups) {
-            [$timeline, $plannedPerBucket] = $this->buildGroupedBuckets($fromDate, $toDate, $allPlans, $lineItems);
+            [$timeline, $plannedPerBucket] = $this->buildGroupedBuckets($fromDate, $toDate, $allPlans, $actualPairs);
         } else {
             // Standard monthly bucketing (no groups)
             $plansByMonth = $allPlans->keyBy(fn ($p) => $p->from_date->format('Y-m'));
-            $timeline = DateBucketer::bucket($fromDate, $toDate, $lineItems,
-                fn ($l) => $l->submission?->transaction_date, fn ($l) => $l->line_total);
+            $timeline = DateBucketer::bucketFromPairs($fromDate, $toDate, $actualPairs);
             $plannedPerBucket = [];
             $cursor = new DateTime($fromDate);
             $end    = new DateTime($toDate);
@@ -201,7 +215,12 @@ class ExpenseCategoryPlanController extends Controller
         ]);
     }
 
-    private function buildGroupedBuckets(string $fromDate, string $toDate, $allPlans, $lineItems): array
+    /**
+     * Build grouped timeline buckets. $actualPairs is a collection of
+     * ['date' => 'YYYY-MM-DD', 'amount' => float] from any source
+     * (expense_line_items or payroll_entries).
+     */
+    private function buildGroupedBuckets(string $fromDate, string $toDate, $allPlans, $actualPairs): array
     {
         $planRanges = $allPlans->map(fn ($p) => [
             'from_month' => $p->from_date->format('Y-m'),
@@ -251,15 +270,14 @@ class ExpenseCategoryPlanController extends Controller
             $cursor->modify('+1 month');
         }
 
-        foreach ($lineItems as $item) {
-            $txDate = $item->submission?->transaction_date;
-            if (! $txDate) {
+        foreach ($actualPairs as $pair) {
+            $dateStr = $pair['date'] ?? '';
+            if (! $dateStr) {
                 continue;
             }
-            $txStr = is_string($txDate) ? $txDate : $txDate->toDateString();
             foreach ($buckets as $i => $bucket) {
-                if ($txStr >= $bucket['from'] && $txStr <= $bucket['to']) {
-                    $buckets[$i]['actual'] += (float) $item->line_total;
+                if ($dateStr >= $bucket['from'] && $dateStr <= $bucket['to']) {
+                    $buckets[$i]['actual'] += (float) ($pair['amount'] ?? 0);
                     break;
                 }
             }
@@ -269,6 +287,25 @@ class ExpenseCategoryPlanController extends Controller
             array_map(fn ($b) => ['label' => $b['label'], 'amount' => $b['actual']], $buckets),
             array_map(fn ($b) => $b['planned'], $buckets),
         ];
+    }
+
+    /**
+     * Return payroll net_salary as (date, amount) pairs for the date range,
+     * using the first day of each payroll month as the representative date.
+     */
+    private function getPayrollPairs(string $fromDate, string $toDate): \Illuminate\Support\Collection
+    {
+        return DB::connection('tenant')
+            ->table('payroll_entries')
+            ->whereRaw(
+                "DATE(CONCAT(`year`, '-', LPAD(`month`, 2, '0'), '-01')) BETWEEN ? AND ?",
+                [$fromDate, $toDate]
+            )
+            ->selectRaw(
+                "DATE(CONCAT(`year`, '-', LPAD(`month`, 2, '0'), '-01')) as `date`, net_salary as amount"
+            )
+            ->get()
+            ->map(fn ($r) => ['date' => $r->date, 'amount' => (float) $r->amount]);
     }
 
     private function groupBucketLabel(string $fromDate, string $toDate): string

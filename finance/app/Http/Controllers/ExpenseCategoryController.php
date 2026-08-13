@@ -13,8 +13,10 @@ class ExpenseCategoryController extends Controller
         $today = now()->toDateString();
         $activeYearId = (int) DB::table('academic_years')->where('is_active', 1)->value('id');
 
+        // System categories (payroll etc.) are pinned at the top regardless of usage count.
         $query = ExpenseCategory::query()
             ->withCount(['submissions as submission_count' => fn ($q) => $q->where('status', 'approved')])
+            ->orderByDesc('is_system')
             ->orderByDesc('submission_count')
             ->orderBy('name');
 
@@ -111,6 +113,10 @@ class ExpenseCategoryController extends Controller
 
     public function update(Request $request, ExpenseCategory $category)
     {
+        if ($category->is_system) {
+            return response()->json(['error' => 'System categories cannot be renamed.'], 422);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:expense_categories,name,'.$category->id,
         ]);
@@ -122,6 +128,10 @@ class ExpenseCategoryController extends Controller
 
     public function destroy(ExpenseCategory $category)
     {
+        if ($category->is_system) {
+            return response()->json(['error' => 'System categories cannot be deleted.'], 422);
+        }
+
         $hasApproved = $category->submissions()->where('status', 'approved')->exists();
         if ($hasApproved) {
             return response()->json(['error' => 'Cannot delete: this category has approved expenses recorded against it.'], 422);

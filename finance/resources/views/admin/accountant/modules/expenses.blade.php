@@ -1004,21 +1004,24 @@ function renderCategoryList() {
     box.innerHTML = categories.map(c => {
         const nameEsc = c.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
         const isExpired = c.latest_plan_to_date && !c.has_active_plan;
-        const planTag = isExpired
+        const systemBadge = c.is_system
+            ? `<span class="text-xs bg-violet-100 text-violet-700 font-semibold px-1.5 py-0.5 rounded flex-shrink-0">system</span>`
+            : '';
+        const planTag = !c.is_system && isExpired
             ? `<span class="text-xs text-red-500 flex-shrink-0 ml-1" title="Plan expired ${c.latest_plan_to_date}">expired</span>`
-            : (c.status !== 'approved' ? `<span class="text-xs text-amber-600 flex-shrink-0 ml-1">${c.status}</span>` : '');
-        const renameBtn = IS_MAIN_ACCOUNTANT
+            : (!c.is_system && c.status !== 'approved' ? `<span class="text-xs text-amber-600 flex-shrink-0 ml-1">${c.status}</span>` : '');
+        const renameBtn = IS_MAIN_ACCOUNTANT && !c.is_system
             ? `<button type="button" onclick="openRenameCategoryModal(${c.id}, '${nameEsc}')" class="text-gray-400 hover:text-blue-600 px-1 py-1 text-sm leading-none flex-shrink-0" title="Rename">✎</button>`
             : '';
-        const deleteBtn = IS_MAIN_ACCOUNTANT
+        const deleteBtn = IS_MAIN_ACCOUNTANT && !c.is_system
             ? `<button type="button" onclick="deleteCategory(${c.id}, '${nameEsc}')" class="text-gray-300 hover:text-red-500 px-1 py-1 text-sm leading-none flex-shrink-0" title="Delete">✕</button>`
             : '';
 
         return `
-            <div class="flex items-center gap-0.5 ${c.status !== 'approved' ? 'opacity-60' : ''}">
+            <div class="flex items-center gap-0.5 ${c.status !== 'approved' && !c.is_system ? 'opacity-60' : ''}">
                 <button type="button" onclick="selectBudgetCategory(${c.id}, '${nameEsc}')"
-                    class="flex-1 text-left px-2 py-1.5 rounded text-sm hover:bg-rose-50 flex items-center gap-1 min-w-0">
-                    <span class="truncate">${c.name}</span>${planTag}
+                    class="flex-1 text-left px-2 py-1.5 rounded text-sm hover:bg-rose-50 flex items-center gap-1.5 min-w-0">
+                    <span class="truncate">${c.name}</span>${systemBadge}${planTag}
                 </button>
                 ${renameBtn}${deleteBtn}
             </div>
