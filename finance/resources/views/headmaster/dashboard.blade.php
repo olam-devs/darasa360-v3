@@ -24,22 +24,42 @@
         @endif
     </div>
 
+    {{-- Academic year selector --}}
+    <div class="mb-5 flex flex-wrap items-center gap-3">
+        <span class="text-sm font-semibold text-slate-600">Academic year:</span>
+        @foreach($academicYears as $year)
+            <a href="{{ route('headmaster.dashboard', ['year_id' => $year->id]) }}"
+               class="rounded-lg border px-4 py-1.5 text-sm font-semibold transition
+                      {{ ($selectedYear && $selectedYear->id === $year->id)
+                            ? 'border-blue-700 bg-blue-600 text-white shadow-sm'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
+                {{ $year->name }}{{ $year->is_current ? ' ✓' : '' }}
+            </a>
+        @endforeach
+        @if($academicYears->isEmpty())
+            <span class="text-sm text-slate-400">No academic years configured</span>
+        @endif
+    </div>
+
     <div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p class="text-sm text-slate-500">Total students</p>
+            <p class="text-sm text-slate-500">Active students</p>
             <p class="text-3xl font-bold text-slate-900">{{ number_format($totalStudents) }}</p>
         </div>
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <p class="text-sm text-slate-500">Expected fees</p>
             <p class="text-2xl font-bold text-slate-900">TSh {{ number_format($totalFeesExpected, 0) }}</p>
+            <p class="mt-1 text-xs text-slate-400">{{ $selectedYear?->name ?? 'All years' }}</p>
         </div>
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <p class="text-sm text-slate-500">Collected fees</p>
             <p class="text-2xl font-bold text-emerald-700">TSh {{ number_format($totalFeesCollected, 0) }}</p>
+            <p class="mt-1 text-xs text-slate-400">{{ $selectedYear?->name ?? 'All years' }}</p>
         </div>
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <p class="text-sm text-slate-500">Collection rate</p>
             <p class="text-3xl font-bold text-blue-800">{{ number_format($collectionRate, 1) }}%</p>
+            <p class="mt-1 text-xs text-slate-400">{{ $selectedYear?->name ?? 'All years' }}</p>
         </div>
     </div>
 

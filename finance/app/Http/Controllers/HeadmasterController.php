@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicYear;
 use App\Models\Book;
 use App\Models\Particular;
 use App\Models\SchoolSetting;
@@ -9,6 +10,7 @@ use App\Models\Student;
 use App\Models\Voucher;
 use App\Services\ActivityLogger;
 use App\Traits\HasSchoolContext;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class HeadmasterController extends Controller
@@ -48,25 +50,50 @@ class HeadmasterController extends Controller
         ], $extra));
     }
 
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         $settings = SchoolSetting::getSettings();
 
-        $totalStudents = Student::count();
+        $academicYears = AcademicYear::where('is_active', true)
+            ->orderBy('start_date', 'desc')
+            ->get();
+        $currentYear = AcademicYear::current();
+
+        $selectedYearId = $request->get('year_id');
+        $selectedYear = $selectedYearId
+            ? $academicYears->firstWhere('id', (int) $selectedYearId)
+            : $currentYear;
+
+        $yearFilter = $selectedYear?->id;
+
+        $totalStudents = Student::where('status', 'active')->count();
         $totalBooks = Book::where('is_active', true)->count();
         $totalParticulars = Particular::count();
 
-        $totalFeesExpected = (float) DB::table('particular_student')
-            ->selectRaw('COALESCE(SUM(COALESCE(sales, 0) + COALESCE(debit, 0)), 0) as total')
-            ->value('total');
-        $totalFeesCollected = (float) DB::table('particular_student')
-            ->selectRaw('COALESCE(SUM(COALESCE(credit, 0)), 0) as total')
-            ->value('total');
+        // Expected and collected for the selected academic year, matching analytics logic.
+        $totals = DB::table('particular_student as ps')
+            ->leftJoin('scholarships as sch', function ($join) {
+                $join->on('sch.student_id', '=', 'ps.student_id')
+                    ->on('sch.particular_id', '=', 'ps.particular_id')
+                    ->where('sch.is_active', '=', 1)
+                    ->whereRaw('sch.academic_year_id <=> ps.academic_year_id');
+            })
+            ->when($yearFilter, fn ($q) => $q->where('ps.academic_year_id', $yearFilter))
+            ->selectRaw('COALESCE(SUM(GREATEST(ps.sales - COALESCE(sch.forgiven_amount, 0), 0)), 0) as expected_net')
+            ->selectRaw('COALESCE(SUM(ps.credit), 0) as collected')
+            ->first();
+
+        $totalFeesExpected = (float) ($totals->expected_net ?? 0);
+        $totalFeesCollected = (float) ($totals->collected ?? 0);
         $collectionRate = $totalFeesExpected > 0
             ? ($totalFeesCollected / $totalFeesExpected) * 100
             : 0;
 
         $recentTransactions = Voucher::with(['student', 'particular', 'book'])
+            ->when(
+                $selectedYear,
+                fn ($q) => $q->whereBetween('date', [$selectedYear->start_date, $selectedYear->end_date])
+            )
             ->latest()
             ->take(10)
             ->get();
@@ -82,7 +109,9 @@ class HeadmasterController extends Controller
             'totalFeesCollected',
             'collectionRate',
             'recentTransactions',
-            'school'
+            'school',
+            'academicYears',
+            'selectedYear',
         ));
     }
 
