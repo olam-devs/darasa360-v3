@@ -603,18 +603,28 @@ class ParticularController extends Controller
         $particular = Particular::findOrFail($particularId);
         $academicYearId = $request->get('academic_year_id');
 
+        $query = DB::connection('tenant')->table('particular_student')
+            ->where('particular_id', $particularId)
+            ->where('student_id', $studentId);
+
         if ($academicYearId) {
-            // Delete only the assignment for specific academic year
-            DB::connection('tenant')->table('particular_student')
-                ->where('particular_id', $particularId)
-                ->where('student_id', $studentId)
-                ->where('academic_year_id', $academicYearId)
-                ->delete();
-        } else {
-            // Delete all assignments for this student and particular
-            $particular->students()->detach($studentId);
+            $query->where('academic_year_id', $academicYearId);
         }
 
-        return response()->json(['message' => 'Assignment deleted successfully']);
+        $row = $query->first();
+
+        if (!$row) {
+            return response()->json(['message' => 'Assignment not found'], 404);
+        }
+
+        if ((float) ($row->credit ?? 0) > 0 || (float) ($row->overpayment ?? 0) > 0) {
+            return response()->json([
+                'message' => 'Cannot unassign: this student has already made a payment for this particular.',
+            ], 422);
+        }
+
+        $query->delete();
+
+        return response()->json(['message' => 'Assignment removed successfully']);
     }
 }

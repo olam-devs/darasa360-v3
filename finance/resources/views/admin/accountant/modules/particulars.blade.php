@@ -516,6 +516,12 @@ const API_BASE = '/api';
                                 class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-bold">
                                  Update
                             </button>
+                            ${student.credit == 0 ? `
+                            <button onclick="unassignStudent(${particularId}, ${student.student_id})"
+                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-bold"
+                                title="Remove assignment (no payments made yet)">
+                                 Unassign
+                            </button>` : ''}
                             ` : `
                             <button onclick="assignSingleStudent(${particularId}, ${student.student_id})"
                                 class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">
@@ -618,6 +624,12 @@ const API_BASE = '/api';
                                 class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-bold">
                                  Update
                             </button>
+                            ${student.credit == 0 ? `
+                            <button onclick="unassignStudent(${particularId}, ${student.student_id})"
+                                class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-bold"
+                                title="Remove assignment (no payments made yet)">
+                                 Unassign
+                            </button>` : ''}
                             ` : `
                             <button onclick="assignSingleStudent(${particularId}, ${student.student_id})"
                                 class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">
@@ -812,6 +824,22 @@ const API_BASE = '/api';
             } catch (error) {
                 console.error('Error updating assignment:', error);
                 alert(' Error: ' + (error.response?.data?.message || error.message));
+            }
+        }
+
+        async function unassignStudent(particularId, studentId) {
+            if (!confirm('Remove this assignment? This cannot be undone.')) return;
+
+            try {
+                await axios.delete(`${API_BASE}/particulars/${particularId}/assignments/${studentId}`, {
+                    params: { academic_year_id: selectedAcademicYearId }
+                });
+                alert(' Assignment removed successfully.');
+                _cachedAssignmentStudents = null;
+                showAssignStudentsForm(particularId, currentParticularForExisting.name);
+            } catch (error) {
+                const msg = error.response?.data?.message || error.message;
+                alert(' Cannot unassign: ' + msg);
             }
         }
 
