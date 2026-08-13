@@ -29,6 +29,8 @@ const API_BASE = '/api';
         let allClasses = [];
         let allAcademicYears = [];
         let selectedAcademicYearId = null;
+        let _cachedAssignmentStudents = null; // {key: particularId+'-'+yearId, data: [...]}
+        let _searchDebounceTimer = null;
 
         // Configure axios
         axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
@@ -337,7 +339,24 @@ const API_BASE = '/api';
                         </div>
 
                         <div class="mb-6 p-6 bg-blue-50 rounded-lg border-2 border-blue-300">
-                            <label class="block text-lg font-bold mb-4 text-center"> Step 2: Select Class to View Students:</label>
+                            <label class="block text-lg font-bold mb-4 text-center"> Step 2: Find Students</label>
+
+                            <!-- Search by name (cross-class) -->
+                            <div class="mb-4">
+                                <div class="relative">
+                                    <input type="text" id="studentSearchInput"
+                                        placeholder="Type a student name to search across all classes..."
+                                        oninput="debounceStudentSearch(${particularId})"
+                                        class="w-full border-2 border-blue-400 rounded-lg px-4 py-3 pr-10 text-sm focus:border-blue-600 focus:outline-none bg-white"
+                                        autocomplete="off">
+                                    <span class="absolute right-3 top-3 text-gray-400 pointer-events-none">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+                                    </span>
+                                </div>
+                                <p class="text-xs text-blue-600 mt-1">Or select a class below to view all students in that class</p>
+                            </div>
+
+                            <!-- Class buttons -->
                             <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                                 ${classButtons}
                             </div>
@@ -359,7 +378,9 @@ const API_BASE = '/api';
 
         function onAcademicYearChange(yearId) {
             selectedAcademicYearId = parseInt(yearId);
-            // Clear the students list when academic year changes
+            _cachedAssignmentStudents = null;
+            const si = document.getElementById('studentSearchInput');
+            if (si) si.value = '';
             document.getElementById('studentsListContainer').innerHTML = '<p class="text-center text-gray-500 p-4">Select a class to view students for the selected academic year.</p>';
         }
 
@@ -409,13 +430,24 @@ const API_BASE = '/api';
                 return;
             }
 
+            // Clear search when a class button is clicked
+            const si = document.getElementById('studentSearchInput');
+            if (si) si.value = '';
+
             // Show loading
             document.getElementById('studentsListContainer').innerHTML = '<p class="text-center text-blue-600 p-4">⏳ Loading students...</p>';
 
             try {
-                // Load all students with assignment status for this particular and academic year
-                const response = await axios.get(`${API_BASE}/particulars/${particularId}/students-for-new-assignment?academic_year_id=${selectedAcademicYearId}`);
-                const allStudents = response.data;
+                // Load all students (use cache when available)
+                const cacheKey = `${particularId}-${selectedAcademicYearId}`;
+                let allStudents;
+                if (_cachedAssignmentStudents && _cachedAssignmentStudents.key === cacheKey) {
+                    allStudents = _cachedAssignmentStudents.data;
+                } else {
+                    const response = await axios.get(`${API_BASE}/particulars/${particularId}/students-for-new-assignment?academic_year_id=${selectedAcademicYearId}`);
+                    allStudents = response.data;
+                    _cachedAssignmentStudents = { key: cacheKey, data: allStudents };
+                }
 
                 // Filter students by class
                 const classStudents = allStudents.filter(s => s.class_name === className);
@@ -506,6 +538,106 @@ const API_BASE = '/api';
             }
         }
 
+        function debounceStudentSearch(particularId) {
+            clearTimeout(_searchDebounceTimer);
+            _searchDebounceTimer = setTimeout(() => {
+                const query = (document.getElementById('studentSearchInput')?.value || '').trim();
+                searchParticularStudents(particularId, query);
+            }, 300);
+        }
+
+        async function searchParticularStudents(particularId, query) {
+            if (!selectedAcademicYearId) {
+                alert('Please select an Academic Year first');
+                return;
+            }
+
+            const container = document.getElementById('studentsListContainer');
+
+            if (!query) {
+                container.innerHTML = '<p class="text-center text-slate-400 p-4">Type a name to search, or select a class above.</p>';
+                return;
+            }
+
+            container.innerHTML = '<p class="text-center text-blue-600 p-4">⏳ Searching...</p>';
+
+            try {
+                const cacheKey = `${particularId}-${selectedAcademicYearId}`;
+                let allStudents;
+                if (_cachedAssignmentStudents && _cachedAssignmentStudents.key === cacheKey) {
+                    allStudents = _cachedAssignmentStudents.data;
+                } else {
+                    const response = await axios.get(`${API_BASE}/particulars/${particularId}/students-for-new-assignment?academic_year_id=${selectedAcademicYearId}`);
+                    allStudents = response.data;
+                    _cachedAssignmentStudents = { key: cacheKey, data: allStudents };
+                }
+
+                const lq = query.toLowerCase();
+                const matched = allStudents.filter(s =>
+                    s.student_name.toLowerCase().includes(lq) ||
+                    (s.student_reg_no && s.student_reg_no.toLowerCase().includes(lq))
+                );
+
+                if (matched.length === 0) {
+                    container.innerHTML = `<p class="text-center text-gray-500 p-4">No students match "<strong>${query}</strong>".</p>`;
+                    return;
+                }
+
+                let html = `
+                    <div class="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
+                        <h4 class="font-bold text-lg mb-3">Results for "<span class="text-blue-700">${query}</span>" — ${matched.length} student${matched.length !== 1 ? 's' : ''}</h4>
+                        <div class="space-y-2 max-h-96 overflow-y-auto">
+                `;
+
+                matched.forEach(student => {
+                    const bgClass = student.has_assignment ? 'bg-green-50 border-green-400' : 'bg-white';
+                    const checkmark = student.has_assignment ? ' ' : '';
+
+                    html += `
+                        <div class="flex items-center gap-2 p-3 ${bgClass} rounded border-2 hover:border-blue-500">
+                            <div class="flex-1">
+                                <p class="font-bold">${checkmark}${student.student_name}</p>
+                                <p class="text-xs text-gray-500">${student.student_reg_no} &middot; <span class="text-blue-600 font-semibold">${student.class_name}</span></p>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <span class="text-xs font-bold">Amount (TSH):</span>
+                                <input type="text" value="${student.sales || ''}"
+                                    class="money-input student-amount w-32 border-2 border-gray-300 rounded px-2 py-1 text-sm"
+                                    data-student-id="${student.student_id}"
+                                    data-original="${student.sales || 0}"
+                                    placeholder="0.00">
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <span class="text-xs font-bold">Deadline:</span>
+                                <input type="date" value="${student.deadline || ''}"
+                                    class="student-deadline w-36 border-2 border-gray-300 rounded px-2 py-1 text-sm"
+                                    data-student-id="${student.student_id}">
+                            </div>
+                            ${student.has_assignment ? `
+                            <button onclick="saveStudentEdit(${particularId}, ${student.student_id})"
+                                class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded text-sm font-bold">
+                                 Update
+                            </button>
+                            ` : `
+                            <button onclick="assignSingleStudent(${particularId}, ${student.student_id})"
+                                class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm font-bold">
+                                 Assign
+                            </button>
+                            `}
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+                container.innerHTML = html;
+                applyMoneyFormattingInContainer(container);
+
+            } catch (error) {
+                console.error('Error searching students:', error);
+                container.innerHTML = '<p class="text-center text-red-500 p-4"> Error loading students</p>';
+            }
+        }
+
         function getSelectedRowsForBulk() {
             const selected = [];
             document.querySelectorAll('.student-select-checkbox:checked').forEach(cb => {
@@ -558,6 +690,7 @@ const API_BASE = '/api';
                     use_advance: useAdvance,
                 });
                 alert(` Bulk assign complete for ${assignments.length} student(s)`);
+                _cachedAssignmentStudents = null;
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error bulk assigning:', error);
@@ -597,6 +730,7 @@ const API_BASE = '/api';
                     academic_year_id: selectedAcademicYearId,
                 });
                 alert(` Bulk update complete for ${updates.length} student(s)`);
+                _cachedAssignmentStudents = null;
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error bulk updating:', error);
@@ -631,7 +765,7 @@ const API_BASE = '/api';
                 });
 
                 alert(' Student assigned successfully!');
-                // Reload the class view
+                _cachedAssignmentStudents = null;
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error assigning student:', error);
@@ -673,7 +807,7 @@ const API_BASE = '/api';
                     alert(' Deadline updated successfully!');
                 }
 
-                // Reload the class view
+                _cachedAssignmentStudents = null;
                 showAssignStudentsForm(particularId, currentParticularForExisting.name);
             } catch (error) {
                 console.error('Error updating assignment:', error);
