@@ -8,6 +8,7 @@ use App\Models\PayrollDeductionType;
 use App\Models\PayrollEntry;
 use App\Models\PayrollEntryDeduction;
 use App\Models\Staff;
+use App\Models\StaffDeduction;
 use App\Models\Voucher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -109,6 +110,56 @@ class PayrollController extends Controller
             'total_deductions' => $payments->sum('total_deductions'),
             'total_net'        => $payments->sum('net_salary'),
         ]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Per-staff Deduction Presets
+    // ────────────────────────────────────────────────────────────────────────
+
+    public function indexStaffDeductions($staffId)
+    {
+        Staff::findOrFail($staffId);
+        $deductions = StaffDeduction::where('staff_id', $staffId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+        return response()->json(['deductions' => $deductions]);
+    }
+
+    public function storeStaffDeduction(Request $request, $staffId)
+    {
+        Staff::findOrFail($staffId);
+        $validated = $request->validate([
+            'name'              => 'required|string|max:255',
+            'type'              => 'required|in:fixed,percentage,insurance,penalty,other',
+            'default_amount'    => 'required|numeric|min:0',
+            'deduction_type_id' => 'nullable|exists:payroll_deduction_types,id',
+            'note'              => 'nullable|string|max:255',
+        ]);
+        $validated['staff_id']  = $staffId;
+        $validated['is_active'] = true;
+        $ded = StaffDeduction::create($validated);
+        return response()->json(['deduction' => $ded], 201);
+    }
+
+    public function updateStaffDeduction(Request $request, $staffId, $dedId)
+    {
+        $ded = StaffDeduction::where('staff_id', $staffId)->findOrFail($dedId);
+        $validated = $request->validate([
+            'name'           => 'required|string|max:255',
+            'type'           => 'required|in:fixed,percentage,insurance,penalty,other',
+            'default_amount' => 'required|numeric|min:0',
+            'note'           => 'nullable|string|max:255',
+        ]);
+        $ded->update($validated);
+        return response()->json(['deduction' => $ded]);
+    }
+
+    public function destroyStaffDeduction($staffId, $dedId)
+    {
+        $ded = StaffDeduction::where('staff_id', $staffId)->findOrFail($dedId);
+        $ded->delete();
+        return response()->json(['message' => 'Deduction preset removed.']);
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -368,7 +419,7 @@ class PayrollController extends Controller
      */
     public function updatePayroll(Request $request, $id)
     {
-        $payroll = PayrollEntry::with('deductions')->findOrFail($id);
+        $payroll = PayrollEntry::with(['deductions', 'staff'])->findOrFail($id);
 
         $validated = $request->validate([
             'gross_salary'     => 'required|numeric|min:0',
@@ -376,15 +427,46 @@ class PayrollController extends Controller
             'payment_method'   => 'required|in:cash,bank_transfer,cheque,mobile_money',
             'reference_number' => 'nullable|string|max:255',
             'notes'            => 'nullable|string',
+            'deductions'       => 'nullable|array',
+            'deductions.*.deduction_type_id' => 'nullable|exists:payroll_deduction_types,id',
+            'deductions.*.name'   => 'required_with:deductions|string|max:255',
+            'deductions.*.type'   => 'required_with:deductions|in:fixed,percentage,insurance,penalty,other',
+            'deductions.*.amount' => 'required_with:deductions|numeric|min:0',
+            'deductions.*.note'   => 'nullable|string',
         ]);
 
-        $totalDeductions = (float) $payroll->deductions->sum('amount');
-        $netSalary = max(0.0, (float) $validated['gross_salary'] - $totalDeductions);
+        $gross = (float) $validated['gross_salary'];
+        $deductions = $validated['deductions'] ?? [];
+
+        $totalDeductions = 0.0;
+        foreach ($deductions as &$ded) {
+            if (($ded['type'] ?? 'fixed') === 'percentage') {
+                $ded['amount'] = round($gross * ((float) $ded['amount'] / 100), 2);
+            }
+            $totalDeductions += (float) $ded['amount'];
+        }
+        unset($ded);
+
+        $netSalary = max(0.0, $gross - $totalDeductions);
 
         DB::beginTransaction();
         try {
+            // Replace deductions entirely
+            $payroll->deductions()->delete();
+            foreach ($deductions as $ded) {
+                PayrollEntryDeduction::create([
+                    'payroll_entry_id'  => $payroll->id,
+                    'deduction_type_id' => $ded['deduction_type_id'] ?? null,
+                    'name'              => $ded['name'],
+                    'type'              => $ded['type'],
+                    'amount'            => $ded['amount'],
+                    'note'              => $ded['note'] ?? null,
+                ]);
+            }
+
             $payroll->update([
-                'gross_salary'     => $validated['gross_salary'],
+                'gross_salary'     => $gross,
+                'total_deductions' => $totalDeductions,
                 'net_salary'       => $netSalary,
                 'payment_date'     => $validated['payment_date'],
                 'payment_method'   => $validated['payment_method'],
@@ -401,12 +483,9 @@ class PayrollController extends Controller
                 ]);
             }
 
-            // Keep the linked transaction-fee voucher's amount in sync -
-            // it was originally resolved off net_salary, which just changed.
             if ($payroll->bank_fee_voucher_id && $payroll->bank_fee_category_id) {
                 $feeCategory = BookFeeCategory::find($payroll->bank_fee_category_id);
                 $newFee = $feeCategory ? $feeCategory->resolveFeeForAmount($netSalary) : 0.0;
-
                 Voucher::where('id', $payroll->bank_fee_voucher_id)->update([
                     'date'   => $validated['payment_date'],
                     'credit' => $newFee,
@@ -415,11 +494,9 @@ class PayrollController extends Controller
             }
 
             DB::commit();
-
             return response()->json($payroll->fresh(['staff', 'book', 'deductions', 'voucher']));
         } catch (\Exception $e) {
             DB::rollBack();
-
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

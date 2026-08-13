@@ -405,6 +405,10 @@ Route::middleware(['tenant.context', 'headmaster.tenant.context', 'finance.porta
         Route::put('api/staff/{id}', [PayrollController::class, 'updateStaff'])->name('api.staff.update');
         Route::delete('api/staff/{id}', [PayrollController::class, 'destroyStaff'])->name('api.staff.destroy');
         Route::get('api/staff/{id}/payment-history', [PayrollController::class, 'staffPaymentHistory'])->name('api.staff.payment-history');
+        Route::get('api/staff/{staffId}/deductions', [PayrollController::class, 'indexStaffDeductions'])->name('api.staff.deductions.index');
+        Route::post('api/staff/{staffId}/deductions', [PayrollController::class, 'storeStaffDeduction'])->name('api.staff.deductions.store');
+        Route::put('api/staff/{staffId}/deductions/{dedId}', [PayrollController::class, 'updateStaffDeduction'])->name('api.staff.deductions.update');
+        Route::delete('api/staff/{staffId}/deductions/{dedId}', [PayrollController::class, 'destroyStaffDeduction'])->name('api.staff.deductions.destroy');
         Route::get('api/staff/csv/template', [PayrollController::class, 'downloadStaffTemplate'])->name('api.staff.csv.template');
         Route::post('api/staff/csv/upload', [PayrollController::class, 'uploadStaffCsv'])->name('api.staff.csv.upload');
 

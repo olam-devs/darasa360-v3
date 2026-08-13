@@ -357,6 +357,216 @@
     </div>
 </div>
 
+{{-- ──────────────────────────────────────────
+     EDIT STAFF MODAL
+────────────────────────────────────────── --}}
+<div id="editStaffModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <h3 class="text-2xl font-bold text-blue-600 mb-4"> Edit Staff Member</h3>
+        <input type="hidden" id="edit_staff_id">
+        <form id="editStaffForm" onsubmit="submitEditStaffForm(event)">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Full Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="edit_staff_name" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Staff ID <span class="text-red-500">*</span></label>
+                    <input type="text" id="edit_staff_staff_id" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Position <span class="text-red-500">*</span></label>
+                    <input type="text" id="edit_staff_position" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Department</label>
+                    <input type="text" id="edit_staff_department" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Monthly Salary (TSh) <span class="text-red-500">*</span></label>
+                    <input type="number" id="edit_staff_salary" required step="0.01" min="0" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Status <span class="text-red-500">*</span></label>
+                    <select id="edit_staff_status" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Date Joined</label>
+                    <input type="date" id="edit_staff_date_joined" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Phone</label>
+                    <input type="tel" id="edit_staff_phone" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Email</label>
+                    <input type="email" id="edit_staff_email" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Bank Name</label>
+                    <input type="text" id="edit_staff_bank_name" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Bank Account Number</label>
+                    <input type="text" id="edit_staff_bank_account" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="block font-bold mb-1 text-sm">Notes</label>
+                <textarea id="edit_staff_notes" rows="2" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2"></textarea>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded font-bold transition"> Save Changes</button>
+                <button type="button" onclick="closeEditStaffModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition"> Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ──────────────────────────────────────────
+     STAFF DEDUCTIONS MODAL
+────────────────────────────────────────── --}}
+<div id="staffDeductionsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="text-xl font-bold text-orange-600"> Preset Deductions</h3>
+                <p class="text-sm text-gray-500 mt-0.5">Staff: <span id="sdm-staff-name" class="font-semibold text-gray-700"></span></p>
+            </div>
+            <button onclick="closeStaffDeductionsModal()" class="text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">×</button>
+        </div>
+        <p class="text-xs text-gray-500 mb-4 bg-orange-50 border border-orange-200 rounded p-2">
+            These are recurring deductions auto-loaded when processing payroll for this staff member. You can verify, adjust or remove them per payroll run.
+        </p>
+
+        <!-- Add new preset form -->
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+            <h4 class="font-bold text-orange-700 mb-3 text-sm">Add Preset Deduction</h4>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold mb-1">Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="sdm_name" placeholder="e.g., NSSF, Income Tax" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1">Type <span class="text-red-500">*</span></label>
+                    <select id="sdm_type" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" onchange="onSdmTypeChange()">
+                        <option value="fixed">Fixed Amount</option>
+                        <option value="percentage">Percentage (%)</option>
+                        <option value="insurance">Insurance</option>
+                        <option value="penalty">Penalty</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1">Amount <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="number" id="sdm_amount" step="0.01" min="0" placeholder="0" class="w-full border border-gray-300 rounded px-3 py-2 text-sm pr-10">
+                        <span id="sdm_unit" class="absolute right-3 top-2 text-gray-400 text-sm">TSh</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1">Note</label>
+                    <input type="text" id="sdm_note" placeholder="Optional" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                </div>
+            </div>
+            <button onclick="submitStaffDeduction()" class="mt-3 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 rounded font-bold transition text-sm">
+                 Add Preset
+            </button>
+        </div>
+
+        <!-- Existing presets list -->
+        <div id="sdm-list">
+            <p class="text-gray-400 text-center py-4">Loading…</p>
+        </div>
+    </div>
+</div>
+
+{{-- ──────────────────────────────────────────
+     EDIT PAYROLL MODAL
+────────────────────────────────────────── --}}
+<div id="editPayrollModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <h3 class="text-2xl font-bold text-blue-600 mb-1"> Edit Payroll Entry</h3>
+        <p class="text-sm text-gray-500 mb-4">Staff: <span id="ep-staff-name" class="font-semibold text-gray-700"></span> &mdash; Period: <span id="ep-period" class="font-semibold text-gray-700"></span></p>
+        <input type="hidden" id="ep-payroll-id">
+        <form id="editPayrollForm" onsubmit="submitEditPayrollForm(event)">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Gross Salary (TSh) <span class="text-red-500">*</span></label>
+                    <input type="number" id="ep_gross" required step="0.01" min="0"
+                        oninput="epRecalcNet()" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Payment Date <span class="text-red-500">*</span></label>
+                    <input type="date" id="ep_payment_date" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Payment Method <span class="text-red-500">*</span></label>
+                    <select id="ep_payment_method" required class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="cash">Cash</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="mobile_money">Mobile Money</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-bold mb-1 text-sm">Reference Number</label>
+                    <input type="text" id="ep_reference" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                </div>
+            </div>
+
+            <!-- Deductions Section -->
+            <div class="mt-5 border-2 border-orange-200 rounded-lg p-4 bg-orange-50">
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="font-bold text-orange-700"> Deductions</h4>
+                    <div class="flex gap-2">
+                        <select id="ep-quick-deduction-type" class="border border-orange-300 rounded px-2 py-1 text-xs">
+                            <option value="">— Add from template —</option>
+                        </select>
+                        <button type="button" onclick="epAddDeductionFromTemplate()" class="bg-orange-400 hover:bg-orange-500 text-white px-3 py-1 rounded text-xs">+ Add</button>
+                        <button type="button" onclick="epAddDeductionRow()" class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded text-xs">+ Custom</button>
+                    </div>
+                </div>
+                <div id="ep-deductionRows" class="space-y-2"></div>
+                <div class="mt-3 text-right text-sm font-bold text-orange-700" id="ep-deductionTotals"></div>
+            </div>
+
+            <!-- Net pay preview -->
+            <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4 flex justify-between items-center">
+                <span class="font-bold text-green-700">Net Take-Home Pay:</span>
+                <span class="text-2xl font-bold text-green-700" id="ep-net-preview">TSh 0</span>
+            </div>
+
+            <div class="mt-4">
+                <label class="block font-bold mb-1 text-sm">Notes</label>
+                <textarea id="ep_notes" rows="2" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2"></textarea>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded font-bold transition"> Save Changes</button>
+                <button type="button" onclick="closeEditPayrollModal()" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded font-bold transition"> Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- ──────────────────────────────────────────
+     PAYROLL DETAIL MODAL
+────────────────────────────────────────── --}}
+<div id="payrollDetailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-violet-600"> Payroll Details</h3>
+            <button onclick="document.getElementById('payrollDetailModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-700 text-2xl font-bold leading-none">×</button>
+        </div>
+        <div id="payrollDetailContent"></div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -434,6 +644,7 @@ function renderStaffTable(staff) {
                     <th class="p-3 text-left">Department</th>
                     <th class="p-3 text-right">Monthly Salary</th>
                     <th class="p-3 text-center">Status</th>
+                    <th class="p-3 text-center">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -442,6 +653,7 @@ function renderStaffTable(staff) {
         const badge = m.status === 'active'
             ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-bold">Active</span>'
             : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-bold">Inactive</span>';
+        const eName = m.name.replace(/'/g, "\\'");
         html += `
             <tr class="border-t hover:bg-violet-50">
                 <td class="p-3 font-mono text-xs">${m.staff_id}</td>
@@ -450,6 +662,11 @@ function renderStaffTable(staff) {
                 <td class="p-3 text-gray-500">${m.department || '—'}</td>
                 <td class="p-3 text-right font-bold text-violet-700">${fmt(m.monthly_salary)}</td>
                 <td class="p-3 text-center">${badge}</td>
+                <td class="p-3 text-center whitespace-nowrap">
+                    <button onclick="showStaffDeductionsModal(${m.id}, '${eName}')" class="text-orange-500 hover:text-orange-700 text-xs font-bold mr-2" title="Manage preset deductions">Deductions</button>
+                    <button onclick="editStaff(${m.id})" class="text-blue-500 hover:text-blue-700 text-xs font-bold mr-2" title="Edit staff">Edit</button>
+                    <button onclick="deleteStaff(${m.id}, '${eName}')" class="text-red-400 hover:text-red-600 text-xs font-bold" title="Delete staff">Delete</button>
+                </td>
             </tr>`;
     });
     html += '</tbody></table>';
@@ -534,7 +751,7 @@ async function loadPayrollEntries() {
                         <th class="p-3 text-right">Net Pay</th>
                         <th class="p-3 text-left">Method</th>
                         <th class="p-3 text-center">Status</th>
-                        <th class="p-3 text-center">Details</th>
+                        <th class="p-3 text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -545,6 +762,7 @@ async function loadPayrollEntries() {
                 ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-bold">Paid</span>'
                 : '<span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">Pending</span>';
             const dedsCount = e.deductions?.length || 0;
+            const staffName = (e.staff?.name || '').replace(/'/g, "\\'");
             html += `
                 <tr class="border-t hover:bg-violet-50">
                     <td class="p-3">${MONTHS[e.month] || e.month} ${e.year}</td>
@@ -554,11 +772,12 @@ async function loadPayrollEntries() {
                     <td class="p-3 text-right text-green-700 font-bold">${fmt(e.net_salary)}</td>
                     <td class="p-3 text-gray-500 capitalize">${(e.payment_method || '').replace('_',' ')}</td>
                     <td class="p-3 text-center">${badge}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="showPayrollDetail(${e.id})"
-                            class="text-violet-600 hover:underline text-xs">
+                    <td class="p-3 text-center whitespace-nowrap">
+                        <button onclick="showPayrollDetail(${e.id})" class="text-violet-600 hover:underline text-xs mr-2">
                             ${dedsCount > 0 ? dedsCount + ' cut(s)' : 'View'}
                         </button>
+                        <button onclick="editPayrollEntry(${e.id})" class="text-blue-500 hover:text-blue-700 text-xs font-bold mr-2">Edit</button>
+                        <button onclick="deletePayrollEntry(${e.id}, '${staffName}')" class="text-red-400 hover:text-red-600 text-xs font-bold">Delete</button>
                     </td>
                 </tr>`;
         });
@@ -574,21 +793,64 @@ async function showPayrollDetail(id) {
     try {
         const r = await axios.get(`${API_BASE}/payroll/${id}`);
         const e = r.data;
-        let msg = `Staff: ${e.staff?.name}\nPeriod: ${MONTHS[e.month]} ${e.year}\nGross: ${fmt(e.gross_salary)}\n`;
+
+        let html = `
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3 bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+                    <div><div class="text-xs text-gray-500 font-bold mb-0.5">Staff</div><div class="font-semibold">${e.staff?.name || '—'}</div></div>
+                    <div><div class="text-xs text-gray-500 font-bold mb-0.5">Period</div><div class="font-semibold">${MONTHS[e.month] || e.month} ${e.year}</div></div>
+                    <div><div class="text-xs text-gray-500 font-bold mb-0.5">Book</div><div class="font-semibold">${e.book?.name || '—'}</div></div>
+                    <div><div class="text-xs text-gray-500 font-bold mb-0.5">Payment Date</div><div class="font-semibold">${e.payment_date?.substring(0,10) || '—'}</div></div>
+                    <div><div class="text-xs text-gray-500 font-bold mb-0.5">Method</div><div class="font-semibold capitalize">${(e.payment_method||'').replace(/_/g,' ')}</div></div>
+                    ${e.reference_number ? `<div><div class="text-xs text-gray-500 font-bold mb-0.5">Reference</div><div class="font-semibold">${e.reference_number}</div></div>` : ''}
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                        <div class="text-xs text-blue-500 font-bold">GROSS</div>
+                        <div class="text-base font-bold text-blue-700 mt-1">${fmt(e.gross_salary)}</div>
+                    </div>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                        <div class="text-xs text-red-500 font-bold">DEDUCTIONS</div>
+                        <div class="text-base font-bold text-red-700 mt-1">${fmt(e.total_deductions)}</div>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                        <div class="text-xs text-green-500 font-bold">NET PAY</div>
+                        <div class="text-base font-bold text-green-700 mt-1">${fmt(e.net_salary)}</div>
+                    </div>
+                </div>`;
+
         if (e.deductions && e.deductions.length > 0) {
-            msg += '\nDeductions:\n';
+            html += `<div class="border border-orange-200 rounded-lg overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-orange-50 text-orange-700">
+                        <tr><th class="p-2 text-left">Deduction</th><th class="p-2 text-left">Type</th><th class="p-2 text-right">Amount</th><th class="p-2 text-left">Note</th></tr>
+                    </thead>
+                    <tbody>`;
             e.deductions.forEach(d => {
-                msg += ` • ${d.name} (${d.type}): ${fmt(d.amount)}`;
-                if (d.note) msg += ` — ${d.note}`;
-                msg += '\n';
+                html += `<tr class="border-t"><td class="p-2 font-semibold">${d.name}</td><td class="p-2 capitalize text-gray-500">${d.type}</td><td class="p-2 text-right text-red-600 font-bold">${fmt(d.amount)}</td><td class="p-2 text-gray-400 text-xs">${d.note || '—'}</td></tr>`;
             });
-            msg += `\nTotal Deductions: ${fmt(e.total_deductions)}`;
+            html += `</tbody></table></div>`;
         }
-        msg += `\nNet Pay: ${fmt(e.net_salary)}`;
+
         if (e.bank_fee_amount) {
-            msg += `\n\nTransaction fee (${e.bank_fee_category?.name || 'category'}): ${fmt(e.bank_fee_amount)}`;
+            html += `<div class="bg-amber-50 border border-amber-200 rounded-lg p-3 flex justify-between items-center text-sm">
+                <span class="font-semibold text-amber-700">Transaction fee (${e.bank_fee_category?.name || 'bank fee'}):</span>
+                <span class="font-bold text-amber-700">${fmt(e.bank_fee_amount)}</span>
+            </div>`;
         }
-        alert(msg);
+
+        if (e.notes) {
+            html += `<div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+                <div class="text-xs font-bold text-gray-500 mb-1">Notes</div>
+                <div class="text-gray-700">${e.notes}</div>
+            </div>`;
+        }
+
+        html += `</div>`;
+
+        document.getElementById('payrollDetailContent').innerHTML = html;
+        document.getElementById('payrollDetailModal').classList.remove('hidden');
     } catch (err) {
         alert('Could not load details.');
     }
@@ -667,14 +929,31 @@ function filterPayrollStaffList() {
     });
 }
 
-function onStaffSelected() {
+async function onStaffSelected() {
     const sel = document.getElementById('payroll_staff_id');
     const opt = sel.options[sel.selectedIndex];
     const sal = opt?.getAttribute('data-salary');
     if (sal) {
         document.getElementById('payroll_gross').value = parseFloat(sal);
-        recalcNet();
     }
+    const staffId = sel.value;
+    document.getElementById('deductionRows').innerHTML = '';
+    deductionRowCount = 0;
+    if (staffId) {
+        try {
+            const r = await axios.get(`${API_BASE}/staff/${staffId}/deductions`);
+            (r.data.deductions || []).forEach(d => {
+                addDeductionRow({
+                    deduction_type_id: d.deduction_type_id,
+                    name: d.name,
+                    type: d.type,
+                    amount: d.default_amount,
+                    is_pct: d.type === 'percentage',
+                });
+            });
+        } catch (e) { /* no presets — silent */ }
+    }
+    recalcNet();
 }
 
 /**
@@ -977,6 +1256,331 @@ async function loadDeductionsLedger() {
         document.getElementById('deductions-table').innerHTML = html;
     } catch (e) {
         document.getElementById('deductions-table').innerHTML = '<p class="text-red-500 text-center py-4">Error loading deductions ledger.</p>';
+    }
+}
+
+// ─── Edit Staff ───────────────────────────────────────────────────────────────
+
+async function editStaff(id) {
+    try {
+        const r = await axios.get(`${API_BASE}/staff/${id}`);
+        const s = r.data;
+        document.getElementById('edit_staff_id').value = s.id;
+        document.getElementById('edit_staff_name').value = s.name;
+        document.getElementById('edit_staff_staff_id').value = s.staff_id;
+        document.getElementById('edit_staff_position').value = s.position;
+        document.getElementById('edit_staff_department').value = s.department || '';
+        document.getElementById('edit_staff_salary').value = s.monthly_salary;
+        document.getElementById('edit_staff_status').value = s.status;
+        document.getElementById('edit_staff_date_joined').value = s.date_joined || '';
+        document.getElementById('edit_staff_phone').value = s.phone || '';
+        document.getElementById('edit_staff_email').value = s.email || '';
+        document.getElementById('edit_staff_bank_name').value = s.bank_name || '';
+        document.getElementById('edit_staff_bank_account').value = s.bank_account || '';
+        document.getElementById('edit_staff_notes').value = s.notes || '';
+        document.getElementById('editStaffModal').classList.remove('hidden');
+    } catch (e) {
+        alert('Could not load staff details.');
+    }
+}
+
+function closeEditStaffModal() {
+    document.getElementById('editStaffModal').classList.add('hidden');
+    document.getElementById('editStaffForm').reset();
+}
+
+async function submitEditStaffForm(event) {
+    event.preventDefault();
+    const id = document.getElementById('edit_staff_id').value;
+    const btn = event.submitter;
+    btn.disabled = true; btn.textContent = '⏳ Saving…';
+    try {
+        await axios.put(`${API_BASE}/staff/${id}`, {
+            name: document.getElementById('edit_staff_name').value,
+            staff_id: document.getElementById('edit_staff_staff_id').value,
+            position: document.getElementById('edit_staff_position').value,
+            department: document.getElementById('edit_staff_department').value || null,
+            monthly_salary: parseFloat(document.getElementById('edit_staff_salary').value),
+            status: document.getElementById('edit_staff_status').value,
+            date_joined: document.getElementById('edit_staff_date_joined').value || null,
+            phone: document.getElementById('edit_staff_phone').value || null,
+            email: document.getElementById('edit_staff_email').value || null,
+            bank_name: document.getElementById('edit_staff_bank_name').value || null,
+            bank_account: document.getElementById('edit_staff_bank_account').value || null,
+            notes: document.getElementById('edit_staff_notes').value || null,
+        });
+        closeEditStaffModal();
+        loadStaff();
+    } catch (e) {
+        const msg = e.response?.data?.errors
+            ? Object.values(e.response.data.errors).flat().join('\n')
+            : (e.response?.data?.message || e.message);
+        alert(' ' + msg);
+    } finally {
+        btn.disabled = false; btn.textContent = ' Save Changes';
+    }
+}
+
+async function deleteStaff(id, name) {
+    if (!confirm(`Delete staff member "${name}"?\n\nThis cannot be undone. Staff with payroll history cannot be deleted.`)) return;
+    try {
+        const r = await axios.delete(`${API_BASE}/staff/${id}`);
+        alert(r.data.message);
+        loadStaff();
+    } catch (e) {
+        alert(' ' + (e.response?.data?.error || e.response?.data?.message || e.message));
+    }
+}
+
+// ─── Staff Deduction Presets ──────────────────────────────────────────────────
+
+let _sdmStaffId = null;
+
+async function showStaffDeductionsModal(staffId, staffName) {
+    _sdmStaffId = staffId;
+    document.getElementById('sdm-staff-name').textContent = staffName;
+    document.getElementById('sdm_name').value = '';
+    document.getElementById('sdm_amount').value = '';
+    document.getElementById('sdm_note').value = '';
+    document.getElementById('sdm_type').value = 'fixed';
+    onSdmTypeChange();
+    document.getElementById('staffDeductionsModal').classList.remove('hidden');
+    await loadStaffDeductionsList();
+}
+
+function closeStaffDeductionsModal() {
+    document.getElementById('staffDeductionsModal').classList.add('hidden');
+    _sdmStaffId = null;
+}
+
+function onSdmTypeChange() {
+    const t = document.getElementById('sdm_type').value;
+    document.getElementById('sdm_unit').textContent = t === 'percentage' ? '%' : 'TSh';
+}
+
+async function loadStaffDeductionsList() {
+    const el = document.getElementById('sdm-list');
+    el.innerHTML = '<p class="text-gray-400 text-center py-4">Loading…</p>';
+    try {
+        const r = await axios.get(`${API_BASE}/staff/${_sdmStaffId}/deductions`);
+        const deds = r.data.deductions || [];
+        if (!deds.length) {
+            el.innerHTML = '<p class="text-gray-400 text-center py-4">No preset deductions. Add one above.</p>';
+            return;
+        }
+        let html = '<table class="w-full text-sm border border-gray-200 rounded"><thead class="bg-orange-50"><tr><th class="p-2 text-left">Name</th><th class="p-2 text-left">Type</th><th class="p-2 text-right">Amount</th><th class="p-2 text-left">Note</th><th class="p-2 text-center">Action</th></tr></thead><tbody>';
+        deds.forEach(d => {
+            const display = d.type === 'percentage' ? d.default_amount + '%' : fmt(d.default_amount);
+            html += `<tr class="border-t hover:bg-orange-50">
+                <td class="p-2 font-semibold">${d.name}</td>
+                <td class="p-2 capitalize text-gray-500">${d.type}</td>
+                <td class="p-2 text-right">${display}</td>
+                <td class="p-2 text-gray-400 text-xs">${d.note || '—'}</td>
+                <td class="p-2 text-center">
+                    <button onclick="deleteStaffDeduction(${d.id})" class="text-red-400 hover:text-red-600 text-xs font-bold">Remove</button>
+                </td>
+            </tr>`;
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = '<p class="text-red-500 text-center py-4">Error loading presets.</p>';
+    }
+}
+
+async function submitStaffDeduction() {
+    const name = document.getElementById('sdm_name').value.trim();
+    const type = document.getElementById('sdm_type').value;
+    const amount = parseFloat(document.getElementById('sdm_amount').value);
+    const note = document.getElementById('sdm_note').value.trim();
+    if (!name || isNaN(amount)) { alert('Name and amount are required.'); return; }
+    try {
+        await axios.post(`${API_BASE}/staff/${_sdmStaffId}/deductions`, {
+            name, type, default_amount: amount, note: note || null,
+        });
+        document.getElementById('sdm_name').value = '';
+        document.getElementById('sdm_amount').value = '';
+        document.getElementById('sdm_note').value = '';
+        await loadStaffDeductionsList();
+    } catch (e) {
+        alert(' ' + (e.response?.data?.message || e.message));
+    }
+}
+
+async function deleteStaffDeduction(dedId) {
+    if (!confirm('Remove this preset deduction?')) return;
+    try {
+        await axios.delete(`${API_BASE}/staff/${_sdmStaffId}/deductions/${dedId}`);
+        await loadStaffDeductionsList();
+    } catch (e) {
+        alert(' ' + (e.response?.data?.message || e.message));
+    }
+}
+
+// ─── Edit Payroll ─────────────────────────────────────────────────────────────
+
+let epDeductionRowCount = 0;
+
+async function editPayrollEntry(id) {
+    try {
+        const [entryR, typesR] = await Promise.all([
+            axios.get(`${API_BASE}/payroll/${id}`),
+            axios.get(`${API_BASE}/payroll/deduction-types`),
+        ]);
+        const e = entryR.data;
+        const types = typesR.data || [];
+
+        document.getElementById('ep-payroll-id').value = e.id;
+        document.getElementById('ep-staff-name').textContent = e.staff?.name || '—';
+        document.getElementById('ep-period').textContent = `${MONTHS[e.month] || ''} ${e.year}`;
+        document.getElementById('ep_gross').value = e.gross_salary;
+        document.getElementById('ep_payment_date').value = e.payment_date?.substring(0, 10) || '';
+        document.getElementById('ep_payment_method').value = e.payment_method;
+        document.getElementById('ep_reference').value = e.reference_number || '';
+        document.getElementById('ep_notes').value = e.notes || '';
+
+        // Populate deduction type template dropdown
+        const qSel = document.getElementById('ep-quick-deduction-type');
+        qSel.innerHTML = '<option value="">— Add from template —</option>';
+        types.forEach(t => {
+            qSel.innerHTML += `<option value="${t.id}" data-name="${t.name}" data-type="${t.type}" data-value="${t.default_value}" data-pct="${t.is_percentage ? 1 : 0}">${t.name} (${t.is_percentage ? t.default_value + '%' : fmt(t.default_value)})</option>`;
+        });
+
+        // Pre-fill existing deductions
+        document.getElementById('ep-deductionRows').innerHTML = '';
+        epDeductionRowCount = 0;
+        (e.deductions || []).forEach(d => {
+            epAddDeductionRow({ name: d.name, type: d.type, amount: d.amount, note: d.note || '', deduction_type_id: d.deduction_type_id });
+        });
+
+        epRecalcNet();
+        document.getElementById('editPayrollModal').classList.remove('hidden');
+    } catch (err) {
+        alert('Could not load payroll entry.');
+    }
+}
+
+function closeEditPayrollModal() {
+    document.getElementById('editPayrollModal').classList.add('hidden');
+    document.getElementById('editPayrollForm').reset();
+    document.getElementById('ep-deductionRows').innerHTML = '';
+    epDeductionRowCount = 0;
+}
+
+function epAddDeductionFromTemplate() {
+    const sel = document.getElementById('ep-quick-deduction-type');
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt || !opt.value) return;
+    const isPct = opt.getAttribute('data-pct') === '1';
+    epAddDeductionRow({
+        deduction_type_id: opt.value,
+        name: opt.getAttribute('data-name'),
+        type: opt.getAttribute('data-type'),
+        amount: opt.getAttribute('data-value'),
+        is_pct: isPct,
+    });
+    sel.value = '';
+}
+
+function epAddDeductionRow(defaults = {}) {
+    const idx = epDeductionRowCount++;
+    const row = document.createElement('div');
+    row.className = 'flex gap-2 items-end bg-white border border-orange-200 rounded p-2';
+    row.id = `ep-ded-row-${idx}`;
+    const typeOptions = ['fixed','percentage','insurance','penalty','other']
+        .map(t => `<option value="${t}" ${(defaults.type||'fixed')===t?'selected':''}>${t}</option>`)
+        .join('');
+    row.innerHTML = `
+        <input type="hidden" name="ep_deductions[${idx}][deduction_type_id]" value="${defaults.deduction_type_id || ''}">
+        <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-0.5">Name</label>
+            <input type="text" name="ep_deductions[${idx}][name]" value="${defaults.name || ''}" required
+                placeholder="e.g., NSSF" class="w-full border border-gray-300 rounded px-2 py-1 text-sm">
+        </div>
+        <div>
+            <label class="block text-xs text-gray-500 mb-0.5">Type</label>
+            <select name="ep_deductions[${idx}][type]" class="border border-gray-300 rounded px-2 py-1 text-sm" onchange="epRecalcNet()">
+                ${typeOptions}
+            </select>
+        </div>
+        <div class="w-32">
+            <label class="block text-xs text-gray-500 mb-0.5">${defaults.is_pct ? '% of gross' : 'Amount (TSh)'}</label>
+            <input type="number" name="ep_deductions[${idx}][amount]" value="${defaults.amount || ''}" required
+                step="0.01" min="0" oninput="epRecalcNet()" placeholder="0"
+                class="w-full border border-gray-300 rounded px-2 py-1 text-sm">
+        </div>
+        <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-0.5">Note</label>
+            <input type="text" name="ep_deductions[${idx}][note]" value="${defaults.note || ''}"
+                placeholder="optional" class="w-full border border-gray-300 rounded px-2 py-1 text-sm">
+        </div>
+        <button type="button" onclick="document.getElementById('ep-ded-row-${idx}').remove(); epRecalcNet();"
+            class="text-red-400 hover:text-red-600 text-xl font-bold leading-none pb-1">×</button>
+    `;
+    document.getElementById('ep-deductionRows').appendChild(row);
+    epRecalcNet();
+}
+
+function epRecalcNet() {
+    const gross = parseFloat(document.getElementById('ep_gross').value) || 0;
+    let totalDed = 0;
+    document.querySelectorAll('#ep-deductionRows > div').forEach(row => {
+        const type = row.querySelector('[name$="[type]"]')?.value || 'fixed';
+        const amount = parseFloat(row.querySelector('[name$="[amount]"]')?.value) || 0;
+        totalDed += type === 'percentage' ? gross * (amount / 100) : amount;
+    });
+    const net = Math.max(0, gross - totalDed);
+    document.getElementById('ep-net-preview').textContent = fmt(net);
+    document.getElementById('ep-deductionTotals').textContent =
+        totalDed > 0 ? `Total deductions: ${fmt(totalDed)}` : '';
+}
+
+async function submitEditPayrollForm(event) {
+    event.preventDefault();
+    const id = document.getElementById('ep-payroll-id').value;
+    const btn = event.submitter;
+    btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+    const deductions = [];
+    document.querySelectorAll('#ep-deductionRows > div').forEach(row => {
+        deductions.push({
+            deduction_type_id: row.querySelector('[name$="[deduction_type_id]"]')?.value || null,
+            name: row.querySelector('[name$="[name]"]')?.value,
+            type: row.querySelector('[name$="[type]"]')?.value,
+            amount: parseFloat(row.querySelector('[name$="[amount]"]')?.value) || 0,
+            note: row.querySelector('[name$="[note]"]')?.value || null,
+        });
+    });
+
+    try {
+        await axios.put(`${API_BASE}/payroll/${id}`, {
+            gross_salary: parseFloat(document.getElementById('ep_gross').value),
+            payment_date: document.getElementById('ep_payment_date').value,
+            payment_method: document.getElementById('ep_payment_method').value,
+            reference_number: document.getElementById('ep_reference').value || null,
+            notes: document.getElementById('ep_notes').value || null,
+            deductions,
+        });
+        closeEditPayrollModal();
+        loadPayrollEntries();
+    } catch (e) {
+        const msg = e.response?.data?.errors
+            ? Object.values(e.response.data.errors).flat().join('\n')
+            : (e.response?.data?.error || e.message);
+        alert(' ' + msg);
+    } finally {
+        btn.disabled = false; btn.textContent = ' Save Changes';
+    }
+}
+
+async function deletePayrollEntry(id, staffName) {
+    if (!confirm(`Delete payroll entry for "${staffName}"?\n\nThis will also reverse the linked voucher(s). This cannot be undone.`)) return;
+    try {
+        const r = await axios.delete(`${API_BASE}/payroll/${id}`);
+        alert(r.data.message);
+        loadPayrollEntries();
+    } catch (e) {
+        alert(' ' + (e.response?.data?.error || e.message));
     }
 }
 

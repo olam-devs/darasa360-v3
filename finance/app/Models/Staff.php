@@ -47,6 +47,11 @@ class Staff extends BaseModel
         return $this->hasManyThrough(PayrollEntryDeduction::class, PayrollEntry::class);
     }
 
+    public function presetDeductions()
+    {
+        return $this->hasMany(StaffDeduction::class)->where('is_active', true);
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
