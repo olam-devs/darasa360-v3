@@ -218,8 +218,14 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
             Route::post('api/students/{studentId}/portal-email/generate', [StudentController::class, 'regeneratePortalEmail'])->name('api.students.portal-email.generate');
         });
     });
+});
 
-    Route::middleware(['finance.portal'])->group(function () {
+// Finance portal routes — accessible to authenticated accountants AND active headmaster
+// sessions. Intentionally sits OUTSIDE the auth group so the auth middleware does not
+// reject headmaster requests before EnsureFinancePortalAccess can pass them.
+// EnsureTenantContext handles accountants (reads Auth user's school).
+// EnsureHeadmasterTenantContext handles headmasters (reads headmaster_school_slug session).
+Route::middleware(['tenant.context', 'headmaster.tenant.context', 'finance.portal'])->group(function () {
         Route::redirect('invoices/create', '/accountant/invoices-page');
         Route::get('invoices', fn () => redirect()->route('accountant.invoices-page'))->name('invoices.index');
         Route::get('invoices/{invoice}', fn () => redirect()->route('accountant.invoices-page'))->name('invoices.show');
@@ -509,7 +515,6 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::get('api/scholarships/student/{studentId}/details', [ScholarshipController::class, 'studentDetailsForScholarship'])->name('api.scholarships.student.details');
         Route::post('api/scholarships/check', [ScholarshipController::class, 'checkScholarship'])->name('api.scholarships.check');
         Route::get('api/scholarships/summary/by-particular', [ScholarshipController::class, 'summaryByParticular'])->name('api.scholarships.summary');
-    });
 });
 
 // Parent Portal Routes (using custom session-based auth) - OUTSIDE main auth middleware
