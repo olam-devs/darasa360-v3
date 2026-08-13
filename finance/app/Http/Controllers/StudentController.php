@@ -81,6 +81,7 @@ class StudentController extends Controller
             'parent_phone_1' => 'nullable|string|max:255',
             'parent_phone_2' => 'nullable|string|max:255',
             'admission_date' => 'nullable|date',
+            'date_of_birth' => 'nullable|date',
             'status' => 'required|in:active,inactive,graduated',
         ]);
 
@@ -184,6 +185,7 @@ class StudentController extends Controller
             'parent_phone_1' => 'nullable|string|max:255',
             'parent_phone_2' => 'nullable|string|max:255',
             'admission_date' => 'nullable|date',
+            'date_of_birth' => 'nullable|date',
             'status' => 'required|in:active,inactive,graduated',
         ]);
 

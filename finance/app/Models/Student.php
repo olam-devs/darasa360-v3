@@ -28,6 +28,7 @@ class Student extends BaseModel
         'parent_phone_1',
         'parent_phone_2',
         'admission_date',
+        'date_of_birth',
         'status',
         'advance_balance',
         'portal_password',
@@ -37,6 +38,7 @@ class Student extends BaseModel
 
     protected $casts = [
         'admission_date' => 'date',
+        'date_of_birth' => 'date',
         'advance_balance' => 'decimal:2',
         'portal_password_set_at' => 'datetime',
     ];

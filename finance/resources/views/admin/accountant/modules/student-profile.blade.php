@@ -39,6 +39,7 @@
                         <h2 id="pName" class="text-2xl font-extrabold text-slate-900"></h2>
                         <p id="pMeta" class="text-sm text-slate-600 mt-1"></p>
                         <p id="pContact" class="text-sm text-slate-500 mt-2"></p>
+                        <p id="pAge" class="hidden text-sm text-indigo-700 mt-1 font-medium"></p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <a id="linkLedgerPdf" href="#" target="_blank" class="inline-flex items-center px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">Ledger PDF</a>
@@ -358,6 +359,23 @@
             if (s.parent_phone_2) contact.push('Phone 2: ' + s.parent_phone_2);
             if (s.email) contact.push('Email: ' + s.email);
             document.getElementById('pContact').textContent = contact.join(' · ') || 'No contact on file';
+
+            const ageEl = document.getElementById('pAge');
+            if (s.date_of_birth) {
+                const dob = new Date(s.date_of_birth);
+                const now = new Date();
+                let years = now.getFullYear() - dob.getFullYear();
+                let months = now.getMonth() - dob.getMonth();
+                if (months < 0 || (months === 0 && now.getDate() < dob.getDate())) { years--; months += 12; }
+                if (now.getDate() < dob.getDate()) months = (months - 1 + 12) % 12;
+                const dob_fmt = dob.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                ageEl.textContent = years > 0
+                    ? `Born ${dob_fmt} · Age: ${years} yr${years !== 1 ? 's' : ''} ${months > 0 ? months + ' mo' : ''}`
+                    : `Born ${dob_fmt} · Age: ${months} month${months !== 1 ? 's' : ''}`;
+                ageEl.classList.remove('hidden');
+            } else {
+                ageEl.classList.add('hidden');
+            }
 
             const L = data.links || {};
             document.getElementById('linkLedgerPdf').href = L.ledger_pdf || '#';

@@ -92,6 +92,10 @@
                         <input type="date" id="studentAdmissionDate" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
                     </div>
                     <div>
+                        <label class="block font-bold mb-2">Date of Birth <span class="text-gray-400 font-normal text-xs">(optional)</span></label>
+                        <input type="date" id="studentDob" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
+                    </div>
+                    <div>
                         <label class="block font-bold mb-2">Status</label>
                         <select id="studentStatus" class="w-full border-2 border-gray-300 rounded-lg px-4 py-2">
                             <option value="active">Active</option>
@@ -306,6 +310,7 @@ const API_BASE = '/api';
                 document.getElementById('studentParentPhone1').value = student.parent_phone_1 || '';
                 document.getElementById('studentParentPhone2').value = student.parent_phone_2 || '';
                 document.getElementById('studentAdmissionDate').value = student.admission_date || '';
+                document.getElementById('studentDob').value = student.date_of_birth || '';
                 document.getElementById('studentStatus').value = student.status;
 
                 document.getElementById('studentModal').classList.remove('hidden');
@@ -347,6 +352,7 @@ const API_BASE = '/api';
                 parent_phone_1: document.getElementById('studentParentPhone1').value,
                 parent_phone_2: document.getElementById('studentParentPhone2').value,
                 admission_date: document.getElementById('studentAdmissionDate').value || new Date().toISOString().split('T')[0],
+                date_of_birth: document.getElementById('studentDob').value || null,
                 status: document.getElementById('studentStatus').value,
             };
 
