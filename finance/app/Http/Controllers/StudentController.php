@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class StudentController extends Controller
 {
@@ -154,6 +155,92 @@ class StudentController extends Controller
         $student->update(['portal_email' => $email]);
 
         return response()->json(['success' => true, 'portal_email' => $email]);
+    }
+
+    /**
+     * Bulk-provision portal access for every student in a class:
+     * generates a portal email if missing, sets a fresh random password.
+     * Returns plaintext passwords ONCE — never stored server-side.
+     */
+    public function bulkProvisionPortal(Request $request, $classId)
+    {
+        $class = SchoolClass::findOrFail($classId);
+        $students = Student::where('class_id', $classId)->orderBy('name')->get();
+
+        if ($students->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No students in this class.'], 422);
+        }
+
+        $provisioned = [];
+
+        DB::beginTransaction();
+        try {
+            foreach ($students as $student) {
+                if (! $student->portal_email) {
+                    $email = $this->generatePortalEmail($student->name);
+                    if ($email) {
+                        $student->portal_email = $email;
+                    }
+                }
+
+                $plain = strtoupper(Str::random(3)) . rand(10, 99) . strtolower(Str::random(3));
+
+                $student->portal_password = Hash::make($plain);
+                $student->portal_password_set_at = now();
+                $student->portal_password_set_by = auth()->id();
+                $student->save();
+
+                $provisioned[] = [
+                    'student_id' => $student->id,
+                    'name' => $student->name,
+                    'class_name' => $class->name,
+                    'portal_email' => $student->portal_email,
+                    'temp_password' => $plain,
+                    'parent_phone_1' => $student->parent_phone_1,
+                ];
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'count' => count($provisioned),
+            'class_name' => $class->name,
+            'credentials' => $provisioned,
+        ]);
+    }
+
+    /**
+     * Generate a PDF listing portal credentials for a class.
+     * Credentials are submitted back from the JS that received them —
+     * they are never stored server-side after the bulk provision response.
+     */
+    public function portalCredentialsPdf(Request $request)
+    {
+        $request->validate([
+            'class_name' => 'required|string|max:100',
+            'credentials' => 'required|array|min:1',
+            'credentials.*.name' => 'required|string',
+            'credentials.*.portal_email' => 'nullable|string',
+            'credentials.*.temp_password' => 'required|string',
+        ]);
+
+        $school = SchoolSetting::getSettings();
+        $className = $request->input('class_name');
+        $credentials = $request->input('credentials');
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
+            'admin.accountant.portal-credentials-pdf',
+            compact('school', 'className', 'credentials')
+        );
+        $pdf->setPaper('a4', 'portrait');
+
+        $safeName = preg_replace('/[^a-zA-Z0-9_-]/', '-', $className);
+
+        return $pdf->download("portal-credentials-{$safeName}.pdf");
     }
 
     public function show($id)
@@ -554,9 +641,10 @@ class StudentController extends Controller
 
     public function portalPasswordsPage()
     {
-        $classes  = SchoolClass::orderBy('name')->get();
-        $settings = SchoolSetting::getSettings();
-        return view('admin.accountant.modules.portal-passwords', compact('classes', 'settings'));
+        $classes       = SchoolClass::orderBy('name')->get();
+        $settings      = SchoolSetting::getSettings();
+        $currentSchool = \App\Models\Central\School::resolveForRequest();
+        return view('admin.accountant.modules.portal-passwords', compact('classes', 'settings', 'currentSchool'));
     }
 
     public function searchStudentsForPassword(Request $request)

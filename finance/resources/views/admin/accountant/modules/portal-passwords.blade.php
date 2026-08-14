@@ -66,6 +66,61 @@
         </div>
     </div>
 
+    <!-- Bulk Generate Portal Credentials -->
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <div class="font-semibold text-slate-800">Generate Portal Emails &amp; Passwords — By Class</div>
+                <div class="text-xs text-slate-400 mt-0.5">Generates a portal email (if missing) and a new random password for every student in the class. Download PDF to distribute, or send SMS privately per parent.</div>
+            </div>
+        </div>
+        <div class="p-5">
+            <div class="flex flex-wrap gap-3 items-end">
+                <div class="flex-1 min-w-44">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Select Class</label>
+                    <select id="prov-class" class="inp">
+                        <option value="">-- Choose a class --</option>
+                        @foreach($classes as $class)
+                            <option value="{{ $class->id }}" data-name="{{ $class->name }}">{{ $class->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <button onclick="doBulkProvision()" id="prov-btn" class="btn-sm btn-blue py-2.5 px-5">
+                        Generate &amp; Set Passwords
+                    </button>
+                </div>
+            </div>
+            <div id="prov-warning" class="hidden mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2">
+                This will reset passwords for ALL students in this class. Existing logins will stop working until parents use the new password.
+            </div>
+            <!-- Results -->
+            <div id="prov-result" class="hidden mt-5">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="font-semibold text-slate-700 text-sm" id="prov-result-label"></div>
+                    <button onclick="downloadCredentialsPdf()" class="btn-sm btn-green py-2 px-4">
+                        <i class="fas fa-file-pdf mr-1.5"></i> Download PDF
+                    </button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table id="prov-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+                        <thead>
+                            <tr style="background:#1e40af;color:#fff;">
+                                <th style="padding:7px 10px;text-align:left;">#</th>
+                                <th style="padding:7px 10px;text-align:left;">Student</th>
+                                <th style="padding:7px 10px;text-align:left;">Portal Email</th>
+                                <th style="padding:7px 10px;text-align:left;">Temp Password</th>
+                                <th style="padding:7px 10px;text-align:center;">SMS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prov-tbody"></tbody>
+                    </table>
+                </div>
+                <p class="mt-2 text-xs text-slate-400">Passwords shown above are shown once. Download the PDF or send SMS to parents now before navigating away.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Search & individual reset -->
     <div class="card">
         <div class="card-header">
@@ -106,6 +161,36 @@
                 <i class="fas fa-search text-2xl mb-3 block opacity-30"></i>
                 Search for a student above to get started
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Portal SMS Modal -->
+<div id="sms-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+        <h3 class="font-bold text-slate-900 mb-1">Send Portal Login via SMS</h3>
+        <p class="text-sm text-slate-500 mb-4" id="sms-modal-sub">to parent of <span id="sms-student-name"></span></p>
+        <div class="mb-3">
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Language</label>
+            <div class="flex gap-2">
+                <button onclick="setSmsLang('en')" id="lang-en-btn"
+                    class="flex-1 btn-sm btn-blue py-2">English</button>
+                <button onclick="setSmsLang('sw')" id="lang-sw-btn"
+                    class="flex-1 btn-sm py-2" style="background:#f1f5f9;color:#475569;">Kiswahili</button>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Phone Number</label>
+            <input type="text" id="sms-phone" class="inp" placeholder="+255...">
+        </div>
+        <div class="mb-4">
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Message</label>
+            <textarea id="sms-message" rows="5" class="inp" style="resize:vertical;font-size:12px;"></textarea>
+            <div class="text-right text-xs text-slate-400 mt-1" id="sms-char-count"></div>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="closeSmsModal()" class="flex-1 btn-sm py-2.5" style="background:#f1f5f9;color:#475569;">Cancel</button>
+            <button onclick="sendPortalSms()" id="sms-send-btn" class="flex-1 btn-sm btn-blue py-2.5">Send SMS</button>
         </div>
     </div>
 </div>
@@ -262,5 +347,165 @@ document.getElementById('pwd-modal').addEventListener('click', function(e) {
     if (e.target === this) closeModal();
 });
 document.getElementById('modal-password').addEventListener('keydown', e => { if (e.key === 'Enter') savePassword(); });
+document.getElementById('sms-modal').addEventListener('click', function(e) { if (e.target === this) closeSmsModal(); });
+document.getElementById('prov-class').addEventListener('change', function() {
+    const w = document.getElementById('prov-warning');
+    w.classList.toggle('hidden', !this.value);
+});
+
+// ─── Bulk Provision ────────────────────────────────────────────────────────────
+
+let provisionedCredentials = [];
+let provisionedClassName = '';
+
+async function doBulkProvision() {
+    const classId = document.getElementById('prov-class').value;
+    const classOpt = document.querySelector(`#prov-class option[value="${classId}"]`);
+    if (!classId) { showToast('Please select a class', 'error'); return; }
+    if (!confirm(`Generate/reset portal emails and passwords for ALL students in ${classOpt?.dataset.name ?? 'this class'}? Existing passwords will change.`)) return;
+
+    const btn = document.getElementById('prov-btn');
+    btn.disabled = true; btn.textContent = 'Generating…';
+    document.getElementById('prov-result').classList.add('hidden');
+
+    try {
+        const r = await axios.post(`{{ url('/accountant/api/students/class') }}/${classId}/bulk-provision-portal`, {}, {
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+        });
+        provisionedCredentials = r.data.credentials ?? [];
+        provisionedClassName = r.data.class_name ?? '';
+        renderProvisionedTable(provisionedCredentials, provisionedClassName);
+        showToast(`Generated credentials for ${r.data.count} students`, 'success');
+    } catch (e) {
+        showToast(e.response?.data?.message || 'Generation failed', 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Generate & Set Passwords';
+    }
+}
+
+function renderProvisionedTable(creds, className) {
+    const tbody = document.getElementById('prov-tbody');
+    tbody.innerHTML = creds.map((c, i) => `
+        <tr style="background:${i%2?'#f8fafc':'#fff'};border-bottom:1px solid #e5e7eb;">
+            <td style="padding:7px 10px;color:#888;">${i+1}</td>
+            <td style="padding:7px 10px;font-weight:600;">${esc(c.name)}</td>
+            <td style="padding:7px 10px;font-family:monospace;font-size:11px;color:#1d4ed8;">${esc(c.portal_email ?? '—')}</td>
+            <td style="padding:7px 10px;font-family:monospace;font-size:11px;background:#fef2f2;color:#991b1b;border-radius:4px;">${esc(c.temp_password)}</td>
+            <td style="padding:7px 10px;text-align:center;">
+                <button class="btn-sm btn-blue py-1" onclick='openSmsModal(${JSON.stringify(c)})' style="padding:4px 10px;font-size:11px;">
+                    <i class="fas fa-sms mr-1"></i>SMS
+                </button>
+            </td>
+        </tr>
+    `).join('');
+    document.getElementById('prov-result-label').textContent = `${creds.length} students in ${className} — share privately`;
+    document.getElementById('prov-result').classList.remove('hidden');
+}
+
+function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function downloadCredentialsPdf() {
+    if (!provisionedCredentials.length) { showToast('No credentials to download', 'error'); return; }
+    try {
+        const response = await axios.post('{{ route("api.students.portal-credentials-pdf") }}', {
+            class_name: provisionedClassName,
+            credentials: provisionedCredentials,
+        }, {
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+            responseType: 'blob',
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `portal-credentials-${provisionedClassName}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { window.URL.revokeObjectURL(url); a.remove(); }, 1000);
+    } catch (e) {
+        showToast('PDF download failed', 'error');
+    }
+}
+
+// ─── Portal SMS ────────────────────────────────────────────────────────────────
+
+let smsStudent = null;
+let smsLang = 'en';
+
+const SMS_TEMPLATES = {
+    en: (s, loginLink) =>
+        `Dear parent of ${s.name},\n\nYour child's parent portal login:\nEmail: ${s.portal_email ?? '(not set)'}\nPassword: ${s.temp_password}\nLogin: ${loginLink}\n\nPlease change the password after first login.\n— Darasa Finance`,
+    sw: (s, loginLink) =>
+        `Mpendwa mzazi wa ${s.name},\n\nMtoto wako anaweza kuingia portal:\nBarua pepe: ${s.portal_email ?? '(haijawekwa)'}\nNenosiri: ${s.temp_password}\nIngia: ${loginLink}\n\nBadilisha nenosiri baada ya kuingia mara ya kwanza.\n— Darasa Finance`,
+};
+
+const PARENT_LOGIN_LINK = '{{ config("app.url") }}/parent/login{{ $currentSchool?->slug ? "/" . $currentSchool->slug : "" }}';
+
+function openSmsModal(student) {
+    smsStudent = student;
+    smsLang = 'en';
+    document.getElementById('sms-student-name').textContent = student.name;
+    document.getElementById('sms-phone').value = student.parent_phone_1 ?? '';
+    setSmsLang('en');
+    document.getElementById('sms-modal').classList.remove('hidden');
+    document.getElementById('sms-modal').classList.add('flex');
+}
+
+function closeSmsModal() {
+    document.getElementById('sms-modal').classList.add('hidden');
+    document.getElementById('sms-modal').classList.remove('flex');
+    smsStudent = null;
+}
+
+function setSmsLang(lang) {
+    smsLang = lang;
+    const enBtn = document.getElementById('lang-en-btn');
+    const swBtn = document.getElementById('lang-sw-btn');
+    if (lang === 'en') {
+        enBtn.className = 'flex-1 btn-sm btn-blue py-2';
+        swBtn.className = 'flex-1 btn-sm py-2'; swBtn.style.cssText = 'background:#f1f5f9;color:#475569;';
+    } else {
+        swBtn.className = 'flex-1 btn-sm btn-blue py-2'; swBtn.style.cssText = '';
+        enBtn.className = 'flex-1 btn-sm py-2'; enBtn.style.cssText = 'background:#f1f5f9;color:#475569;';
+    }
+    const msg = SMS_TEMPLATES[lang](smsStudent, PARENT_LOGIN_LINK);
+    document.getElementById('sms-message').value = msg;
+    document.getElementById('sms-char-count').textContent = msg.length + ' characters';
+}
+
+document.getElementById('sms-message')?.addEventListener('input', function() {
+    document.getElementById('sms-char-count').textContent = this.value.length + ' characters';
+});
+
+async function sendPortalSms() {
+    const phone = document.getElementById('sms-phone').value.trim();
+    const message = document.getElementById('sms-message').value.trim();
+    if (!phone) { showToast('Phone number is required', 'error'); return; }
+    if (!message) { showToast('Message cannot be empty', 'error'); return; }
+
+    const btn = document.getElementById('sms-send-btn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+
+    try {
+        const r = await axios.post('{{ route("sms.send") }}', {
+            recipient_phone: phone,
+            message: message,
+            student_id: smsStudent?.student_id ?? null,
+        }, {
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+        });
+        if (r.data.success) {
+            showToast('SMS sent', 'success');
+            closeSmsModal();
+        } else {
+            showToast(r.data.message || 'Send failed', 'error');
+        }
+    } catch (e) {
+        showToast(e.response?.data?.message || 'SMS send failed', 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = 'Send SMS';
+    }
+}
 </script>
 @endpush

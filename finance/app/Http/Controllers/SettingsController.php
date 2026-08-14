@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Central\School;
 use App\Models\SchoolSetting;
+use App\Services\TenantDatabaseManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -31,6 +32,28 @@ class SettingsController extends Controller
             'logo' => 'nullable|image|max:2048',
             'show_logo_on_pdfs' => 'required|in:0,1',
         ]);
+
+        $currentSchool = School::resolveForRequest();
+        $newDomain = strtolower(trim($validated['parent_portal_email_domain'] ?? ''));
+
+        if ($newDomain !== '') {
+            $allSchools = School::where('id', '!=', $currentSchool?->id)->get();
+            foreach ($allSchools as $otherSchool) {
+                try {
+                    app(TenantDatabaseManager::class)->switchToSchool($otherSchool);
+                    $otherDomain = strtolower(trim(SchoolSetting::getSettings()->parent_portal_email_domain ?? ''));
+                    if ($otherDomain !== '' && $otherDomain === $newDomain) {
+                        app(TenantDatabaseManager::class)->switchToSchool($currentSchool);
+                        return back()
+                            ->withErrors(['parent_portal_email_domain' => 'This domain is already used by another school. Each school must have a unique parent portal email domain.'])
+                            ->withInput();
+                    }
+                } catch (\Exception $e) {
+                    // skip unreachable school
+                }
+            }
+            app(TenantDatabaseManager::class)->switchToSchool($currentSchool);
+        }
 
         $settings = SchoolSetting::first() ?? new SchoolSetting;
 

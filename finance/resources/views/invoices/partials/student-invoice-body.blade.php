@@ -2,7 +2,6 @@
 
 <div class="student-info">
     <strong>Student Name:</strong> {{ $student->name }}<br>
-    <strong>Registration No:</strong> {{ $student->student_reg_no }}<br>
     <strong>Class:</strong> {{ $student->schoolClass->name ?? 'N/A' }}<br>
     <strong>Date:</strong> {{ date('d/m/Y') }}
     @if(isset($invoiceData['has_scholarships']) && $invoiceData['has_scholarships'])

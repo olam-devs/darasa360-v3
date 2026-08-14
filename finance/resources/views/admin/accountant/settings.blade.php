@@ -83,9 +83,9 @@
                         <div>
                             <label class="block text-sm font-bold mb-2">Parent Portal Email Domain</label>
                             <input id="parent_portal_email_domain" type="text" name="parent_portal_email_domain" value="{{ old('parent_portal_email_domain', $settings->parent_portal_email_domain ?? '') }}"
-                                placeholder="e.g. olam" pattern="[a-zA-Z0-9-]*"
+                                placeholder="e.g. little-kigamboni" pattern="[a-zA-Z0-9-]*"
                                 class="w-full border-2 border-gray-300 rounded px-4 py-2 focus:border-slate-500 focus:outline-none">
-                            <p class="mt-1 text-xs text-gray-500">Used to auto-generate each new student's parent-portal login, e.g. <code class="text-xs">jackson@olam.com</code>. Set this before adding students so their portal email is created automatically.</p>
+                            <p class="mt-1 text-xs text-gray-500">Used to auto-generate each student's parent-portal login. Hyphens are allowed, e.g. <code class="text-xs">little-kigamboni</code> → logins like <code class="text-xs">grace@little-kigamboni.com</code>. Must be unique — no two schools can share the same domain. Set this before adding students.</p>
                         </div>
 
                     </div>
@@ -199,6 +199,40 @@
                         </a>
                     </div>
                 </form>
+
+                <!-- Login links — always shown so accountants can copy and share them -->
+                @if($currentSchool?->slug)
+                <div class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
+                    <h3 class="text-lg font-semibold text-slate-900 mb-1">Login links</h3>
+                    <p class="text-sm text-slate-500 mb-4">Share these links with parents and headmasters so they can log in to their portals.</p>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Parent Portal Login</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="parent_login_link"
+                                    value="{{ config('app.url') }}/parent/login/{{ $currentSchool->slug }}"
+                                    readonly class="flex-1 border border-slate-200 rounded bg-white px-3 py-2 text-sm font-mono text-slate-700 focus:outline-none select-all">
+                                <button type="button" onclick="copyLink('parent_login_link', this)"
+                                    class="shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1.5">Headmaster Portal Login</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="headmaster_login_link"
+                                    value="{{ config('app.url') }}/headmaster/login/{{ $currentSchool->slug }}"
+                                    readonly class="flex-1 border border-slate-200 rounded bg-white px-3 py-2 text-sm font-mono text-slate-700 focus:outline-none select-all">
+                                <button type="button" onclick="copyLink('headmaster_login_link', this)"
+                                    class="shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
 
                 <!-- Portal setup (super-admin-gated per school) -->
                 <div class="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
@@ -349,6 +383,22 @@
 @push('scripts')
     <script>
         axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
+
+        function copyLink(inputId, btn) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            input.select();
+            navigator.clipboard.writeText(input.value).then(() => {
+                const orig = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.classList.add('text-green-700', 'border-green-300');
+                setTimeout(() => { btn.textContent = orig; btn.classList.remove('text-green-700', 'border-green-300'); }, 1800);
+            }).catch(() => {
+                document.execCommand('copy');
+                btn.textContent = 'Copied!';
+                setTimeout(() => { btn.textContent = 'Copy'; }, 1800);
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', function() {
             loadBankAccounts();

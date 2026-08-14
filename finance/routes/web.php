@@ -216,6 +216,8 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
             Route::post('api/students/portal-password/bulk', [StudentController::class, 'bulkSetPortalPassword'])->name('api.students.portal-password.bulk');
             Route::post('api/students/{studentId}/portal-password', [StudentController::class, 'setPortalPassword'])->name('api.students.portal-password.set');
             Route::post('api/students/{studentId}/portal-email/generate', [StudentController::class, 'regeneratePortalEmail'])->name('api.students.portal-email.generate');
+            Route::post('api/students/class/{classId}/bulk-provision-portal', [StudentController::class, 'bulkProvisionPortal'])->name('api.students.portal.bulk-provision');
+            Route::post('api/students/portal-credentials-pdf', [StudentController::class, 'portalCredentialsPdf'])->name('api.students.portal-credentials-pdf');
         });
     });
 });
