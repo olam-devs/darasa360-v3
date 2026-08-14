@@ -291,6 +291,7 @@ class VoucherController extends Controller
         try {
             $student = $voucher->student;
             $particular = $voucher->particular;
+            $originalDebit = (float) $voucher->debit;
 
             if ($student && $particular) {
                 $pivot = $student->particulars()
@@ -298,8 +299,8 @@ class VoucherController extends Controller
                     ->first();
 
                 if ($pivot) {
-                    $salesDelta = $voucher->voucher_type === 'Sales' ? (float) $voucher->debit : 0.0;
-                    $creditDelta = $voucher->voucher_type === 'Receipt' ? (float) $voucher->debit : 0.0;
+                    $salesDelta = $voucher->voucher_type === 'Sales' ? $originalDebit : 0.0;
+                    $creditDelta = $voucher->voucher_type === 'Receipt' ? $originalDebit : 0.0;
 
                     if ($salesDelta !== 0.0 || $creditDelta !== 0.0) {
                         $student->particulars()->updateExistingPivot($particular->id, [
@@ -307,6 +308,19 @@ class VoucherController extends Controller
                             'credit' => max(0, (float) $pivot->pivot->credit - $creditDelta),
                         ]);
                     }
+                }
+            }
+
+            // Reverse advance balance changes that were caused by this voucher.
+            if ($student && $originalDebit > 0.0) {
+                if ($voucher->payment_by_receipt_to === 'Advance Payment') {
+                    // Voiding an advance-payment receipt — remove the amount added to advance_balance.
+                    $student->advance_balance = max(0.0, (float) ($student->advance_balance ?? 0) - $originalDebit);
+                    $student->save();
+                } elseif ($voucher->payment_by_receipt_to === 'Advance Used') {
+                    // Voiding an advance-used receipt — restore the consumed advance_balance.
+                    $student->advance_balance = (float) ($student->advance_balance ?? 0) + $originalDebit;
+                    $student->save();
                 }
             }
 

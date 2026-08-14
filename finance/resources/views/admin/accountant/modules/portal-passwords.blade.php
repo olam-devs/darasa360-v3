@@ -409,7 +409,7 @@ function esc(str) {
 async function downloadCredentialsPdf() {
     if (!provisionedCredentials.length) { showToast('No credentials to download', 'error'); return; }
     try {
-        const response = await axios.post('{{ route("api.students.portal-credentials-pdf") }}', {
+        const response = await axios.post('{{ route("accountant.api.students.portal-credentials-pdf") }}', {
             class_name: provisionedClassName,
             credentials: provisionedCredentials,
         }, {
