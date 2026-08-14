@@ -105,6 +105,33 @@ Run this **per real school** — there is no bulk "run against every provisioned
 
 **Re-running a tenant migration you just edited (not a new file)**: Laravel tracks migrations by filename, so if you fix the *content* of an already-applied migration, it won't re-run on its own. Delete its tracked row from the tenant DB's own `migrations` table first (via the same tinker pattern, `DB::connection('tenant')->table('migrations')->where('migration', '<name>')->delete()`), then re-run. Only safe to do this for migrations that are genuinely idempotent (checks `Schema::hasTable`/`hasColumn`/existence before acting) — confirmed this exact flow twice on 2026-08-11 fixing a migration that had silently missed several tables on its first pass.
 
+**Migration drift — column/table already applied but not tracked (`Duplicate column name`)**: If you see `SQLSTATE[42S21]: Column already exists: 1060 Duplicate column name 'xyz'` (or `Table '...' already exists`) when running tenant migrations, it means the schema change was applied directly to the DB at some earlier point but the migration filename was never written into the tenant `migrations` table, so Laravel tries to run it again. Fix: use tinker to insert the migration name into the tenant `migrations` table (batch 99 or any batch number), then re-run — Laravel will skip it and continue with anything genuinely pending:
+```php
+$migName = '2026_08_13_000001_add_date_of_birth_to_students_table'; // example
+if (!DB::connection('tenant')->table('migrations')->where('migration', $migName)->exists()) {
+    DB::connection('tenant')->table('migrations')->insert(['migration' => $migName, 'batch' => 99]);
+}
+Artisan::call('migrate', ['--database' => 'tenant', '--path' => 'database/migrations', '--force' => true]);
+echo Artisan::output();
+```
+Confirmed real (2026-08-13): `date_of_birth` had been applied to the live school DBs directly but was untracked; this pattern fixed it on all three live schools (17, 20, 21) before `staff_deductions` ran cleanly.
+
+**MyISAM tenant DBs — FK constraints fail (`Failed to open the referenced table`)**: This host's `default_storage_engine` is MyISAM. Finance/Academics force InnoDB via `config/database.php`, but tenant DBs provisioned before that config was in place (e.g., sandbox school 8, `olamtecc_school_001_olam_secondary_school`) may still use MyISAM — and MyISAM silently ignores FK constraint syntax at table-creation time but throws `SQLSTATE[HY000]: General error: 1824 Failed to open the referenced table` when using `foreignId()->constrained()`. **Always write new tenant-table migrations MyISAM-safe**: use plain `unsignedBigInteger` columns instead of `foreignId()->constrained()`, then wrap the FK block in an engine check:
+```php
+$table->unsignedBigInteger('staff_id');
+$table->unsignedBigInteger('deduction_type_id')->nullable();
+// ...
+if (config('database.connections.tenant.engine', 'InnoDB') !== 'MyISAM') {
+    $table->foreign('staff_id')->references('id')->on('staff')->cascadeOnDelete();
+    $table->foreign('deduction_type_id')->references('id')->on('payroll_deduction_types')->nullOnDelete();
+}
+```
+Eloquent relationships enforce the logical constraint either way. If the migration already ran and created the table before hitting the FK line (check `SHOW TABLES` first), just mark it as ran via tinker:
+```php
+DB::connection('tenant')->table('migrations')->insert(['migration' => '<name>', 'batch' => 100]);
+```
+Confirmed real (2026-08-13): sandbox school 8 uses MyISAM; fixed by making the `staff_deductions` migration conditional and marking it as ran manually (table already existed).
+
 ## Step 5 — Cache & permissions (only if this is a fresh deploy, or views/config changed)
 
 ```bash
