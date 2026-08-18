@@ -921,19 +921,73 @@ function recomputeReviewLine(input) {
     if (totalEl) totalEl.textContent = 'TSh ' + fmt(price * qty);
 }
 
+function priceChangeTag(submittedPrice, hist) {
+    if (!hist.length || !submittedPrice) return '';
+    const lastPrice = hist[0].unit_price;
+    if (!lastPrice) return '';
+    const pct = Math.round(((submittedPrice - lastPrice) / lastPrice) * 100);
+    if (Math.abs(pct) < 5) return ''; // within 5% — no flag
+    const up = pct > 0;
+    const colour = up ? 'text-red-600 bg-red-50' : 'text-emerald-700 bg-emerald-50';
+    const arrow  = up ? '↑' : '↓';
+    return `<span class="ml-1 text-xs font-semibold px-1 py-0.5 rounded ${colour}">${arrow}${Math.abs(pct)}% vs last</span>`;
+}
+
+function budgetAlertHtml(bi) {
+    if (!bi || bi.budget_total == null) return '';
+    const total    = bi.budget_total;
+    const spent    = bi.already_spent;
+    const incoming = bi.submission_total;
+    const afterApproval = spent + incoming;
+    const pctAfter = total > 0 ? Math.round((afterApproval / total) * 100) : 0;
+
+    let cls, icon, msg;
+    if (afterApproval > total) {
+        const over = afterApproval - total;
+        cls  = 'bg-red-50 border-red-400 text-red-800';
+        icon = '🔴';
+        msg  = `OVER BUDGET — Approving this will exceed the budget by <strong>TSh ${fmt(over)}</strong>. `
+             + `Budget: TSh ${fmt(total)} | Spent: TSh ${fmt(spent)} | This order: TSh ${fmt(incoming)}`;
+    } else if (pctAfter >= 90) {
+        cls  = 'bg-amber-50 border-amber-400 text-amber-800';
+        icon = '⚠️';
+        msg  = `Budget nearly full — After approval: <strong>${pctAfter}%</strong> of budget used. `
+             + `Budget: TSh ${fmt(total)} | Spent: TSh ${fmt(spent)} | This order: TSh ${fmt(incoming)} | Remaining: TSh ${fmt(total - afterApproval)}`;
+    } else if (pctAfter >= 75) {
+        cls  = 'bg-yellow-50 border-yellow-300 text-yellow-800';
+        icon = '📊';
+        msg  = `Approaching budget — Approval will use ${pctAfter}% of the budget. `
+             + `Remaining after: TSh ${fmt(total - afterApproval)}`;
+    } else {
+        return ''; // plenty of budget — no alert needed
+    }
+    return `<div class="border-l-4 rounded px-3 py-2 mb-3 text-xs ${cls}">${icon} ${msg}</div>`;
+}
+
 function renderQueueCard(sub, priceHistoryMap) {
     const total = (sub.line_items || []).reduce((s, l) => s + parseFloat(l.line_total), 0);
     const lineRows = (sub.line_items || []).map(li => {
         const hist = priceHistoryMap[li.expense_item_id] || [];
-        const histHtml = hist.length
-            ? '<div class="text-xs text-gray-400 mt-1">Last: ' + hist.slice(0, 3).map(h => `${h.date} TSh ${fmt(h.unit_price)}${h.category ? ' (' + h.category + ')' : ''}`).join(' · ') + '</div>'
-            : '<div class="text-xs text-gray-300 mt-1">No prior price history.</div>';
+        let histHtml = '';
+        if (hist.length) {
+            const rows = hist.slice(0, 4).map(h => {
+                const unitStr = h.unit ? ` per ${h.unit}` : '';
+                return `<div class="text-gray-500">${h.date} — <span class="font-medium text-gray-700">TSh ${fmt(h.unit_price)}${unitStr}</span>${h.category ? ` <span class="text-gray-400">(${h.category})</span>` : ''}</div>`;
+            }).join('');
+            histHtml = `<div class="mt-1.5 pl-2 border-l-2 border-gray-200 text-xs space-y-0.5">${rows}</div>`;
+        } else if (li.expense_item_id) {
+            histHtml = '<div class="text-xs text-gray-300 mt-1">No prior price history for this item.</div>';
+        }
+        const priceTag = priceChangeTag(parseFloat(li.unit_price), hist);
         const lineTotal = (parseFloat(li.unit_price) * parseFloat(li.quantity)).toFixed(2);
         return `
             <tr data-line-id="${li.id}">
                 <td class="p-2 align-top text-sm">${li.item_name_snapshot}${histHtml}</td>
-                <td class="p-2 align-top"><input type="text" class="w-20 border rounded px-1 py-0.5 text-xs review-unit" value="${li.unit_type_snapshot}"></td>
-                <td class="p-2 align-top text-right"><input type="number" step="0.01" class="w-24 border rounded px-1 py-0.5 text-xs text-right review-price" value="${li.unit_price}" oninput="recomputeReviewLine(this)"></td>
+                <td class="p-2 align-top"><input type="text" class="w-20 border rounded px-1 py-0.5 text-xs review-unit" value="${li.unit_type_snapshot || ''}"></td>
+                <td class="p-2 align-top text-right">
+                    <input type="number" step="0.01" class="w-24 border rounded px-1 py-0.5 text-xs text-right review-price" value="${li.unit_price}" oninput="recomputeReviewLine(this)">
+                    ${priceTag}
+                </td>
                 <td class="p-2 align-top text-right"><input type="number" step="0.001" class="w-20 border rounded px-1 py-0.5 text-xs text-right review-qty" value="${li.quantity}" oninput="recomputeReviewLine(this)"></td>
                 <td class="p-2 align-top text-right review-line-total text-sm">TSh ${fmt(lineTotal)}</td>
                 <td class="p-2 align-top text-center">
@@ -955,6 +1009,7 @@ function renderQueueCard(sub, priceHistoryMap) {
             </div>
             <p class="font-bold text-gray-900">TSh ${fmt(total)}</p>
         </div>
+        ${budgetAlertHtml(sub.budget_info)}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 bg-gray-50 rounded p-2">
             <div>
                 <label class="block text-xs text-gray-500 mb-1">Book (money comes from) *</label>

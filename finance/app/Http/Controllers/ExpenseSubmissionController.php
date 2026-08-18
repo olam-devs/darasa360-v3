@@ -6,6 +6,7 @@ use App\Models\AcademicYear;
 use App\Models\Book;
 use App\Models\BookFeeCategory;
 use App\Models\ExpenseCategory;
+use App\Models\ExpenseCategoryPlan;
 use App\Models\ExpenseItem;
 use App\Models\ExpenseLineItem;
 use App\Models\ExpenseSubmission;
@@ -359,14 +360,42 @@ class ExpenseSubmissionController extends Controller
         $submitterIds = $submissions->pluck('submitted_by')->filter()->unique()->values();
         $submitterNames = \App\Models\Central\SchoolAccountant::whereIn('id', $submitterIds)
             ->pluck('name', 'id');
-        $submissions = $submissions->map(function ($s) use ($submitterNames) {
+
+        // Budget headroom per (category × academic year) pair.
+        $catYearPairs = $submissions
+            ->map(fn ($s) => $s->expense_category_id . '_' . $s->academic_year_id)
+            ->unique()->values();
+
+        $budgetData = [];
+        foreach ($catYearPairs as $key) {
+            [$catId, $yearId] = explode('_', $key, 2);
+            $budgetTotal = (float) ExpenseCategoryPlan::where('expense_category_id', $catId)
+                ->where('academic_year_id', $yearId)
+                ->sum('expected_amount');
+            $alreadySpent = (float) ExpenseLineItem::where('status', 'approved')
+                ->whereHas('submission', fn ($q) => $q
+                    ->where('expense_category_id', $catId)
+                    ->where('academic_year_id', $yearId))
+                ->sum('line_total');
+            $budgetData[$key] = [
+                'budget_total'  => $budgetTotal > 0 ? $budgetTotal : null,
+                'already_spent' => $alreadySpent,
+            ];
+        }
+
+        $submissions = $submissions->map(function ($s) use ($submitterNames, $budgetData) {
             $s->submitted_by_name = $submitterNames[$s->submitted_by] ?? 'Unknown';
+            $key = $s->expense_category_id . '_' . $s->academic_year_id;
+            $bd  = $budgetData[$key] ?? null;
+            $s->budget_info = $bd ? array_merge($bd, [
+                'submission_total' => (float) $s->total_amount,
+            ]) : null;
             return $s;
         });
 
         return response()->json([
-            'submissions' => $submissions,
-            'price_history' => $priceHistory,
+            'submissions'       => $submissions,
+            'price_history'     => $priceHistory,
             'pending_categories' => ExpenseCategory::pending()->orderBy('created_at')->get(),
         ]);
     }

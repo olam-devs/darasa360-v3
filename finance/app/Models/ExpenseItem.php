@@ -42,12 +42,14 @@ class ExpenseItem extends BaseModel
                 'expense_categories.name as category',
                 'expense_line_items.unit_price',
                 'expense_line_items.quantity',
+                'expense_line_items.unit_type_snapshot as unit',
             ])
             ->map(fn ($row) => [
-                'date' => $row->date,
-                'category' => $row->category,
+                'date'       => $row->date,
+                'category'   => $row->category,
                 'unit_price' => (float) $row->unit_price,
-                'quantity' => (float) $row->quantity,
+                'quantity'   => (float) $row->quantity,
+                'unit'       => $row->unit ?? '',
             ]);
     }
 }
