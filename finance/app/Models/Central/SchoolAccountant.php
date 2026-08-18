@@ -39,6 +39,7 @@ class SchoolAccountant extends Authenticatable
         'can_edit_history',
         'can_view_logs',
         'is_main_accountant',
+        'can_view_budget_chart',
     ];
 
     /**
@@ -66,6 +67,7 @@ class SchoolAccountant extends Authenticatable
             'can_edit_history' => 'boolean',
             'can_view_logs' => 'boolean',
             'is_main_accountant' => 'boolean',
+            'can_view_budget_chart' => 'boolean',
         ];
     }
 

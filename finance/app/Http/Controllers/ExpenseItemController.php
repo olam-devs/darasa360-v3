@@ -38,8 +38,8 @@ class ExpenseItemController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'unit_type' => 'required|string|max:100',
+            'name'      => 'required|string|max:255',
+            'unit_type' => 'nullable|string|max:100',
         ]);
 
         $existing = ExpenseItem::whereRaw('LOWER(name) = ?', [strtolower($validated['name'])])->first();

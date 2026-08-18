@@ -4,7 +4,8 @@
 @section('page_title', 'Expenses')
 
 @php
-    $isMainAccountant = (bool) (auth()->user()->is_main_accountant ?? false);
+    $isMainAccountant    = (bool) (auth()->user()->is_main_accountant ?? false);
+    $canViewBudgetChart  = $isMainAccountant || (bool) (auth()->user()->can_view_budget_chart ?? false);
 @endphp
 
 @section('content')
@@ -52,10 +53,13 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
                     <div class="flex gap-2">
                         <div class="flex-1">
-                            <input type="text" id="composeCategoryInput" list="categoriesDatalist"
+                            <input type="text" id="composeCategoryInput"
                                 class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"
                                 placeholder="Search or type category name..."
-                                oninput="onComposeCategoryInput()" autocomplete="off">
+                                oninput="onComposeCategoryInput(); showCategoryDropdown(this.value)"
+                                onfocus="showCategoryDropdown(this.value)"
+                                onblur="setTimeout(hideCategoryDropdown, 200)"
+                                autocomplete="off">
                             <input type="hidden" id="composeCategory">
                             <p id="composeCategoryWarning" class="hidden text-xs text-amber-600 mt-1"></p>
                         </div>
@@ -241,6 +245,14 @@
 
     <datalist id="itemsDatalist"></datalist>
     <datalist id="categoriesDatalist"></datalist>
+
+    <!-- Custom autocomplete dropdowns (positioned by JS) -->
+    <div id="itemDropdown"
+        class="hidden fixed z-[200] bg-white border border-gray-200 rounded-lg shadow-lg overflow-y-auto text-sm"
+        style="max-height:200px"></div>
+    <div id="categoryDropdown"
+        class="hidden fixed z-[200] bg-white border border-gray-200 rounded-lg shadow-lg overflow-y-auto text-sm"
+        style="max-height:200px"></div>
 </div>
 
 <!-- Category Modal (add / rename) -->
@@ -269,8 +281,8 @@
             <input type="text" id="catalogItemName" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. Exercise Books (80 pages)">
         </div>
         <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Unit Type</label>
-            <input type="text" id="catalogItemUnit" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. pieces, litres, kg"
+            <label class="block text-sm font-medium text-gray-700 mb-1">Unit Type <span class="text-gray-400 font-normal">(optional — kg, litre, pieces, …)</span></label>
+            <input type="text" id="catalogItemUnit" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. kg, litre, pieces (leave blank if not applicable)"
                 onkeydown="if(event.key==='Enter')submitCatalogItemModal()">
         </div>
         <div class="flex gap-2 justify-end">
@@ -305,8 +317,13 @@
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
 
 const EBASE = '{{ url('/api') }}';
-const IS_MAIN_ACCOUNTANT = @json($isMainAccountant);
+const IS_MAIN_ACCOUNTANT   = @json($isMainAccountant);
+const CAN_VIEW_BUDGET_CHART = @json($canViewBudgetChart);
 const DEFAULT_SUBMIT_BTN_TEXT = IS_MAIN_ACCOUNTANT ? 'Approve & Record' : 'Submit for Approval';
+
+function esc(str) {
+    return String(str ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
 
 function fmt(n) {
     return new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n || 0);
@@ -442,8 +459,12 @@ function addComposeLineRow(prefill) {
     const tr = document.createElement('tr');
     tr.dataset.rowId = rowId;
     tr.innerHTML = `
-        <td class="p-2">
-            <input type="text" list="itemsDatalist" class="w-full border rounded px-2 py-1 line-item-name text-sm" oninput="onLineItemNameChange(${rowId})" placeholder="Search or type new item" autocomplete="off">
+        <td class="p-2" style="position:relative">
+            <input type="text" class="w-full border rounded px-2 py-1 line-item-name text-sm"
+                oninput="onLineItemNameChange(${rowId}); showItemDropdown(${rowId}, this.value)"
+                onfocus="showItemDropdown(${rowId}, this.value)"
+                onblur="setTimeout(hideItemDropdown, 200)"
+                placeholder="Type to search item…" autocomplete="off">
             <input type="hidden" class="line-item-existing-id">
         </td>
         <td class="p-2"><input type="text" class="w-full border rounded px-2 py-1 line-item-unit text-sm" placeholder="unit"></td>
@@ -469,6 +490,102 @@ function removeComposeLineRow(rowId) {
     recomputeComposeGrandTotal();
 }
 
+// ─── Custom autocomplete dropdowns ───────────────────────────────────────
+let _itemDropdownActiveRow = null;
+
+function _positionDropdown(dd, inp) {
+    const r = inp.getBoundingClientRect();
+    dd.style.top    = (r.bottom + window.scrollY) + 'px';
+    dd.style.left   = (r.left   + window.scrollX) + 'px';
+    dd.style.width  = Math.max(r.width, 220) + 'px';
+}
+
+function showItemDropdown(rowId, val) {
+    _itemDropdownActiveRow = rowId;
+    const dd  = document.getElementById('itemDropdown');
+    const tr  = document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`);
+    const inp = tr?.querySelector('.line-item-name');
+    if (!inp || !itemsCache.length) { dd.classList.add('hidden'); return; }
+
+    const q = (val || '').trim().toLowerCase();
+    const matches = q
+        ? itemsCache.filter(i => i.name.toLowerCase().includes(q)).slice(0, 12)
+        : itemsCache.slice(0, 12);
+
+    if (!matches.length) { dd.classList.add('hidden'); return; }
+
+    _positionDropdown(dd, inp);
+    dd.innerHTML = matches.map(i => {
+        const unit = i.unit_type ? ` <span class="text-gray-400">(${esc(i.unit_type)})</span>` : '';
+        return `<div class="px-3 py-1.5 hover:bg-rose-50 cursor-pointer leading-snug"
+            onmousedown="selectItemDropdown(${rowId}, ${i.id}, '${esc(i.name)}', '${esc(i.unit_type||'')}', ${i.last_price ?? 'null'})">${esc(i.name)}${unit}</div>`;
+    }).join('');
+    dd.classList.remove('hidden');
+}
+
+function selectItemDropdown(rowId, id, name, unit, lastPrice) {
+    const tr = document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`);
+    if (!tr) return;
+    tr.querySelector('.line-item-name').value = name;
+    tr.querySelector('.line-item-existing-id').value = id;
+    if (unit) tr.querySelector('.line-item-unit').value = unit;
+    if (IS_MAIN_ACCOUNTANT && lastPrice != null) {
+        tr.querySelector('.line-item-price').value = lastPrice;
+        recomputeComposeLine(rowId);
+    }
+    document.getElementById('itemDropdown').classList.add('hidden');
+}
+
+function hideItemDropdown() {
+    document.getElementById('itemDropdown').classList.add('hidden');
+}
+
+function showCategoryDropdown(val) {
+    const dd  = document.getElementById('categoryDropdown');
+    const inp = document.getElementById('composeCategoryInput');
+    if (!inp || !categoriesCache.length) { dd.classList.add('hidden'); return; }
+
+    const q = (val || '').trim().toLowerCase();
+    const matches = q
+        ? categoriesCache.filter(c => c.name.toLowerCase().includes(q)).slice(0, 12)
+        : categoriesCache.slice(0, 12);
+
+    if (!matches.length) { dd.classList.add('hidden'); return; }
+
+    _positionDropdown(dd, inp);
+    dd.innerHTML = matches.map(c =>
+        `<div class="px-3 py-1.5 hover:bg-rose-50 cursor-pointer"
+            onmousedown="selectCategoryDropdown(${c.id}, '${esc(c.name)}')">${esc(c.name)}</div>`
+    ).join('');
+    dd.classList.remove('hidden');
+}
+
+function selectCategoryDropdown(id, name) {
+    document.getElementById('composeCategoryInput').value = name;
+    document.getElementById('composeCategory').value = id;
+    document.getElementById('categoryDropdown').classList.add('hidden');
+    onComposeCategoryInput();
+}
+
+function hideCategoryDropdown() {
+    document.getElementById('categoryDropdown').classList.add('hidden');
+}
+
+// Reposition dropdowns on scroll so they stay below their input
+window.addEventListener('scroll', () => {
+    const itemDd = document.getElementById('itemDropdown');
+    if (!itemDd.classList.contains('hidden') && _itemDropdownActiveRow != null) {
+        const tr  = document.querySelector(`#composeLineItems tr[data-row-id="${_itemDropdownActiveRow}"]`);
+        const inp = tr?.querySelector('.line-item-name');
+        if (inp) _positionDropdown(itemDd, inp);
+    }
+    const catDd = document.getElementById('categoryDropdown');
+    if (!catDd.classList.contains('hidden')) {
+        const inp = document.getElementById('composeCategoryInput');
+        if (inp) _positionDropdown(catDd, inp);
+    }
+}, { passive: true });
+
 function onLineItemNameChange(rowId) {
     const tr = document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`);
     const name = tr.querySelector('.line-item-name').value.trim().toLowerCase();
@@ -478,7 +595,7 @@ function onLineItemNameChange(rowId) {
     const priceField = tr.querySelector('.line-item-price');
     if (match) {
         idField.value = match.id;
-        unitField.value = match.unit_type;
+        if (match.unit_type) unitField.value = match.unit_type;
         if (IS_MAIN_ACCOUNTANT && match.last_price != null) {
             priceField.value = match.last_price;
             recomputeComposeLine(rowId);
@@ -1052,7 +1169,7 @@ async function loadChart() {
         document.getElementById('chartHiddenMsg').classList.add('hidden');
         document.getElementById('chartCanvasWrap').classList.remove('hidden');
 
-        if (IS_MAIN_ACCOUNTANT) {
+        if (CAN_VIEW_BUDGET_CHART) {
             document.getElementById('chartExpected').textContent = 'TSh ' + fmt(res.data.expected_amount);
         }
         document.getElementById('chartActual').textContent = 'TSh ' + fmt(res.data.actual_amount);
@@ -1066,7 +1183,7 @@ async function loadChart() {
         if (e.response?.status === 403) {
             document.getElementById('chartHiddenMsg').classList.remove('hidden');
             document.getElementById('chartCanvasWrap').classList.add('hidden');
-            if (IS_MAIN_ACCOUNTANT) document.getElementById('chartExpected').textContent = 'TSh 0';
+            if (CAN_VIEW_BUDGET_CHART) document.getElementById('chartExpected').textContent = 'TSh 0';
             document.getElementById('chartActual').textContent = 'TSh 0';
         } else {
             showDarasaToast({ type: 'error', message: 'Could not load chart data.' });
@@ -1095,7 +1212,7 @@ function renderExpenseChart(timeline, plannedPerBucket) {
     const datasets = [];
     const budgetArr = Array.isArray(plannedPerBucket) ? plannedPerBucket : [];
 
-    if (IS_MAIN_ACCOUNTANT && budgetArr.some(v => v > 0)) {
+    if (CAN_VIEW_BUDGET_CHART && budgetArr.some(v => v > 0)) {
         datasets.push({
             label: 'Budget',
             data: budgetArr,
@@ -1412,12 +1529,12 @@ function closeCatalogItemModal() {
 async function submitCatalogItemModal() {
     const name = document.getElementById('catalogItemName').value.trim();
     const unitType = document.getElementById('catalogItemUnit').value.trim();
-    if (!name || !unitType) {
-        showDarasaToast({ type: 'error', message: 'Both name and unit type are required.' });
+    if (!name) {
+        showDarasaToast({ type: 'error', message: 'Item name is required.' });
         return;
     }
     try {
-        await axios.post(`${EBASE}/expense-items`, { name, unit_type: unitType });
+        await axios.post(`${EBASE}/expense-items`, { name, unit_type: unitType || null });
         showDarasaToast({ type: 'success', message: 'Item added.' });
         closeCatalogItemModal();
         loadCatalog();
@@ -1436,7 +1553,7 @@ async function loadCatalog() {
         const items = res.data.items || [];
         box.innerHTML = items.length
             ? `<table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-2 text-left">Name</th><th class="p-2 text-left">Unit type</th></tr></thead><tbody>${
-                items.map(i => `<tr class="border-t"><td class="p-2">${i.name}</td><td class="p-2">${i.unit_type}</td></tr>`).join('')
+                items.map(i => `<tr class="border-t"><td class="p-2">${i.name}</td><td class="p-2 text-gray-500">${i.unit_type || '—'}</td></tr>`).join('')
             }</tbody></table>`
             : '<p class="text-gray-400 text-sm text-center py-4">No items found.</p>';
     } catch (e) {

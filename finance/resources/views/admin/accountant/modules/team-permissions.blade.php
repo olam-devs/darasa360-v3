@@ -40,13 +40,14 @@
                 }
                 let html = '<table class="w-full border border-slate-200 rounded-lg overflow-hidden"><thead class="bg-slate-100"><tr>' +
                     '<th class="p-2 text-left">Name</th><th class="p-2 text-left">Email</th>' +
-                    '<th class="p-2 text-center">Edit history</th><th class="p-2 text-center">View logs</th><th class="p-2"></th>' +
+                    '<th class="p-2 text-center">Edit history</th><th class="p-2 text-center">View logs</th><th class="p-2 text-center">Budget chart</th><th class="p-2"></th>' +
                     '</tr></thead><tbody>';
                 accountants.forEach(a => {
                     const mainBadge = a.is_main_accountant ? ' <span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Main</span>' : '';
                     html += `<tr class="border-t bg-white"><td class="p-2 font-medium">${a.name}${mainBadge}</td><td class="p-2 text-slate-600">${a.email}</td>
                         <td class="p-2 text-center"><input type="checkbox" id="edit_${a.id}" ${a.can_edit_history ? 'checked' : ''}></td>
                         <td class="p-2 text-center"><input type="checkbox" id="logs_${a.id}" ${a.can_view_logs ? 'checked' : ''}></td>
+                        <td class="p-2 text-center"><input type="checkbox" id="budget_${a.id}" ${a.can_view_budget_chart ? 'checked' : ''}></td>
                         <td class="p-2 text-right"><button type="button" onclick="saveTeamPermissions(${a.id})" class="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">Save</button></td></tr>`;
                 });
                 html += '</tbody></table>';
@@ -61,6 +62,7 @@
                 await axios.put(`${accountantPermissionsUpdateUrlBase}/${accountantId}`, {
                     can_edit_history: document.getElementById('edit_' + accountantId).checked,
                     can_view_logs: document.getElementById('logs_' + accountantId).checked,
+                    can_view_budget_chart: document.getElementById('budget_' + accountantId).checked,
                 });
                 showDarasaToast({ type: 'success', message: 'Permissions saved.' });
             } catch (e) {

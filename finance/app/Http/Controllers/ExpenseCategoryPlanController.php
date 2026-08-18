@@ -112,8 +112,9 @@ class ExpenseCategoryPlanController extends Controller
             'to_date'          => 'nullable|date|after_or_equal:from_date',
         ]);
 
-        $categoryId = $validated['category_id'] ?? null;
-        $isMain     = (bool) ($request->user()->is_main_accountant ?? false);
+        $categoryId      = $validated['category_id'] ?? null;
+        $isMain          = (bool) ($request->user()->is_main_accountant ?? false);
+        $canViewBudget   = $isMain || (bool) ($request->user()->can_view_budget_chart ?? false);
 
         $academicYear = AcademicYear::find($validated['academic_year_id']);
         $fromDate = $validated['from_date']
@@ -128,7 +129,7 @@ class ExpenseCategoryPlanController extends Controller
         $monthlyPlans   = [];
         $allPlans       = collect();
 
-        if ($isMain) {
+        if ($canViewBudget) {
             $allPlans = ExpenseCategoryPlan::where('academic_year_id', $validated['academic_year_id'])
                 ->when($categoryId, fn ($q) => $q->where('expense_category_id', $categoryId))
                 ->get()

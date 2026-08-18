@@ -34,7 +34,7 @@ class AccountantPermissionController extends Controller
 
         $accountants = $school->accountants()
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'is_active', 'is_main_accountant', 'can_edit_history', 'can_view_logs']);
+            ->get(['id', 'name', 'email', 'is_active', 'is_main_accountant', 'can_edit_history', 'can_view_logs', 'can_view_budget_chart']);
 
         return response()->json(['accountants' => $accountants]);
     }
@@ -54,13 +54,15 @@ class AccountantPermissionController extends Controller
         }
 
         $validated = $request->validate([
-            'can_edit_history' => 'required|boolean',
-            'can_view_logs' => 'required|boolean',
+            'can_edit_history'    => 'required|boolean',
+            'can_view_logs'       => 'required|boolean',
+            'can_view_budget_chart' => 'nullable|boolean',
         ]);
 
         $accountant->update([
-            'can_edit_history' => $validated['can_edit_history'],
-            'can_view_logs' => $validated['can_view_logs'],
+            'can_edit_history'    => $validated['can_edit_history'],
+            'can_view_logs'       => $validated['can_view_logs'],
+            'can_view_budget_chart' => (bool) ($validated['can_view_budget_chart'] ?? false),
         ]);
 
         $this->accountantPermissionSync->sync($school, $accountant);
@@ -72,7 +74,7 @@ class AccountantPermissionController extends Controller
         );
 
         return response()->json(['accountant' => $accountant->fresh()->only([
-            'id', 'name', 'email', 'is_active', 'is_main_accountant', 'can_edit_history', 'can_view_logs',
+            'id', 'name', 'email', 'is_active', 'is_main_accountant', 'can_edit_history', 'can_view_logs', 'can_view_budget_chart',
         ])]);
     }
 }
