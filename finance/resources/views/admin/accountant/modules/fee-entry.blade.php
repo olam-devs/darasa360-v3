@@ -776,8 +776,9 @@
                     msg += '\n\nPart of this receipt was over the fee balance and was recorded separately as an advance on the student (you will see two receipt lines).';
                 }
                 showDarasaToast({ type: 'success', title: 'Fee entry', message: msg, duration: 8000 });
-                closeVoucherForm();
                 loadVouchers();
+                const savedStudentName = document.getElementById('selectedStudentName')?.textContent?.trim() || 'student';
+                showFeeEntryNextAction(savedStudentName);
             } catch (error) {
                 showDarasaToast({ type: 'error', title: 'Fee entry', message: darasaAxiosMessage(error) });
             } finally {
@@ -802,6 +803,55 @@
             } catch (error) {
                 showDarasaToast({ type: 'error', title: 'Fee entry', message: darasaAxiosMessage(error) });
             }
+        }
+
+        function showFeeEntryNextAction(studentName) {
+            const btnArea = document.querySelector('#voucherFormContainer .flex.gap-3.pt-3.border-t-2');
+            if (!btnArea) { closeVoucherForm(); return; }
+            btnArea.innerHTML = `
+                <div class="w-full">
+                    <p class="text-sm font-semibold text-green-700 mb-3">&#10003; Entry saved!</p>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="addAnotherParticular()"
+                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-bold transition text-sm">
+                            Add another particular for ${studentName}
+                        </button>
+                        <button type="button" onclick="closeVoucherForm()"
+                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
+                            Done
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addAnotherParticular() {
+            const particularEl = document.getElementById('voucherParticular');
+            const typeEl = document.getElementById('voucherType');
+            const amountEl = document.getElementById('voucherAmount');
+            const notesEl = document.getElementById('voucherNotes');
+            if (particularEl) particularEl.value = '';
+            if (typeEl) typeEl.value = '';
+            if (amountEl) amountEl.value = '';
+            if (notesEl) notesEl.value = '';
+            document.getElementById('amountSection')?.classList.add('hidden');
+            document.getElementById('paymentInfoDisplay')?.classList.add('hidden');
+            document.getElementById('applyAdvanceRow')?.classList.add('hidden');
+            document.getElementById('bookSelection')?.classList.add('hidden');
+            voucherNotesTouched = false;
+            feeEntrySaveInFlight = false;
+            const btnArea = document.querySelector('#voucherFormContainer .flex.gap-3.pt-3.border-t-2');
+            if (btnArea) {
+                btnArea.innerHTML = `
+                    <button type="submit" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-bold transition text-sm">
+                         Save Entry
+                    </button>
+                    <button type="button" onclick="closeVoucherForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
+                         Cancel
+                    </button>
+                `;
+            }
+            document.getElementById('voucherParticular')?.focus();
         }
 
         function closeVoucherForm() {
