@@ -16,7 +16,7 @@ class ExpenseItemController extends Controller
         }
 
         $isMain = (bool) ($request->user()->is_main_accountant ?? false);
-        $items = $query->limit(200)->get(['id', 'name', 'unit_type']);
+        $items = $query->limit(200)->get(['id', 'name', 'unit_type', 'item_type']);
 
         // For the main accountant, include last approved price per item so the
         // compose form can auto-fill unit price when a known item is selected.
@@ -40,7 +40,11 @@ class ExpenseItemController extends Controller
         $validated = $request->validate([
             'name'      => 'required|string|max:255',
             'unit_type' => 'nullable|string|max:100',
+            'item_type' => 'nullable|in:goods,service',
         ]);
+        if (empty($validated['item_type'])) {
+            $validated['item_type'] = 'goods';
+        }
 
         $existing = ExpenseItem::whereRaw('LOWER(name) = ?', [strtolower($validated['name'])])->first();
         if ($existing) {

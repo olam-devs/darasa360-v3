@@ -280,6 +280,19 @@
             <label class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
             <input type="text" id="catalogItemName" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. Exercise Books (80 pages)">
         </div>
+        <div class="mb-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
+            <div class="flex gap-5">
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                    <input type="radio" name="catalogItemType" value="goods" id="catalogItemTypeGoods" checked class="accent-blue-600">
+                    Goods <span class="text-gray-400 text-xs">(qty × unit price)</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-sm">
+                    <input type="radio" name="catalogItemType" value="service" id="catalogItemTypeService" class="accent-purple-600">
+                    Service <span class="text-gray-400 text-xs">(flat fee, no qty)</span>
+                </label>
+            </div>
+        </div>
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Unit Type <span class="text-gray-400 font-normal">(optional — kg, litre, pieces, …)</span></label>
             <input type="text" id="catalogItemUnit" class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm" placeholder="e.g. kg, litre, pieces (leave blank if not applicable)"
@@ -466,10 +479,15 @@ function addComposeLineRow(prefill) {
                 onblur="setTimeout(hideItemDropdown, 200)"
                 placeholder="Type to search item…" autocomplete="off">
             <input type="hidden" class="line-item-existing-id">
+            <input type="hidden" class="line-item-type" value="goods">
         </td>
-        <td class="p-2"><input type="text" class="w-full border rounded px-2 py-1 line-item-unit text-sm" placeholder="unit"></td>
-        <td class="p-2 text-right"><input type="number" step="0.01" min="0" value="0" class="w-full border rounded px-2 py-1 text-right line-item-price text-sm" oninput="recomputeComposeLine(${rowId})"></td>
-        <td class="p-2 text-right"><input type="number" step="0.001" min="0.001" value="1" class="w-full border rounded px-2 py-1 text-right line-item-qty text-sm" oninput="recomputeComposeLine(${rowId})"></td>
+        <td class="p-2 line-item-unit-cell"><input type="text" class="w-full border rounded px-2 py-1 line-item-unit text-sm" placeholder="unit"></td>
+        <td class="p-2 text-right line-item-price-cell">
+            <input type="number" step="0.01" min="0" value="0" class="w-full border rounded px-2 py-1 text-right line-item-price text-sm" oninput="recomputeComposeLine(${rowId})">
+            <input type="number" step="0.01" min="0" value="0" class="w-full border rounded px-2 py-1 text-right line-item-flat text-sm hidden" oninput="recomputeComposeLine(${rowId})" placeholder="Total amount">
+            <span class="line-item-flat-label text-xs text-purple-600 hidden">Flat fee (TSh)</span>
+        </td>
+        <td class="p-2 text-right line-item-qty-cell"><input type="number" step="0.001" min="0.001" value="1" class="w-full border rounded px-2 py-1 text-right line-item-qty text-sm" oninput="recomputeComposeLine(${rowId})"></td>
         <td class="p-2 text-right line-item-subtotal text-sm">TSh 0</td>
         <td class="p-2 text-center"><button type="button" onclick="removeComposeLineRow(${rowId})" class="text-red-500 hover:text-red-700">&times;</button></td>
     `;
@@ -478,9 +496,16 @@ function addComposeLineRow(prefill) {
     if (prefill) {
         tr.querySelector('.line-item-name').value = prefill.item_name_snapshot;
         tr.querySelector('.line-item-existing-id').value = prefill.expense_item_id || '';
-        tr.querySelector('.line-item-unit').value = prefill.unit_type_snapshot;
-        tr.querySelector('.line-item-price').value = prefill.unit_price;
-        tr.querySelector('.line-item-qty').value = prefill.quantity;
+        const cachedItem = itemsCache.find(i => i.id == prefill.expense_item_id);
+        const prefillType = cachedItem?.item_type || (prefill.unit_type_snapshot === 'service' ? 'service' : 'goods');
+        applyItemTypeToRow(rowId, prefillType);
+        if (prefillType === 'service') {
+            tr.querySelector('.line-item-flat').value = prefill.unit_price;
+        } else {
+            tr.querySelector('.line-item-unit').value = prefill.unit_type_snapshot;
+            tr.querySelector('.line-item-price').value = prefill.unit_price;
+            tr.querySelector('.line-item-qty').value = prefill.quantity;
+        }
         recomputeComposeLine(rowId);
     }
 }
@@ -517,20 +542,26 @@ function showItemDropdown(rowId, val) {
     _positionDropdown(dd, inp);
     dd.innerHTML = matches.map(i => {
         const unit = i.unit_type ? ` <span class="text-gray-400">(${esc(i.unit_type)})</span>` : '';
+        const svcBadge = i.item_type === 'service' ? ' <span class="text-purple-500 text-xs">service</span>' : '';
         return `<div class="px-3 py-1.5 hover:bg-rose-50 cursor-pointer leading-snug"
-            onmousedown="selectItemDropdown(${rowId}, ${i.id}, '${esc(i.name)}', '${esc(i.unit_type||'')}', ${i.last_price ?? 'null'})">${esc(i.name)}${unit}</div>`;
+            onmousedown="selectItemDropdown(${rowId}, ${i.id}, '${esc(i.name)}', '${esc(i.unit_type||'')}', ${i.last_price ?? 'null'}, '${i.item_type||'goods'}')">${esc(i.name)}${unit}${svcBadge}</div>`;
     }).join('');
     dd.classList.remove('hidden');
 }
 
-function selectItemDropdown(rowId, id, name, unit, lastPrice) {
+function selectItemDropdown(rowId, id, name, unit, lastPrice, itemType) {
     const tr = document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`);
     if (!tr) return;
     tr.querySelector('.line-item-name').value = name;
     tr.querySelector('.line-item-existing-id').value = id;
-    if (unit) tr.querySelector('.line-item-unit').value = unit;
+    applyItemTypeToRow(rowId, itemType || 'goods');
+    if (itemType !== 'service' && unit) tr.querySelector('.line-item-unit').value = unit;
     if (IS_MAIN_ACCOUNTANT && lastPrice != null) {
-        tr.querySelector('.line-item-price').value = lastPrice;
+        if (itemType === 'service') {
+            tr.querySelector('.line-item-flat').value = lastPrice;
+        } else {
+            tr.querySelector('.line-item-price').value = lastPrice;
+        }
         recomputeComposeLine(rowId);
     }
     document.getElementById('itemDropdown').classList.add('hidden');
@@ -595,9 +626,14 @@ function onLineItemNameChange(rowId) {
     const priceField = tr.querySelector('.line-item-price');
     if (match) {
         idField.value = match.id;
-        if (match.unit_type) unitField.value = match.unit_type;
+        applyItemTypeToRow(rowId, match.item_type || 'goods');
+        if (match.item_type !== 'service' && match.unit_type) unitField.value = match.unit_type;
         if (IS_MAIN_ACCOUNTANT && match.last_price != null) {
-            priceField.value = match.last_price;
+            if (match.item_type === 'service') {
+                tr.querySelector('.line-item-flat').value = match.last_price;
+            } else {
+                priceField.value = match.last_price;
+            }
             recomputeComposeLine(rowId);
         }
     } else {
@@ -607,20 +643,48 @@ function onLineItemNameChange(rowId) {
 
 function recomputeComposeLine(rowId) {
     const tr = document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`);
-    const qty = parseFloat(tr.querySelector('.line-item-qty').value) || 0;
-    const price = parseFloat(tr.querySelector('.line-item-price').value) || 0;
-    tr.querySelector('.line-item-subtotal').textContent = 'TSh ' + fmt(qty * price);
+    const type = tr.querySelector('.line-item-type').value;
+    let total;
+    if (type === 'service') {
+        total = parseFloat(tr.querySelector('.line-item-flat').value) || 0;
+        tr.querySelector('.line-item-price').value = total;
+    } else {
+        const qty = parseFloat(tr.querySelector('.line-item-qty').value) || 0;
+        const price = parseFloat(tr.querySelector('.line-item-price').value) || 0;
+        total = qty * price;
+    }
+    tr.querySelector('.line-item-subtotal').textContent = 'TSh ' + fmt(total);
     recomputeComposeGrandTotal();
 }
 
 function recomputeComposeGrandTotal() {
     const rows = [...document.querySelectorAll('#composeLineItems tr')];
     const total = rows.reduce((sum, tr) => {
+        const type = tr.querySelector('.line-item-type')?.value || 'goods';
+        if (type === 'service') {
+            return sum + (parseFloat(tr.querySelector('.line-item-flat')?.value) || 0);
+        }
         const qty = parseFloat(tr.querySelector('.line-item-qty').value) || 0;
         const price = parseFloat(tr.querySelector('.line-item-price').value) || 0;
         return sum + (qty * price);
     }, 0);
     document.getElementById('composeGrandTotal').textContent = 'TSh ' + fmt(total);
+}
+
+function applyItemTypeToRow(rowId, type) {
+    const tr = document.querySelector(`#composeLineItems tr[data-row-id="${rowId}"]`);
+    if (!tr) return;
+    tr.querySelector('.line-item-type').value = type;
+    const isService = type === 'service';
+    tr.querySelector('.line-item-unit-cell').classList.toggle('hidden', isService);
+    tr.querySelector('.line-item-qty-cell').classList.toggle('hidden', isService);
+    tr.querySelector('.line-item-price').classList.toggle('hidden', isService);
+    tr.querySelector('.line-item-flat').classList.toggle('hidden', !isService);
+    tr.querySelector('.line-item-flat-label').classList.toggle('hidden', !isService);
+    if (isService) {
+        tr.querySelector('.line-item-qty').value = 1;
+        tr.querySelector('.line-item-unit').value = 'service';
+    }
 }
 
 function proposeNewCategory() {
@@ -655,11 +719,15 @@ async function submitExpense() {
     }
 
     const lineItems = rows.map(tr => {
+        const type = tr.querySelector('.line-item-type').value;
+        const isService = type === 'service';
         const existingId = tr.querySelector('.line-item-existing-id').value;
         const name = tr.querySelector('.line-item-name').value.trim();
-        const unit = tr.querySelector('.line-item-unit').value.trim();
-        const qty = parseFloat(tr.querySelector('.line-item-qty').value) || 0;
-        const price = parseFloat(tr.querySelector('.line-item-price').value) || 0;
+        const unit = isService ? 'service' : tr.querySelector('.line-item-unit').value.trim();
+        const qty = isService ? 1 : (parseFloat(tr.querySelector('.line-item-qty').value) || 0);
+        const price = isService
+            ? (parseFloat(tr.querySelector('.line-item-flat').value) || 0)
+            : (parseFloat(tr.querySelector('.line-item-price').value) || 0);
         const data = { quantity: qty, unit_price: price };
         if (existingId) {
             data.expense_item_id = parseInt(existingId, 10);
@@ -1573,6 +1641,7 @@ async function saveMonthlyPlans() {
 function showAddCatalogItem() {
     document.getElementById('catalogItemName').value = '';
     document.getElementById('catalogItemUnit').value = '';
+    document.getElementById('catalogItemTypeGoods').checked = true;
     document.getElementById('catalogItemModal').classList.remove('hidden');
     setTimeout(() => document.getElementById('catalogItemName').focus(), 50);
 }
@@ -1589,7 +1658,8 @@ async function submitCatalogItemModal() {
         return;
     }
     try {
-        await axios.post(`${EBASE}/expense-items`, { name, unit_type: unitType || null });
+        const itemType = document.querySelector('input[name="catalogItemType"]:checked')?.value || 'goods';
+        await axios.post(`${EBASE}/expense-items`, { name, unit_type: unitType || null, item_type: itemType });
         showDarasaToast({ type: 'success', message: 'Item added.' });
         closeCatalogItemModal();
         loadCatalog();
@@ -1607,8 +1677,8 @@ async function loadCatalog() {
         const res = await axios.get(`${EBASE}/expense-items?search=${encodeURIComponent(search)}`);
         const items = res.data.items || [];
         box.innerHTML = items.length
-            ? `<table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-2 text-left">Name</th><th class="p-2 text-left">Unit type</th></tr></thead><tbody>${
-                items.map(i => `<tr class="border-t"><td class="p-2">${i.name}</td><td class="p-2 text-gray-500">${i.unit_type || '—'}</td></tr>`).join('')
+            ? `<table class="w-full text-sm"><thead class="bg-gray-100"><tr><th class="p-2 text-left">Name</th><th class="p-2 text-left">Unit type</th><th class="p-2 text-left">Type</th></tr></thead><tbody>${
+                items.map(i => `<tr class="border-t"><td class="p-2">${i.name}</td><td class="p-2 text-gray-500">${i.unit_type || '—'}</td><td class="p-2"><span class="px-2 py-0.5 rounded text-xs font-medium ${i.item_type === 'service' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">${i.item_type === 'service' ? 'Service' : 'Goods'}</span></td></tr>`).join('')
             }</tbody></table>`
             : '<p class="text-gray-400 text-sm text-center py-4">No items found.</p>';
     } catch (e) {

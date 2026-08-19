@@ -14,6 +14,7 @@ class ExpenseItem extends BaseModel
     protected $fillable = [
         'name',
         'unit_type',
+        'item_type',
         'created_by',
     ];
 
