@@ -156,6 +156,28 @@
                 </svg>
                 <span>Settings</span>
             </a>
+
+            {{-- Guidebook (normal) --}}
+            <a href="{{ route('guidebook.normal') }}"
+               class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition
+                      {{ request()->routeIs('guidebook.normal') ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-700 hover:bg-emerald-50' }}">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                <span>User Guidebook</span>
+            </a>
+
+            {{-- Guidebook (main accountant only) --}}
+            @if(auth()->user() && auth()->user()->is_main_accountant)
+            <a href="{{ route('guidebook.main') }}"
+               class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition
+                      {{ request()->routeIs('guidebook.main') ? 'bg-emerald-700 text-white shadow-sm' : 'text-slate-700 hover:bg-emerald-50' }}">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                <span>Main Accountant Guide</span>
+            </a>
+            @endif
         </nav>
     </div>
 </aside>
