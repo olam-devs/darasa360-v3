@@ -29,6 +29,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReconciliationController;
+use App\Http\Controllers\ExcelExportController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScholarshipController;
 use App\Http\Controllers\SchoolClassController;
@@ -367,6 +368,7 @@ Route::middleware(['tenant.context', 'headmaster.tenant.context', 'finance.porta
         Route::get('reports/fee-collection', [ReportController::class, 'feeCollection'])->name('reports.fee-collection');
         Route::get('reports/outstanding-balances', [ReportController::class, 'outstandingBalances'])->name('reports.outstanding');
         Route::get('reports/student-statement/{studentId?}', [ReportController::class, 'studentStatement'])->name('reports.student-statement');
+        Route::get('api/reports/excel', [ExcelExportController::class, 'download'])->name('api.reports.excel');
 
         // Legacy SMS URLs → accountant modules
         Route::get('sms', fn () => redirect()->route('accountant.sms'))->name('sms.index');
