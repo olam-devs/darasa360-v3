@@ -133,7 +133,7 @@ class ExpenseSubmissionController extends Controller
                     $submission->lineItems()->create([
                         'expense_item_id' => $item->id,
                         'item_name_snapshot' => $item->name,
-                        'unit_type_snapshot' => $item->unit_type,
+                        'unit_type_snapshot' => $item->unit_type ?? '',
                         'quantity' => $lineData['quantity'],
                         'unit_price' => $lineData['unit_price'],
                         'status' => $isMain ? 'approved' : 'pending',
@@ -213,7 +213,7 @@ class ExpenseSubmissionController extends Controller
                     $submission->lineItems()->create([
                         'expense_item_id' => $item->id,
                         'item_name_snapshot' => $item->name,
-                        'unit_type_snapshot' => $item->unit_type,
+                        'unit_type_snapshot' => $item->unit_type ?? '',
                         'quantity' => $lineData['quantity'],
                         'unit_price' => $lineData['unit_price'],
                         'status' => 'pending',
@@ -286,7 +286,7 @@ class ExpenseSubmissionController extends Controller
                         $item = ExpenseItem::findOrFail($lineData['expense_item_id']);
                         $line->expense_item_id = $item->id;
                         $line->item_name_snapshot = $item->name;
-                        $line->unit_type_snapshot = $item->unit_type;
+                        $line->unit_type_snapshot = $item->unit_type ?? '';
                     }
                     $line->status = $lineData['status'];
                     $line->denial_reason = $lineData['status'] === 'denied' ? ($lineData['denial_reason'] ?? null) : null;
