@@ -520,8 +520,8 @@ let _itemDropdownActiveRow = null;
 
 function _positionDropdown(dd, inp) {
     const r = inp.getBoundingClientRect();
-    dd.style.top    = (r.bottom + window.scrollY) + 'px';
-    dd.style.left   = (r.left   + window.scrollX) + 'px';
+    dd.style.top    = r.bottom + 'px';
+    dd.style.left   = r.left   + 'px';
     dd.style.width  = Math.max(r.width, 220) + 'px';
 }
 
