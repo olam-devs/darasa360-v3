@@ -145,7 +145,7 @@
 
 <div class="balance-box {{ $invoiceData['balance_remaining'] <= 0 ? 'paid-full' : '' }}">
     @if($invoiceData['balance_remaining'] > 0)
-        <div style="font-size: 11px; margin-bottom: 5px; font-weight: bold;">TOTAL AMOUNT TO PAY:</div>
+        <div style="font-size: 11px; margin-bottom: 5px; font-weight: bold;">TOTAL AMOUNT:</div>
         <div class="balance-amount">TSh {{ number_format($invoiceData['balance_remaining'], 2) }}</div>
         <div style="margin-top: 8px; font-size: 9px; color: #666;">
             Please ensure payment is made by the deadline date(s) indicated above.
