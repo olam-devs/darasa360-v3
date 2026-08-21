@@ -22,6 +22,12 @@
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 class="mb-4 text-lg font-semibold text-slate-900">Select students</h3>
 
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Invoice heading <span class="text-slate-400 font-normal">(editable — appears on every page)</span></label>
+                <input type="text" id="invoiceHeadingInput" value="FEE STATEMENT" maxlength="80"
+                    class="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold uppercase tracking-wide focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200">
+            </div>
+
             <div class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <button type="button" onclick="showAllStudentsInvoices()" class="rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                     Download all students
@@ -91,8 +97,12 @@
             }
         }
 
+        function getInvoiceHeading() {
+            return encodeURIComponent(document.getElementById('invoiceHeadingInput').value.trim() || 'FEE STATEMENT');
+        }
+
         function showAllStudentsInvoices() {
-            const url = `${INVOICE_PDF_BASE}/all-students/pdf`;
+            const url = `${INVOICE_PDF_BASE}/all-students/pdf?heading=${getInvoiceHeading()}`;
             const newWindow = window.open(url, '_blank');
             if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
                 alert('Pop-up blocked. Allow pop-ups for this site to download invoices.');
@@ -145,14 +155,15 @@
                 return;
             }
 
+            const heading = getInvoiceHeading();
             let url;
             if (selectedClasses.length === allClasses.length) {
-                url = `${INVOICE_PDF_BASE}/all-students/pdf`;
+                url = `${INVOICE_PDF_BASE}/all-students/pdf?heading=${heading}`;
             } else if (selectedClasses.length === 1) {
-                url = `${INVOICE_PDF_BASE}/all-students/pdf?class=${encodeURIComponent(selectedClasses[0])}`;
+                url = `${INVOICE_PDF_BASE}/all-students/pdf?class=${encodeURIComponent(selectedClasses[0])}&heading=${heading}`;
             } else {
                 const classesParam = selectedClasses.map(c => `classes[]=${encodeURIComponent(c)}`).join('&');
-                url = `${INVOICE_PDF_BASE}/all-students/pdf?${classesParam}`;
+                url = `${INVOICE_PDF_BASE}/all-students/pdf?${classesParam}&heading=${heading}`;
             }
 
             const newWindow = window.open(url, '_blank');
@@ -199,7 +210,7 @@
                 alert('Please search and select a student first.');
                 return;
             }
-            const url = `${INVOICE_PDF_BASE}/student/${selectedStudentId}/pdf`;
+            const url = `${INVOICE_PDF_BASE}/student/${selectedStudentId}/pdf?heading=${getInvoiceHeading()}`;
             const newWindow = window.open(url, '_blank');
             if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
                 alert('Pop-up blocked. Allow pop-ups for this site to download invoices.');

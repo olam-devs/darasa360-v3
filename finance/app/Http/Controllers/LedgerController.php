@@ -1518,7 +1518,8 @@ class LedgerController extends Controller
             }
         }
 
-        $pdf = Pdf::loadView('invoices.all-students-pdf', compact('allInvoices', 'school', 'bankAccounts'));
+        $invoiceHeading = trim($request->get('heading', 'FEE STATEMENT')) ?: 'FEE STATEMENT';
+        $pdf = Pdf::loadView('invoices.all-students-pdf', compact('allInvoices', 'school', 'bankAccounts', 'invoiceHeading'));
 
         return $pdf->download($filename);
     }
@@ -1538,7 +1539,8 @@ class LedgerController extends Controller
         $invoiceData = $this->buildStudentInvoiceData($student);
         $bankAccounts = BankAccount::all();
 
-        $pdf = Pdf::loadView('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts'));
+        $invoiceHeading = trim($request->get('heading', 'FEE STATEMENT')) ?: 'FEE STATEMENT';
+        $pdf = Pdf::loadView('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading'));
 
         return $pdf->download("student-{$studentId}-invoice.pdf");
     }

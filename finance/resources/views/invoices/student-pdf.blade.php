@@ -11,7 +11,7 @@
 <body>
     <div class="student-invoice-page">
         @include('components.pdf-header', ['school' => $school ?? null])
-        @include('invoices.partials.student-invoice-body', compact('student', 'invoiceData', 'bankAccounts'))
+        @include('invoices.partials.student-invoice-body', array_merge(compact('student', 'invoiceData', 'bankAccounts'), ['invoiceHeading' => $invoiceHeading ?? 'FEE STATEMENT']))
     </div>
 </body>
 </html>

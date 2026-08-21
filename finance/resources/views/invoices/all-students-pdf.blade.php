@@ -15,6 +15,7 @@
                 'student' => $invoice['student'],
                 'invoiceData' => $invoice['invoiceData'],
                 'bankAccounts' => $bankAccounts ?? collect(),
+                'invoiceHeading' => $invoiceHeading ?? 'FEE STATEMENT',
             ])
         </div>
     @endforeach
