@@ -50,8 +50,8 @@ class ExpenseSubmission extends BaseModel
 
         static::creating(function (self $submission) {
             if (!$submission->submission_number) {
-                $lastNumber = (int) substr((string) static::latest('id')->value('submission_number'), -6);
-                $submission->submission_number = 'EXP'.str_pad($lastNumber + 1, 6, '0', STR_PAD_LEFT);
+                $max = (int) static::selectRaw("COALESCE(MAX(CAST(SUBSTRING(submission_number, 4) AS UNSIGNED)), 0) as n")->value('n');
+                $submission->submission_number = 'EXP' . str_pad($max + 1, 6, '0', STR_PAD_LEFT);
             }
         });
     }

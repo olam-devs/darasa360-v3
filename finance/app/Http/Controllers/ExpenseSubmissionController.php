@@ -115,7 +115,7 @@ class ExpenseSubmissionController extends Controller
         }
 
         try {
-            $submission = DB::transaction(function () use ($validated, $user, $isMain) {
+            $submission = DB::connection('tenant')->transaction(function () use ($validated, $user, $isMain) {
                 $submission = ExpenseSubmission::create([
                     'expense_category_id' => $validated['expense_category_id'],
                     'book_id' => $validated['book_id'] ?? null,
@@ -203,7 +203,7 @@ class ExpenseSubmissionController extends Controller
             'line_items.*.unit_price' => 'required_with:line_items|numeric|min:0',
         ]);
 
-        DB::transaction(function () use ($submission, $validated, $user) {
+        DB::connection('tenant')->transaction(function () use ($submission, $validated, $user) {
             $submission->update(collect($validated)->except('line_items')->toArray());
 
             if (isset($validated['line_items'])) {
@@ -257,7 +257,7 @@ class ExpenseSubmissionController extends Controller
         $user = $request->user();
 
         try {
-            DB::transaction(function () use ($submission, $validated, $user) {
+            DB::connection('tenant')->transaction(function () use ($submission, $validated, $user) {
                 $locked = ExpenseSubmission::whereKey($submission->id)->lockForUpdate()->firstOrFail();
                 if ($locked->status !== 'pending') {
                     throw new \RuntimeException('This submission was already decided.');
@@ -433,7 +433,7 @@ class ExpenseSubmissionController extends Controller
             return response()->json(['error' => 'Only approved submissions can be cancelled.'], 400);
         }
 
-        DB::transaction(function () use ($submission) {
+        DB::connection('tenant')->transaction(function () use ($submission) {
             $this->voucherFactory->reverse($submission->voucher_id, $submission->bank_fee_voucher_id);
             $submission->update([
                 'status' => 'cancelled',
