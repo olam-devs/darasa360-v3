@@ -345,6 +345,7 @@
                         </div>
                     </div>
                 </a>
+                @if(auth()->user()->is_main_accountant)
                 <a href="{{ route('accountant.payroll') }}" class="hover-lift rounded-xl border border-slate-200 border-l-4 border-l-yellow-500 bg-white p-4 md:p-5">
                     <div class="flex gap-3">
                         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
@@ -356,6 +357,7 @@
                         </div>
                     </div>
                 </a>
+                @endif
                 <a href="{{ route('accountant.expenses') }}" class="hover-lift rounded-xl border border-slate-200 border-l-4 border-l-rose-500 bg-white p-4 md:p-5">
                     <div class="flex gap-3">
                         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">

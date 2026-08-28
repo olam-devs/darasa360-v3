@@ -138,7 +138,7 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
             return view('admin.accountant.modules.suspense', compact('settings'));
         })->name('suspense');
 
-        Route::get('/payroll', function () {
+        Route::middleware('is.main.accountant')->get('/payroll', function () {
             $settings = SchoolSetting::getSettings();
 
             return view('admin.accountant.modules.payroll', compact('settings'));
@@ -413,34 +413,34 @@ Route::middleware(['tenant.context', 'headmaster.tenant.context', 'finance.porta
         Route::post('api/suspense-accounts/{id}/resolve', [SuspenseAccountController::class, 'resolve'])->name('api.suspense.resolve');
         Route::get('api/suspense-accounts/summary/unresolved', [SuspenseAccountController::class, 'unresolvedSummary'])->name('api.suspense.summary');
 
-        // Payroll - Staff routes
-        Route::get('api/staff', [PayrollController::class, 'indexStaff'])->name('api.staff.index');
-        Route::post('api/staff', [PayrollController::class, 'storeStaff'])->name('api.staff.store');
-        Route::get('api/staff/{id}', [PayrollController::class, 'showStaff'])->name('api.staff.show');
-        Route::put('api/staff/{id}', [PayrollController::class, 'updateStaff'])->name('api.staff.update');
-        Route::delete('api/staff/{id}', [PayrollController::class, 'destroyStaff'])->name('api.staff.destroy');
-        Route::get('api/staff/{id}/payment-history', [PayrollController::class, 'staffPaymentHistory'])->name('api.staff.payment-history');
-        Route::get('api/staff/{staffId}/deductions', [PayrollController::class, 'indexStaffDeductions'])->name('api.staff.deductions.index');
-        Route::post('api/staff/{staffId}/deductions', [PayrollController::class, 'storeStaffDeduction'])->name('api.staff.deductions.store');
-        Route::put('api/staff/{staffId}/deductions/{dedId}', [PayrollController::class, 'updateStaffDeduction'])->name('api.staff.deductions.update');
-        Route::delete('api/staff/{staffId}/deductions/{dedId}', [PayrollController::class, 'destroyStaffDeduction'])->name('api.staff.deductions.destroy');
-        Route::get('api/staff/csv/template', [PayrollController::class, 'downloadStaffTemplate'])->name('api.staff.csv.template');
-        Route::post('api/staff/csv/upload', [PayrollController::class, 'uploadStaffCsv'])->name('api.staff.csv.upload');
+        // Payroll — main accountant only
+        Route::middleware('is.main.accountant')->group(function () {
+            Route::get('api/staff', [PayrollController::class, 'indexStaff'])->name('api.staff.index');
+            Route::post('api/staff', [PayrollController::class, 'storeStaff'])->name('api.staff.store');
+            Route::get('api/staff/{id}', [PayrollController::class, 'showStaff'])->name('api.staff.show');
+            Route::put('api/staff/{id}', [PayrollController::class, 'updateStaff'])->name('api.staff.update');
+            Route::delete('api/staff/{id}', [PayrollController::class, 'destroyStaff'])->name('api.staff.destroy');
+            Route::get('api/staff/{id}/payment-history', [PayrollController::class, 'staffPaymentHistory'])->name('api.staff.payment-history');
+            Route::get('api/staff/{staffId}/deductions', [PayrollController::class, 'indexStaffDeductions'])->name('api.staff.deductions.index');
+            Route::post('api/staff/{staffId}/deductions', [PayrollController::class, 'storeStaffDeduction'])->name('api.staff.deductions.store');
+            Route::put('api/staff/{staffId}/deductions/{dedId}', [PayrollController::class, 'updateStaffDeduction'])->name('api.staff.deductions.update');
+            Route::delete('api/staff/{staffId}/deductions/{dedId}', [PayrollController::class, 'destroyStaffDeduction'])->name('api.staff.deductions.destroy');
+            Route::get('api/staff/csv/template', [PayrollController::class, 'downloadStaffTemplate'])->name('api.staff.csv.template');
+            Route::post('api/staff/csv/upload', [PayrollController::class, 'uploadStaffCsv'])->name('api.staff.csv.upload');
 
-        // Payroll - specific sub-routes BEFORE the {id} wildcard
-        Route::get('api/payroll', [PayrollController::class, 'indexPayroll'])->name('api.payroll.index');
-        Route::post('api/payroll', [PayrollController::class, 'storePayroll'])->name('api.payroll.store');
-        Route::get('api/payroll/reports/monthly', [PayrollController::class, 'monthlyReport'])->name('api.payroll.monthly-report');
-        Route::get('api/payroll/deductions-ledger', [PayrollController::class, 'deductionsLedger'])->name('api.payroll.deductions-ledger');
-        Route::get('api/payroll/staff/{staffId}/ledger', [PayrollController::class, 'staffLedger'])->name('api.payroll.staff-ledger');
-        Route::get('api/payroll/deduction-types', [PayrollController::class, 'indexDeductionTypes'])->name('api.payroll.deduction-types.index');
-        Route::post('api/payroll/deduction-types', [PayrollController::class, 'storeDeductionType'])->name('api.payroll.deduction-types.store');
-        Route::put('api/payroll/deduction-types/{id}', [PayrollController::class, 'updateDeductionType'])->name('api.payroll.deduction-types.update');
-        Route::delete('api/payroll/deduction-types/{id}', [PayrollController::class, 'destroyDeductionType'])->name('api.payroll.deduction-types.destroy');
-        // Payroll entry CRUD (wildcard {id} last)
-        Route::get('api/payroll/{id}', [PayrollController::class, 'showPayroll'])->name('api.payroll.show');
-        Route::put('api/payroll/{id}', [PayrollController::class, 'updatePayroll'])->name('api.payroll.update');
-        Route::delete('api/payroll/{id}', [PayrollController::class, 'destroyPayroll'])->name('api.payroll.destroy');
+            Route::get('api/payroll', [PayrollController::class, 'indexPayroll'])->name('api.payroll.index');
+            Route::post('api/payroll', [PayrollController::class, 'storePayroll'])->name('api.payroll.store');
+            Route::get('api/payroll/reports/monthly', [PayrollController::class, 'monthlyReport'])->name('api.payroll.monthly-report');
+            Route::get('api/payroll/deductions-ledger', [PayrollController::class, 'deductionsLedger'])->name('api.payroll.deductions-ledger');
+            Route::get('api/payroll/staff/{staffId}/ledger', [PayrollController::class, 'staffLedger'])->name('api.payroll.staff-ledger');
+            Route::get('api/payroll/deduction-types', [PayrollController::class, 'indexDeductionTypes'])->name('api.payroll.deduction-types.index');
+            Route::post('api/payroll/deduction-types', [PayrollController::class, 'storeDeductionType'])->name('api.payroll.deduction-types.store');
+            Route::put('api/payroll/deduction-types/{id}', [PayrollController::class, 'updateDeductionType'])->name('api.payroll.deduction-types.update');
+            Route::delete('api/payroll/deduction-types/{id}', [PayrollController::class, 'destroyDeductionType'])->name('api.payroll.deduction-types.destroy');
+            Route::get('api/payroll/{id}', [PayrollController::class, 'showPayroll'])->name('api.payroll.show');
+            Route::put('api/payroll/{id}', [PayrollController::class, 'updatePayroll'])->name('api.payroll.update');
+            Route::delete('api/payroll/{id}', [PayrollController::class, 'destroyPayroll'])->name('api.payroll.destroy');
+        });
 
         // Overdue amounts route
         Route::get('api/overdue-amounts', [DashboardController::class, 'getOverdueAmounts'])->name('api.overdue-amounts');
