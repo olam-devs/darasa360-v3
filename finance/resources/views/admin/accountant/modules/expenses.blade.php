@@ -126,6 +126,10 @@
                 Editing mode — modify the items and click Update to save changes to the pending submission.
                 <button type="button" onclick="cancelEdit()" class="ml-2 underline text-amber-800">Cancel edit</button>
             </div>
+            <div id="composeReusingBanner" class="hidden mb-3 bg-blue-50 border border-blue-200 rounded px-3 py-2 text-sm text-blue-700">
+                Reusing a previous expense — edit anything then submit as a new expense for approval.
+                <button type="button" onclick="cancelReuse()" class="ml-2 underline text-blue-800">Cancel</button>
+            </div>
 
             <button type="button" onclick="submitExpense()" id="composeSubmitBtn"
                 class="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2.5 rounded font-semibold">
@@ -319,6 +323,13 @@
         <div id="detailModalEditSection" class="hidden mt-4 pt-4 border-t">
             <p class="text-sm text-amber-600 mb-3">This submission is pending. You can edit and resubmit.</p>
             <button type="button" onclick="loadSubmissionForEdit()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">Edit this submission</button>
+        </div>
+        <div class="mt-4 pt-4 border-t">
+            <button type="button" onclick="reuseSubmission()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm font-medium">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Reuse as new expense
+            </button>
+            <p class="text-xs text-gray-400 mt-1">Loads this expense into the compose form so you can edit and submit as a new request.</p>
         </div>
     </div>
 </div>
@@ -694,8 +705,47 @@ function proposeNewCategory() {
 function cancelEdit() {
     editingSubmissionId = null;
     document.getElementById('composeEditingBanner').classList.add('hidden');
+    document.getElementById('composeReusingBanner').classList.add('hidden');
     document.getElementById('composeSubmitBtn').textContent = DEFAULT_SUBMIT_BTN_TEXT;
     resetComposeForm();
+}
+
+function cancelReuse() {
+    document.getElementById('composeReusingBanner').classList.add('hidden');
+    resetComposeForm();
+}
+
+async function reuseSubmission() {
+    if (!currentDetailSubmissionId) return;
+    try {
+        const res = await axios.get(`${EBASE}/expense-submissions/${currentDetailSubmissionId}`);
+        const sub = res.data.submission;
+
+        closeSubmissionDetailModal();
+        switchExpenseTab('compose');
+
+        // Do NOT set editingSubmissionId — this is a brand new submission
+        editingSubmissionId = null;
+
+        const catMatch = categoriesCache.find(c => c.id === sub.expense_category_id);
+        document.getElementById('composeCategoryInput').value = catMatch?.name || '';
+        document.getElementById('composeCategory').value = sub.expense_category_id;
+        document.getElementById('composeAcademicYear').value = sub.academic_year_id;
+        document.getElementById('composeDate').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('composeTitle').value = sub.title || '';
+        document.getElementById('composeDescription').value = sub.description || '';
+
+        document.getElementById('composeLineItems').innerHTML = '';
+        (sub.line_items || []).forEach(li => addComposeLineRow(li));
+
+        document.getElementById('composeEditingBanner').classList.add('hidden');
+        document.getElementById('composeReusingBanner').classList.remove('hidden');
+        document.getElementById('composeSubmitBtn').textContent = DEFAULT_SUBMIT_BTN_TEXT;
+
+        showDarasaToast({ type: 'success', message: 'Expense loaded — edit anything and submit as new.' });
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: 'Could not load submission for reuse.' });
+    }
 }
 
 async function submitExpense() {
@@ -763,6 +813,7 @@ async function submitExpense() {
             showDarasaToast({ type: 'success', message: 'Submission updated.' });
             editingSubmissionId = null;
             document.getElementById('composeEditingBanner').classList.add('hidden');
+            document.getElementById('composeReusingBanner').classList.add('hidden');
             document.getElementById('composeSubmitBtn').textContent = DEFAULT_SUBMIT_BTN_TEXT;
         } else {
             await axios.post(`${EBASE}/expense-submissions`, payload);
