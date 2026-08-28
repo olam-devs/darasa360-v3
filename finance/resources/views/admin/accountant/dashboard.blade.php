@@ -66,6 +66,7 @@
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm fade-in">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
+                    <p class="text-sm text-slate-500">Welcome back, <span class="font-semibold text-slate-700">{{ auth()->user()->name }}</span></p>
                     <h2 class="text-xl font-semibold text-slate-900 md:text-2xl">Overview</h2>
                     <p class="mt-1 text-sm text-slate-600">School finance snapshot and quick entry points.</p>
                 </div>
