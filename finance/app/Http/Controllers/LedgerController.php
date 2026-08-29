@@ -1514,7 +1514,8 @@ class LedgerController extends Controller
         if ($request->filled('class')) {
             $class = SchoolClass::find($request->query('class'));
             if ($class) {
-                $filename = 'class-'.preg_replace('/[^a-zA-Z0-9_-]+/', '-', $class->name).'-invoices.pdf';
+                $safeName = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $class->name);
+                $filename = "{$safeName}-invoices.pdf";
             }
         }
 
@@ -1542,7 +1543,8 @@ class LedgerController extends Controller
         $invoiceHeading = trim($request->get('heading', 'FEE STATEMENT')) ?: 'FEE STATEMENT';
         $pdf = Pdf::loadView('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading'));
 
-        return $pdf->download("student-{$studentId}-invoice.pdf");
+        $safeName = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $student->name);
+        return $pdf->download("{$safeName}-invoice.pdf");
     }
 
     public function exportAllStudentsLedgersPdf(Request $request)
