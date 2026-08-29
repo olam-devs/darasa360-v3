@@ -36,6 +36,8 @@
         let allClasses = [];
         let currentVoucherPage = 1;
         let voucherDateFilters = { from: '', to: '' };
+        let voucherSearch = '';
+        let voucherSearchTimer = null;
         let filteredStudentsForVoucher = [];
         /** Prevents double POST if Save is clicked twice or Enter is pressed before the first request finishes. */
         let feeEntrySaveInFlight = false;
@@ -122,6 +124,9 @@
                 if (voucherDateFilters.from && voucherDateFilters.to) {
                     url += `&from_date=${voucherDateFilters.from}&to_date=${voucherDateFilters.to}`;
                 }
+                if (voucherSearch) {
+                    url += `&search=${encodeURIComponent(voucherSearch)}`;
+                }
 
                 const response = await axios.get(url);
                 const paginationData = response.data;
@@ -153,6 +158,13 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="text" id="voucherSearchInput" value="${voucherSearch}"
+                            placeholder="Search by student name…"
+                            class="w-full border-2 border-gray-300 rounded px-3 py-2 text-sm"
+                            oninput="onVoucherSearchInput(this.value)">
                     </div>
 
                     <div class="overflow-x-auto">
@@ -302,6 +314,14 @@
             document.getElementById('voucherFromDate').value = '';
             document.getElementById('voucherToDate').value = '';
             loadVouchers(1);
+        }
+
+        function onVoucherSearchInput(val) {
+            clearTimeout(voucherSearchTimer);
+            voucherSearchTimer = setTimeout(() => {
+                voucherSearch = val.trim();
+                loadVouchers(1);
+            }, 350);
         }
 
         async function showCreateVoucherForm() {

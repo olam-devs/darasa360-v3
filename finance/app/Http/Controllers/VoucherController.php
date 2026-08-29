@@ -15,6 +15,14 @@ class VoucherController extends Controller
     {
         $query = Voucher::with(['student', 'particular', 'book']);
 
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('student', fn ($sq) => $sq->where('name', 'like', "%{$search}%"))
+                  ->orWhere('payment_by_receipt_to', 'like', "%{$search}%");
+            });
+        }
+
         if ($request->has('student_id')) {
             $query->where('student_id', $request->student_id);
         }

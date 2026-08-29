@@ -150,6 +150,10 @@
     @if($isMainAccountant)
     <div id="epanel-review" class="hidden">
         <div id="pendingCategoriesBox" class="mb-4"></div>
+        <div id="reviewSelectionBar" class="hidden sticky top-0 z-10 bg-rose-50 border border-rose-200 rounded-lg px-4 py-2 mb-3 flex items-center justify-between">
+            <span class="text-sm text-rose-700 font-medium" id="reviewSelectionLabel">0 selected</span>
+            <span class="text-base font-bold text-rose-800" id="reviewSelectionTotal">TSh 0</span>
+        </div>
         <div id="reviewQueueBox"><p class="text-gray-400 text-center py-6">Loading…</p></div>
     </div>
     @endif
@@ -228,7 +232,11 @@
     <!-- Reports & Log Tab -->
     <div id="epanel-reports" class="hidden">
         <div class="bg-white rounded-lg shadow p-4 mb-4">
-            <h3 class="font-semibold mb-3">Decision log (school-wide) <span class="text-xs font-normal text-gray-500">— click any row to see item details</span></h3>
+            <h3 class="font-semibold mb-3">Decision log (school-wide) <span class="text-xs font-normal text-gray-500">— tick to select, click label to see details</span></h3>
+            <div id="logSelectionBar" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 mb-3 flex items-center justify-between">
+                <span class="text-sm text-emerald-700 font-medium" id="logSelectionLabel">0 selected</span>
+                <span class="text-base font-bold text-emerald-800" id="logSelectionTotal">TSh 0</span>
+            </div>
             <div id="logBox"><p class="text-gray-400 text-sm">Loading…</p></div>
         </div>
 
@@ -1120,11 +1128,14 @@ function renderQueueCard(sub, priceHistoryMap) {
     }).join('');
 
     return `
-    <div class="bg-white rounded-lg shadow p-4 mb-4" data-submission-id="${sub.id}">
+    <div class="bg-white rounded-lg shadow p-4 mb-4" data-submission-id="${sub.id}" data-submission-total="${total}">
         <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
-            <div>
-                <p class="font-semibold">${sub.submission_number} — ${sub.category?.name || ''}</p>
-                <p class="text-xs text-gray-500">${sub.transaction_date} · ${sub.title || 'No title'}${sub.submitted_by_name ? ' · by <strong>' + sub.submitted_by_name + '</strong>' : ''}</p>
+            <div class="flex items-start gap-2">
+                <input type="checkbox" class="review-select-cb mt-1 h-4 w-4 rounded border-gray-300 accent-rose-600" onchange="updateReviewSelectionTotal()">
+                <div>
+                    <p class="font-semibold">${sub.submission_number} — ${sub.category?.name || ''}</p>
+                    <p class="text-xs text-gray-500">${sub.transaction_date} · ${sub.title || 'No title'}${sub.submitted_by_name ? ' · by <strong>' + sub.submitted_by_name + '</strong>' : ''}</p>
+                </div>
             </div>
             <p class="font-bold text-gray-900">TSh ${fmt(total)}</p>
         </div>
@@ -1745,15 +1756,17 @@ async function loadLog() {
         const submissions = res.data.data || [];
         box.innerHTML = submissions.length
             ? submissions.map(s => `
-                <button type="button" onclick="openSubmissionDetail(${s.id})"
-                    class="w-full text-left border-t py-3 hover:bg-gray-50 px-1">
-                    <div class="flex justify-between flex-wrap gap-1">
-                        <p class="font-medium text-sm">${s.submission_number} — ${s.category?.name || ''} — TSh ${fmt(s.total_amount)}</p>
-                        <span class="text-xs px-2 py-0.5 rounded-full ${s.status === 'denied' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${s.status.replace('_', ' ')}</span>
-                    </div>
-                    <p class="text-xs text-gray-500">${s.transaction_date} · decided ${s.decided_at || ''}${s.submitted_by_name ? ' · by ' + s.submitted_by_name : ''}</p>
-                    ${s.decision_note ? `<p class="text-sm text-gray-700 mt-1 italic text-left">"${s.decision_note}"</p>` : ''}
-                </button>
+                <div class="flex items-start gap-2 border-t py-3 px-1 hover:bg-gray-50" data-log-total="${s.total_amount}">
+                    <input type="checkbox" class="log-select-cb mt-1 h-4 w-4 rounded border-gray-300 accent-emerald-600 shrink-0" onchange="updateLogSelectionTotal()">
+                    <button type="button" onclick="openSubmissionDetail(${s.id})" class="flex-1 text-left">
+                        <div class="flex justify-between flex-wrap gap-1">
+                            <p class="font-medium text-sm">${s.submission_number} — ${s.category?.name || ''} — TSh ${fmt(s.total_amount)}</p>
+                            <span class="text-xs px-2 py-0.5 rounded-full ${s.status === 'denied' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${s.status.replace('_', ' ')}</span>
+                        </div>
+                        <p class="text-xs text-gray-500">${s.transaction_date} · decided ${s.decided_at || ''}${s.submitted_by_name ? ' · by ' + s.submitted_by_name : ''}</p>
+                        ${s.decision_note ? `<p class="text-sm text-gray-700 mt-1 italic text-left">"${s.decision_note}"</p>` : ''}
+                    </button>
+                </div>
             `).join('')
             : '<p class="text-gray-400 text-center py-6">No decisions yet.</p>';
     } catch (e) {
@@ -1774,6 +1787,41 @@ function downloadReport(type) {
         return;
     }
     window.location = `${EBASE}/expense-submissions-report/${type}?${params.toString()}`;
+}
+
+// ─── Selection totals ────────────────────────────────────────────────────
+function updateReviewSelectionTotal() {
+    const bar = document.getElementById('reviewSelectionBar');
+    let count = 0, total = 0;
+    document.querySelectorAll('#reviewQueueBox .review-select-cb:checked').forEach(cb => {
+        const card = cb.closest('[data-submission-total]');
+        total += parseFloat(card?.dataset.submissionTotal || 0);
+        count++;
+    });
+    if (count > 0) {
+        bar.classList.remove('hidden');
+        document.getElementById('reviewSelectionLabel').textContent = `${count} selected`;
+        document.getElementById('reviewSelectionTotal').textContent = `TSh ${fmt(total)}`;
+    } else {
+        bar.classList.add('hidden');
+    }
+}
+
+function updateLogSelectionTotal() {
+    const bar = document.getElementById('logSelectionBar');
+    let count = 0, total = 0;
+    document.querySelectorAll('#logBox .log-select-cb:checked').forEach(cb => {
+        const row = cb.closest('[data-log-total]');
+        total += parseFloat(row?.dataset.logTotal || 0);
+        count++;
+    });
+    if (count > 0) {
+        bar.classList.remove('hidden');
+        document.getElementById('logSelectionLabel').textContent = `${count} selected`;
+        document.getElementById('logSelectionTotal').textContent = `TSh ${fmt(total)}`;
+    } else {
+        bar.classList.add('hidden');
+    }
 }
 
 // ─── Page init ───────────────────────────────────────────────────────────
