@@ -398,7 +398,7 @@ async function loadItemsCache() {
 }
 
 async function loadCategoriesForSelects() {
-    const res = await axios.get(`${EBASE}/expense-categories?approved_only=1&active_plan_only=1`);
+    const res = await axios.get(`${EBASE}/expense-categories?approved_only=1&active_plan_only=1&_t=${Date.now()}`);
     categoriesCache = res.data.categories || [];
 
     // Compose: datalist (searchable text input)
@@ -735,9 +735,16 @@ async function reuseSubmission() {
         // Do NOT set editingSubmissionId — this is a brand new submission
         editingSubmissionId = null;
 
-        const catMatch = categoriesCache.find(c => c.id === sub.expense_category_id);
-        document.getElementById('composeCategoryInput').value = catMatch?.name || '';
-        document.getElementById('composeCategory').value = sub.expense_category_id;
+        // Always clear the category — accountant MUST pick from the current term's budget.
+        // Auto-filling the old category would let stale Q3 categories slip through.
+        document.getElementById('composeCategoryInput').value = '';
+        document.getElementById('composeCategory').value = '';
+        const warning = document.getElementById('composeCategoryWarning');
+        if (warning) {
+            warning.textContent = 'Select a category from the current term budget below.';
+            warning.classList.remove('hidden');
+        }
+
         document.getElementById('composeAcademicYear').value = sub.academic_year_id;
         document.getElementById('composeDate').value = new Date().toISOString().slice(0, 10);
         document.getElementById('composeTitle').value = sub.title || '';
@@ -750,7 +757,7 @@ async function reuseSubmission() {
         document.getElementById('composeReusingBanner').classList.remove('hidden');
         document.getElementById('composeSubmitBtn').textContent = DEFAULT_SUBMIT_BTN_TEXT;
 
-        showDarasaToast({ type: 'success', message: 'Expense loaded — edit anything and submit as new.' });
+        showDarasaToast({ type: 'info', message: 'Items loaded — select the Q4 category before submitting.' });
     } catch (e) {
         showDarasaToast({ type: 'error', message: 'Could not load submission for reuse.' });
     }
@@ -1292,7 +1299,7 @@ let allCategoriesForBudget = [];
 async function loadCategoryListForBudget() {
     const box = document.getElementById('categoryListBox');
     try {
-        const res = await axios.get(`${EBASE}/expense-categories?active_plan_only=1`);
+        const res = await axios.get(`${EBASE}/expense-categories?active_plan_only=1&_t=${Date.now()}`);
         allCategoriesForBudget = res.data.categories || [];
         renderCategoryList();
     } catch (e) {
