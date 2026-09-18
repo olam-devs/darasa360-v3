@@ -6,6 +6,7 @@
 @php
     $isMainAccountant    = (bool) (auth()->user()->is_main_accountant ?? false);
     $canViewBudgetChart  = $isMainAccountant || (bool) (auth()->user()->can_view_budget_chart ?? false);
+    $currentAccountantId = auth()->id();
 @endphp
 
 @section('content')
@@ -329,10 +330,10 @@
         </div>
         <div id="detailModalBody"><p class="text-gray-400">Loading…</p></div>
         <div id="detailModalEditSection" class="hidden mt-4 pt-4 border-t">
-            <p class="text-sm text-amber-600 mb-2">This submission is pending — you can edit or delete it.</p>
+            <p id="detailModalEditMsg" class="text-sm text-amber-600 mb-2"></p>
             <div class="flex gap-2">
                 <button type="button" onclick="loadSubmissionForEdit()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">Edit</button>
-                <button type="button" onclick="deleteSubmission()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm">Delete</button>
+                <button id="detailModalDeleteBtn" type="button" onclick="deleteSubmission()" class="hidden bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm">Delete</button>
             </div>
         </div>
         <div class="mt-4 pt-4 border-t">
@@ -352,8 +353,9 @@
 axios.defaults.headers.common['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
 
 const EBASE = '{{ url('/api') }}';
-const IS_MAIN_ACCOUNTANT   = @json($isMainAccountant);
+const IS_MAIN_ACCOUNTANT    = @json($isMainAccountant);
 const CAN_VIEW_BUDGET_CHART = @json($canViewBudgetChart);
+const CURRENT_ACCOUNTANT_ID = @json($currentAccountantId);
 const DEFAULT_SUBMIT_BTN_TEXT = IS_MAIN_ACCOUNTANT ? 'Approve & Record' : 'Submit for Approval';
 
 function esc(str) {
@@ -961,6 +963,13 @@ async function openSubmissionDetail(id, allowEdit = false) {
 
         if (allowEdit && sub.status === 'pending') {
             editSection.classList.remove('hidden');
+            const isOwner = sub.submitted_by === CURRENT_ACCOUNTANT_ID;
+            const deleteBtn = document.getElementById('detailModalDeleteBtn');
+            const editMsg   = document.getElementById('detailModalEditMsg');
+            deleteBtn.classList.toggle('hidden', !isOwner);
+            editMsg.textContent = isOwner
+                ? 'This submission is pending — you can edit or delete it.'
+                : 'This submission is pending — you can edit it.';
         }
     } catch (e) {
         body.innerHTML = '<p class="text-red-600">Could not load submission details.</p>';
