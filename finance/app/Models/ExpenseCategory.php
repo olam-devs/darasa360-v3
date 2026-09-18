@@ -19,12 +19,14 @@ class ExpenseCategory extends BaseModel
         'decided_at',
         'decision_note',
         'is_system',
+        'main_accountant_only',
     ];
 
     protected $casts = [
-        'show_budget_to_others' => 'boolean',
-        'is_system'             => 'boolean',
-        'decided_at'            => 'datetime',
+        'show_budget_to_others'  => 'boolean',
+        'is_system'              => 'boolean',
+        'main_accountant_only'   => 'boolean',
+        'decided_at'             => 'datetime',
     ];
 
     public function plans()

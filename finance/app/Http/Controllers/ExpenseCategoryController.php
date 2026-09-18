@@ -49,6 +49,11 @@ class ExpenseCategoryController extends Controller
             });
         }
 
+        $isMain = (bool) ($request->user()?->is_main_accountant ?? false);
+        if (!$isMain) {
+            $query->where('main_accountant_only', false);
+        }
+
         return response()->json(['categories' => $query->get()]);
     }
 
