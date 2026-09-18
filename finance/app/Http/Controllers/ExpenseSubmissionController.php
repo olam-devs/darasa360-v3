@@ -227,6 +227,30 @@ class ExpenseSubmissionController extends Controller
     }
 
     /**
+     * Delete a pending submission. Accountant can only delete their own;
+     * main accountant can delete any pending submission.
+     */
+    public function destroy(Request $request, ExpenseSubmission $submission)
+    {
+        $user = $request->user();
+        $isMain = (bool) ($user->is_main_accountant ?? false);
+
+        if ($submission->status !== 'pending') {
+            return response()->json(['error' => 'Only pending submissions can be deleted.'], 400);
+        }
+        if (!$isMain && $submission->submitted_by !== $user->id) {
+            return response()->json(['error' => 'You can only delete your own pending submissions.'], 403);
+        }
+
+        DB::connection('tenant')->transaction(function () use ($submission) {
+            $submission->lineItems()->delete();
+            $submission->delete();
+        });
+
+        return response()->json(['message' => 'Submission deleted.']);
+    }
+
+    /**
      * The review decision - main-accountant-only (route-gated). Accepts a
      * required decision note, per-line approve/deny + optional edits
      * (quantity/price/item), and an overall category/book reassignment.

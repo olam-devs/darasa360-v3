@@ -482,6 +482,7 @@ Route::middleware(['tenant.context', 'headmaster.tenant.context', 'finance.porta
         Route::post('api/expense-submissions', [ExpenseSubmissionController::class, 'store'])->name('api.expense-submissions.store');
         Route::get('api/expense-submissions/{submission}', [ExpenseSubmissionController::class, 'show'])->name('api.expense-submissions.show');
         Route::put('api/expense-submissions/{submission}', [ExpenseSubmissionController::class, 'update'])->name('api.expense-submissions.update');
+        Route::delete('api/expense-submissions/{submission}', [ExpenseSubmissionController::class, 'destroy'])->name('api.expense-submissions.destroy');
         Route::get('api/expense-submissions-log', [ExpenseSubmissionController::class, 'schoolWideLog'])->name('api.expense-submissions.log');
         Route::get('api/expense-submissions-analytics', [ExpenseSubmissionController::class, 'analytics'])->name('api.expense-submissions.analytics');
 

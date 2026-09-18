@@ -329,8 +329,11 @@
         </div>
         <div id="detailModalBody"><p class="text-gray-400">Loading…</p></div>
         <div id="detailModalEditSection" class="hidden mt-4 pt-4 border-t">
-            <p class="text-sm text-amber-600 mb-3">This submission is pending. You can edit and resubmit.</p>
-            <button type="button" onclick="loadSubmissionForEdit()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">Edit this submission</button>
+            <p class="text-sm text-amber-600 mb-2">This submission is pending — you can edit or delete it.</p>
+            <div class="flex gap-2">
+                <button type="button" onclick="loadSubmissionForEdit()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">Edit</button>
+                <button type="button" onclick="deleteSubmission()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm">Delete</button>
+            </div>
         </div>
         <div class="mt-4 pt-4 border-t">
             <button type="button" onclick="reuseSubmission()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded text-sm font-medium">
@@ -966,6 +969,20 @@ async function openSubmissionDetail(id, allowEdit = false) {
 
 function closeSubmissionDetailModal() {
     document.getElementById('submissionDetailModal').classList.add('hidden');
+}
+
+async function deleteSubmission() {
+    if (!currentDetailSubmissionId) return;
+    const ok = await darasaConfirm('Delete this pending submission? This cannot be undone.', 'Delete submission?');
+    if (!ok) return;
+    try {
+        await axios.delete(`${EBASE}/expense-submissions/${currentDetailSubmissionId}`);
+        showDarasaToast({ type: 'success', message: 'Submission deleted.' });
+        closeSubmissionDetailModal();
+        loadMySubmissions();
+    } catch (e) {
+        showDarasaToast({ type: 'error', message: e.response?.data?.error || 'Could not delete submission.' });
+    }
 }
 
 async function loadSubmissionForEdit() {
