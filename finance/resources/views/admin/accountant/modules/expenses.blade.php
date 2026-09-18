@@ -1091,6 +1091,14 @@ function budgetAlertHtml(bi) {
     return `<div class="border-l-4 rounded px-3 py-2 mb-3 text-xs ${cls}">${icon} ${msg}</div>`;
 }
 
+function toggleReviewCard(header) {
+    const body = header.closest('[data-submission-id]').querySelector('.review-card-body');
+    const chevron = header.querySelector('.review-chevron');
+    const isHidden = body.classList.contains('hidden');
+    body.classList.toggle('hidden', !isHidden);
+    if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+}
+
 function renderQueueCard(sub, priceHistoryMap) {
     const total = (sub.line_items || []).reduce((s, l) => s + parseFloat(l.line_total), 0);
     const lineRows = (sub.line_items || []).map(li => {
@@ -1128,48 +1136,57 @@ function renderQueueCard(sub, priceHistoryMap) {
     }).join('');
 
     return `
-    <div class="bg-white rounded-lg shadow p-4 mb-4" data-submission-id="${sub.id}" data-submission-total="${total}">
-        <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
-            <div class="flex items-start gap-2">
-                <input type="checkbox" class="review-select-cb mt-1 h-4 w-4 rounded border-gray-300 accent-rose-600" onchange="updateReviewSelectionTotal()">
-                <div>
-                    <p class="font-semibold">${sub.submission_number} — ${sub.category?.name || ''}</p>
+    <div class="bg-white rounded-lg shadow mb-3" data-submission-id="${sub.id}" data-submission-total="${total}">
+        <div class="flex justify-between items-center px-4 py-3 cursor-pointer select-none review-card-header rounded-lg hover:bg-gray-50"
+             onclick="toggleReviewCard(this)">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+                <input type="checkbox" class="review-select-cb h-4 w-4 rounded border-gray-300 accent-rose-600 flex-shrink-0"
+                       onchange="updateReviewSelectionTotal()" onclick="event.stopPropagation()">
+                <div class="min-w-0">
+                    <p class="font-semibold truncate">${sub.submission_number} — ${sub.category?.name || ''}</p>
                     <p class="text-xs text-gray-500">${sub.transaction_date} · ${sub.title || 'No title'}${sub.submitted_by_name ? ' · by <strong>' + sub.submitted_by_name + '</strong>' : ''}</p>
                 </div>
             </div>
-            <p class="font-bold text-gray-900">TSh ${fmt(total)}</p>
-        </div>
-        ${budgetAlertHtml(sub.budget_info)}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 bg-gray-50 rounded p-2">
-            <div>
-                <label class="block text-xs text-gray-500 mb-1">Book (money comes from) *</label>
-                <select class="w-full border rounded px-2 py-1 text-sm review-book" onchange="loadFeeCategoriesForSelect(this, this.closest('[data-submission-id]').querySelector('.review-fee-category'))">
-                    <option value="">Select a book</option>
-                    ${booksOptionsHtml(sub.book_id)}
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs text-gray-500 mb-1">Transaction fee (optional)</label>
-                <select class="w-full border rounded px-2 py-1 text-sm review-fee-category"><option value="">-- No fee --</option></select>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <p class="font-bold text-gray-900">TSh ${fmt(total)}</p>
+                <svg class="review-chevron w-4 h-4 text-gray-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
             </div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm mb-3">
-                <thead class="bg-gray-50"><tr>
-                    <th class="p-2 text-left">Item</th>
-                    <th class="p-2 text-left">Unit</th>
-                    <th class="p-2 text-right">Price per unit</th>
-                    <th class="p-2 text-right">Quantity</th>
-                    <th class="p-2 text-right">Total</th>
-                    <th class="p-2 text-center">Decision</th>
-                </tr></thead>
-                <tbody>${lineRows}</tbody>
-            </table>
-        </div>
-        <textarea class="w-full border rounded px-2 py-1 text-sm mb-2 review-note" placeholder="Decision note (required, visible to all accountants)" rows="2"></textarea>
-        <div class="flex gap-2">
-            <button onclick="submitReview(${sub.id}, 'approve')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded text-sm">Save Decision</button>
-            <button onclick="submitReview(${sub.id}, 'deny')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-sm">Deny All</button>
+        <div class="review-card-body hidden px-4 pb-4">
+            ${budgetAlertHtml(sub.budget_info)}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 bg-gray-50 rounded p-2">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Book (money comes from) *</label>
+                    <select class="w-full border rounded px-2 py-1 text-sm review-book" onchange="loadFeeCategoriesForSelect(this, this.closest('[data-submission-id]').querySelector('.review-fee-category'))">
+                        <option value="">Select a book</option>
+                        ${booksOptionsHtml(sub.book_id)}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Transaction fee (optional)</label>
+                    <select class="w-full border rounded px-2 py-1 text-sm review-fee-category"><option value="">-- No fee --</option></select>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm mb-3">
+                    <thead class="bg-gray-50"><tr>
+                        <th class="p-2 text-left">Item</th>
+                        <th class="p-2 text-left">Unit</th>
+                        <th class="p-2 text-right">Price per unit</th>
+                        <th class="p-2 text-right">Quantity</th>
+                        <th class="p-2 text-right">Total</th>
+                        <th class="p-2 text-center">Decision</th>
+                    </tr></thead>
+                    <tbody>${lineRows}</tbody>
+                </table>
+            </div>
+            <textarea class="w-full border rounded px-2 py-1 text-sm mb-2 review-note" placeholder="Decision note (optional)" rows="2"></textarea>
+            <div class="flex gap-2">
+                <button onclick="submitReview(${sub.id}, 'approve')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded text-sm">Approve All</button>
+                <button onclick="submitReview(${sub.id}, 'deny')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-sm">Deny All</button>
+            </div>
         </div>
     </div>`;
 }
@@ -1177,10 +1194,6 @@ function renderQueueCard(sub, priceHistoryMap) {
 async function submitReview(submissionId, overallDecision) {
     const card = document.querySelector(`[data-submission-id="${submissionId}"]`);
     const note = card.querySelector('.review-note').value.trim();
-    if (!note) {
-        showDarasaToast({ type: 'error', message: 'A decision note is required.' });
-        return;
-    }
     const bookId = card.querySelector('.review-book').value || null;
     if (overallDecision === 'approve' && !bookId) {
         showDarasaToast({ type: 'error', message: 'Select which book the money comes from before approving.' });

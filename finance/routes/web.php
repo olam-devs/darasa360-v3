@@ -322,6 +322,7 @@ Route::middleware(['tenant.context', 'headmaster.tenant.context', 'finance.porta
         Route::delete('api/vouchers/{id}', [VoucherController::class, 'destroy'])->name('api.vouchers.destroy');
         Route::post('api/vouchers/{id}/void', [VoucherController::class, 'void'])->name('api.vouchers.void');
         Route::post('api/vouchers/apply-advance', [VoucherController::class, 'applyAdvance'])->name('api.vouchers.apply-advance');
+        Route::post('api/vouchers/batch-receipt', [VoucherController::class, 'batchReceipt'])->name('api.vouchers.batch-receipt');
         Route::get('api/vouchers/search/student', [VoucherController::class, 'searchStudent'])->name('api.vouchers.search');
 
         // Ledgers routes

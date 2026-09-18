@@ -203,6 +203,82 @@ class VoucherController extends Controller
         }
     }
 
+    /**
+     * Batch receipt: one student, multiple particulars, one book-ledger entry.
+     * Each particular_student pivot is updated individually (for per-particular
+     * fee tracking) but only ONE voucher record (no particular_id) is created
+     * for the book/cash ledger so reconciliation with bank statements is easy.
+     */
+    public function batchReceipt(Request $request)
+    {
+        $validated = $request->validate([
+            'date'       => 'required|date',
+            'student_id' => 'required|exists:students,id',
+            'book_id'    => 'required|exists:books,id',
+            'notes'      => 'nullable|string',
+            'items'      => 'required|array|min:1',
+            'items.*.particular_id' => 'required|exists:particulars,id',
+            'items.*.amount'        => 'required|numeric|min:0.01',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $student = Student::findOrFail($validated['student_id']);
+            $totalAmount = 0.0;
+            $particularsApplied = [];
+
+            foreach ($validated['items'] as $item) {
+                $particular = Particular::findOrFail($item['particular_id']);
+                $amount = (float) $item['amount'];
+                $totalAmount += $amount;
+
+                // Ensure pivot row exists
+                $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
+                if (! $pivot) {
+                    $student->particulars()->attach($particular->id, [
+                        'sales' => 0, 'debit' => 0, 'credit' => 0, 'overpayment' => 0,
+                    ]);
+                    $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
+                }
+
+                // Apply to particular: credit tracks payments received
+                $student->particulars()->updateExistingPivot($particular->id, [
+                    'credit' => (float) $pivot->pivot->credit + $amount,
+                ]);
+                $particularsApplied[] = $particular->name;
+            }
+
+            $notes = trim($validated['notes'] ?? '') ?: sprintf(
+                'Batch receipt — %d particular(s) [%s] (%s)',
+                count($particularsApplied),
+                implode(', ', $particularsApplied),
+                $student->name
+            );
+
+            // ONE combined voucher for the book/cash ledger
+            $voucher = Voucher::create([
+                'date'       => $validated['date'],
+                'student_id' => $validated['student_id'],
+                'particular_id' => null,
+                'book_id'    => $validated['book_id'],
+                'voucher_type' => 'Receipt',
+                'debit'      => $totalAmount,
+                'credit'     => 0,
+                'payment_by_receipt_to' => 'Batch Receipt',
+                'notes'      => $notes,
+                'created_by' => auth()->id(),
+            ]);
+
+            DB::commit();
+
+            return response()->json(['voucher' => $voucher, 'total' => $totalAmount], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function show($id)
     {
         $voucher = Voucher::with(['student', 'particular', 'book'])->findOrFail($id);

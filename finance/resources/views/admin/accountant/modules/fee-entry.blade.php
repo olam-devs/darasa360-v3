@@ -16,6 +16,9 @@
                     <button type="button" onclick="showScholarshipsManager()" class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50">
                         Scholarships
                     </button>
+                    <button type="button" onclick="showBatchPaymentForm()" class="inline-flex items-center rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition">
+                        Batch receipt
+                    </button>
                     <button type="button" onclick="showCreateVoucherForm()" class="inline-flex items-center rounded-xl bg-gradient-to-r from-blue-500 to-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition hover:from-blue-600 hover:to-sky-700">
                         Record new entry
                     </button>
@@ -1427,6 +1430,236 @@
             document.getElementById('voucherFormContainer').innerHTML = '';
             selectedStudentForScholarship = null;
             studentParticularsData = {};
+        }
+
+        // ── Batch Receipt ──────────────────────────────────────────────────────────
+        // Batch mode: select student once, fill amounts for multiple particulars,
+        // save once. Individual particular_student credits tracked per particular;
+        // bank/cash ledger shows ONE combined voucher entry for reconciliation.
+
+        let batchStudentId = null;
+        let batchStudentName = '';
+        let batchSaveInFlight = false;
+
+        function showBatchPaymentForm() {
+            const classOptions = allClasses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            const bookOptions = allBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+            const particularsOptions = allParticulars.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            batchStudentId = null;
+            batchStudentName = '';
+            batchSaveInFlight = false;
+
+            document.getElementById('voucherFormContainer').innerHTML = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-2">
+                    <div class="bg-white rounded-lg p-4 max-w-2xl w-full shadow-2xl my-2 max-h-[95vh] overflow-y-auto">
+                        <h3 class="text-xl font-bold mb-1 text-indigo-700">Batch Receipt</h3>
+                        <p class="text-xs text-gray-500 mb-4">Enter all payments for one student at once. One combined entry will appear in the bank/cash ledger.</p>
+
+                        <!-- Student selection -->
+                        <div class="border-2 border-blue-200 rounded p-3 bg-blue-50 mb-3">
+                            <h4 class="text-sm font-bold mb-2 text-blue-800">Select Student</h4>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Search by Name</label>
+                                    <input type="text" id="batchStudentSearch" onkeyup="batchSearchStudents()"
+                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+                                        placeholder="Type student name...">
+                                    <div id="batchStudentResults" class="mt-1"></div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold mb-1">Or select by Class</label>
+                                    <select id="batchClass" onchange="batchLoadClassStudents()"
+                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none">
+                                        <option value="">-- Select Class --</option>
+                                        ${classOptions}
+                                    </select>
+                                    <div id="batchClassResults" class="mt-1"></div>
+                                </div>
+                            </div>
+                            <div id="batchSelectedStudentDisplay" class="mt-2 p-2 bg-white rounded border-2 border-green-500 hidden">
+                                <p class="text-xs font-bold text-green-600">Selected:</p>
+                                <p id="batchSelectedStudentName" class="font-bold text-sm"></p>
+                            </div>
+                        </div>
+
+                        <!-- Date + Book -->
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Date *</label>
+                                <input type="text" id="batchDate" required
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+                                    placeholder="Select date">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Book / Account *</label>
+                                <select id="batchBook" required
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none">
+                                    <option value="">-- Select Book --</option>
+                                    ${bookOptions}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Particulars list -->
+                        <div class="mb-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-sm font-bold text-gray-700">Particulars & Amounts</h4>
+                                <button type="button" onclick="batchAddRow()" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded transition">
+                                    + Add particular
+                                </button>
+                            </div>
+                            <div id="batchRows" class="space-y-2">
+                                <!-- rows added dynamically -->
+                            </div>
+                            <div class="mt-2 flex justify-end">
+                                <span class="text-sm font-bold text-gray-700">Total: <span id="batchTotal" class="text-indigo-700">TSh 0.00</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label class="block text-xs font-bold mb-1">Notes (optional)</label>
+                            <input type="text" id="batchNotes"
+                                class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+                                placeholder="e.g. Cash receipt — will prefill automatically">
+                        </div>
+
+                        <div class="flex gap-3 pt-3 border-t-2">
+                            <button type="button" onclick="submitBatchPayment()"
+                                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold transition text-sm">
+                                Save Batch Receipt
+                            </button>
+                            <button type="button" onclick="closeBatchForm()"
+                                class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            flatpickr('#batchDate', { dateFormat: 'Y-m-d', defaultDate: 'today' });
+            // Add two initial rows
+            batchAddRow();
+            batchAddRow();
+        }
+
+        function batchAddRow() {
+            const particularsOptions = allParticulars.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            const rowHtml = `
+                <div class="batch-row flex gap-2 items-center">
+                    <select class="flex-1 border-2 border-gray-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 batch-particular">
+                        <option value="">-- Particular --</option>
+                        ${particularsOptions}
+                    </select>
+                    <input type="text" class="w-32 border-2 border-gray-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 batch-amount"
+                        placeholder="0.00" inputmode="decimal"
+                        onfocus="this.value = this.value.replace(/,/g,'')"
+                        onblur="this.value = this.value ? parseFloat(this.value.replace(/,/g,'')||0).toLocaleString('en-TZ',{minimumFractionDigits:2}) : ''"
+                        oninput="recalcBatchTotal()">
+                    <button type="button" onclick="this.closest('.batch-row').remove(); recalcBatchTotal()"
+                        class="text-red-400 hover:text-red-600 text-lg leading-none">&times;</button>
+                </div>
+            `;
+            document.getElementById('batchRows').insertAdjacentHTML('beforeend', rowHtml);
+        }
+
+        function recalcBatchTotal() {
+            let total = 0;
+            document.querySelectorAll('.batch-amount').forEach(el => {
+                total += parseMoneyInput(el.value);
+            });
+            const el = document.getElementById('batchTotal');
+            if (el) el.textContent = 'TSh ' + total.toLocaleString('en-TZ', { minimumFractionDigits: 2 });
+        }
+
+        function batchSearchStudents() {
+            const term = document.getElementById('batchStudentSearch').value.toLowerCase();
+            if (term.length < 2) { document.getElementById('batchStudentResults').innerHTML = ''; return; }
+            const matches = allStudents.filter(s => s.name.toLowerCase().includes(term)).slice(0, 5);
+            document.getElementById('batchStudentResults').innerHTML = '<div class="space-y-1 max-h-32 overflow-y-auto">' +
+                matches.map(s => `<div onclick="batchSelectStudent(${s.id},'${s.name.replace(/'/g,"\\'")}')"`+
+                    ` class="p-1.5 bg-white border rounded cursor-pointer hover:bg-indigo-50 text-xs"><strong>${s.name}</strong> · ${s.student_reg_no}</div>`
+                ).join('') + '</div>';
+        }
+
+        function batchLoadClassStudents() {
+            const classId = document.getElementById('batchClass').value;
+            if (!classId) { document.getElementById('batchClassResults').innerHTML = ''; return; }
+            const students = allStudents.filter(s => s.class_id == classId);
+            document.getElementById('batchClassResults').innerHTML =
+                `<select class="w-full border-2 border-gray-300 rounded px-2 py-2 text-sm" onchange="batchSelectStudentFromClass(this.value)">
+                    <option value="">-- Select Student --</option>
+                    ${students.map(s => `<option value="${s.id}">${s.name} (${s.student_reg_no})</option>`).join('')}
+                </select>`;
+        }
+
+        function batchSelectStudentFromClass(id) {
+            if (!id) return;
+            const s = allStudents.find(x => x.id == id);
+            if (s) batchSelectStudent(s.id, s.name);
+        }
+
+        function batchSelectStudent(id, name) {
+            batchStudentId = id;
+            batchStudentName = name;
+            document.getElementById('batchSelectedStudentName').textContent = name;
+            document.getElementById('batchSelectedStudentDisplay').classList.remove('hidden');
+            document.getElementById('batchStudentSearch').value = '';
+            document.getElementById('batchStudentResults').innerHTML = '';
+        }
+
+        async function submitBatchPayment() {
+            if (batchSaveInFlight) return;
+            if (!batchStudentId) {
+                showDarasaToast({ type: 'warning', title: 'Batch receipt', message: 'Select a student first.' });
+                return;
+            }
+            const date = document.getElementById('batchDate').value;
+            const bookId = document.getElementById('batchBook').value;
+            if (!date || !bookId) {
+                showDarasaToast({ type: 'warning', title: 'Batch receipt', message: 'Select date and book.' });
+                return;
+            }
+
+            const rows = [...document.querySelectorAll('.batch-row')];
+            const items = rows.map(row => ({
+                particular_id: parseInt(row.querySelector('.batch-particular').value) || null,
+                amount: parseMoneyInput(row.querySelector('.batch-amount').value),
+            })).filter(i => i.particular_id && i.amount > 0);
+
+            if (items.length === 0) {
+                showDarasaToast({ type: 'warning', title: 'Batch receipt', message: 'Add at least one particular with an amount.' });
+                return;
+            }
+
+            const notes = document.getElementById('batchNotes').value.trim() ||
+                `Batch receipt — ${items.length} particular(s) — ${batchStudentName}`;
+
+            batchSaveInFlight = true;
+            const btn = document.querySelector('#voucherFormContainer button[onclick="submitBatchPayment()"]');
+            if (btn) btn.disabled = true;
+
+            try {
+                await axios.post(`${API_BASE}/vouchers/batch-receipt`, {
+                    date, student_id: batchStudentId, book_id: parseInt(bookId),
+                    notes, items,
+                });
+                showDarasaToast({ type: 'success', title: 'Batch receipt', message: `${items.length} particular(s) saved. One entry added to ledger.`, duration: 6000 });
+                closeBatchForm();
+                loadVouchers();
+            } catch (e) {
+                showDarasaToast({ type: 'error', title: 'Batch receipt', message: darasaAxiosMessage(e) });
+            } finally {
+                batchSaveInFlight = false;
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function closeBatchForm() {
+            document.getElementById('voucherFormContainer').innerHTML = '';
+            batchStudentId = null;
+            batchStudentName = '';
         }
     </script>
 @endpush
