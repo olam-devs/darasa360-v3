@@ -13,7 +13,7 @@ class ParticularController extends Controller
 {
     public function index()
     {
-        $particulars = Particular::with('students')->get();
+        $particulars = Particular::with('students')->latest()->get();
 
         return response()->json($particulars);
     }

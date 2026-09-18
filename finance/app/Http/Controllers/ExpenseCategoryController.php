@@ -41,6 +41,14 @@ class ExpenseCategoryController extends Controller
             $query->approved();
         }
 
+        if ($request->boolean('active_plan_only')) {
+            $today = now()->toDateString();
+            $query->whereHas('plans', function ($q) use ($today) {
+                $q->whereDate('from_date', '<=', $today)
+                  ->whereDate('to_date', '>=', $today);
+            });
+        }
+
         return response()->json(['categories' => $query->get()]);
     }
 

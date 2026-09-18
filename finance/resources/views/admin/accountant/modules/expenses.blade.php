@@ -398,7 +398,7 @@ async function loadItemsCache() {
 }
 
 async function loadCategoriesForSelects() {
-    const res = await axios.get(`${EBASE}/expense-categories?approved_only=1`);
+    const res = await axios.get(`${EBASE}/expense-categories?approved_only=1&active_plan_only=1`);
     categoriesCache = res.data.categories || [];
 
     // Compose: datalist (searchable text input)
