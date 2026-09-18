@@ -1279,7 +1279,7 @@ let allCategoriesForBudget = [];
 async function loadCategoryListForBudget() {
     const box = document.getElementById('categoryListBox');
     try {
-        const res = await axios.get(`${EBASE}/expense-categories`);
+        const res = await axios.get(`${EBASE}/expense-categories?active_plan_only=1`);
         allCategoriesForBudget = res.data.categories || [];
         renderCategoryList();
     } catch (e) {
