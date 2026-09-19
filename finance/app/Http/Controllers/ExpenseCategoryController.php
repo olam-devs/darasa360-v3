@@ -43,9 +43,10 @@ class ExpenseCategoryController extends Controller
 
         if ($request->boolean('active_plan_only')) {
             $today = now()->toDateString();
-            $query->whereHas('plans', function ($q) use ($today) {
+            $query->whereHas('plans', function ($q) use ($today, $activeYearId) {
                 $q->whereDate('from_date', '<=', $today)
-                  ->whereDate('to_date', '>=', $today);
+                  ->whereDate('to_date', '>=', $today)
+                  ->when($activeYearId, fn ($q) => $q->where('academic_year_id', $activeYearId));
             });
         }
 
