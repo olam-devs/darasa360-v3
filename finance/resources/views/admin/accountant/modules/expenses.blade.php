@@ -385,7 +385,12 @@ function switchExpenseTab(name) {
 
     if (name === 'mysubmissions') loadMySubmissions();
     if (name === 'review') loadReviewQueue();
-    if (name === 'budget') { loadCategoryListForBudget(); loadChart(); }
+    if (name === 'budget') {
+        document.getElementById('chartFrom').value = '';
+        document.getElementById('chartTo').value = '';
+        loadCategoryListForBudget();
+        loadChart();
+    }
     if (name === 'catalog') loadCatalog();
     if (name === 'reports') loadLog();
 }
@@ -1399,6 +1404,12 @@ async function loadChart() {
         const res = await axios.get(`${EBASE}/expense-plans/chart?${params.toString()}`);
         document.getElementById('chartHiddenMsg').classList.add('hidden');
         document.getElementById('chartCanvasWrap').classList.remove('hidden');
+
+        // Pre-fill date fields with the active period when user hasn't set them
+        const fromEl = document.getElementById('chartFrom');
+        const toEl   = document.getElementById('chartTo');
+        if (!fromEl.value && res.data.active_period?.from) fromEl.value = res.data.active_period.from;
+        if (!toEl.value   && res.data.active_period?.to)   toEl.value   = res.data.active_period.to;
 
         if (CAN_VIEW_BUDGET_CHART) {
             document.getElementById('chartExpected').textContent = 'TSh ' + fmt(res.data.expected_amount);

@@ -117,12 +117,24 @@ class ExpenseCategoryPlanController extends Controller
         $canViewBudget   = $isMain || (bool) ($request->user()->can_view_budget_chart ?? false);
 
         $academicYear = AcademicYear::find($validated['academic_year_id']);
+        $today = now()->toDateString();
+
+        // Default to the currently active plan period (e.g. Q4), not the full year
+        $activePeriodPlan = ExpenseCategoryPlan::where('academic_year_id', $validated['academic_year_id'])
+            ->whereDate('from_date', '<=', $today)
+            ->whereDate('to_date', '>=', $today)
+            ->when($categoryId, fn ($q) => $q->where('expense_category_id', $categoryId))
+            ->orderBy('from_date')
+            ->first();
+
         $fromDate = $validated['from_date']
-            ?? ($academicYear ? $academicYear->start_date->toDateString() : now()->startOfYear()->toDateString());
+            ?? ($activePeriodPlan ? $activePeriodPlan->from_date->toDateString()
+                : ($academicYear ? $academicYear->start_date->toDateString() : now()->startOfYear()->toDateString()));
         $toDate = $validated['to_date']
-            ?? ($academicYear
-                ? min($academicYear->end_date->toDateString(), now()->toDateString())
-                : now()->toDateString());
+            ?? ($activePeriodPlan ? $activePeriodPlan->to_date->toDateString()
+                : ($academicYear
+                    ? min($academicYear->end_date->toDateString(), $today)
+                    : $today));
 
         // --- Budget (main accountant only) ---
         $expectedAmount = 0.0;
@@ -213,6 +225,7 @@ class ExpenseCategoryPlanController extends Controller
             'timeline'           => $timeline,
             'planned_per_bucket' => $plannedPerBucket,
             'monthly_plans'      => $monthlyPlans,
+            'active_period'      => ['from' => $fromDate, 'to' => $toDate],
         ]);
     }
 
