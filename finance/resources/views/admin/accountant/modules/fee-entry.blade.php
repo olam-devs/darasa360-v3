@@ -1,4 +1,4 @@
-﻿@extends('layouts.accountant')
+﻿﻿﻿﻿@extends('layouts.accountant')
 
 @section('title', 'Fee Entry — Darasa Finance')
 @section('page_title', 'Fee entry')
@@ -15,9 +15,6 @@
                 <div class="flex gap-3">
                     <button type="button" onclick="showScholarshipsManager()" class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50">
                         Scholarships
-                    </button>
-                    <button type="button" onclick="showBatchPaymentForm()" class="inline-flex items-center rounded-lg border border-indigo-300 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition">
-                        Batch receipt
                     </button>
                     <button type="button" onclick="showCreateVoucherForm()" class="inline-flex items-center rounded-xl bg-gradient-to-r from-blue-500 to-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition hover:from-blue-600 hover:to-sky-700">
                         Record new entry
@@ -327,247 +324,194 @@
             }, 350);
         }
 
+        // â”€â”€ Receipt Entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // One student, multiple particulars, ONE combined bank/cash ledger entry.
+
+        let receiptStudentId    = null;
+        let receiptStudentName  = '';
+        let receiptItems        = [];   // [{particularId, particularName, amount}]
+        let receiptParticulars  = [];   // loaded from API when student is selected
+        let receiptSaveInFlight = false;
+
         async function showCreateVoucherForm() {
-            // Load particulars first
-            if (allParticulars.length === 0) {
-                const response = await axios.get(`${API_BASE}/particulars`);
-                allParticulars = response.data;
-            }
+            const classOptions = allClasses.map(c =>
+                `<option value="${c.id}">${c.name}</option>`).join('');
+            const bookOptions = allBooks.map(b =>
+                `<option value="${b.id}">${b.name}</option>`).join('');
 
-            const particularsOptions = allParticulars.map(p =>
-                `<option value="${p.id}">${p.name}</option>`
-            ).join('');
+            receiptStudentId    = null;
+            receiptStudentName  = '';
+            receiptItems        = [];
+            receiptParticulars  = [];
+            receiptSaveInFlight = false;
 
-            const classOptions = allClasses.map(cls =>
-                `<option value="${cls.id}">${cls.name}</option>`
-            ).join('');
-
-            const formHtml = `
+            document.getElementById('voucherFormContainer').innerHTML = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-2">
                     <div class="bg-white rounded-lg p-4 max-w-4xl w-full shadow-2xl my-2 max-h-[95vh] overflow-y-auto">
-                        <h3 class="text-xl font-bold mb-3 text-purple-600">Record New Fee Entry</h3>
-                        <form onsubmit="createVoucher(event)" class="space-y-3">
-                            <div class="grid grid-cols-3 gap-3">
+                        <h3 class="text-xl font-bold mb-3 text-purple-600">Record Fee Receipt</h3>
+
+                        <!-- Date &middot; Book &middot; Total Received -->
+                        <div class="grid grid-cols-3 gap-3 mb-3">
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Date *</label>
+                                <input type="text" id="receiptDate" required
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                    placeholder="Select date">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Book / Account *</label>
+                                <select id="receiptBook" required
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
+                                    <option value="">-- Select Book --</option>
+                                    ${bookOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold mb-1">Total Received (TSh)</label>
+                                <input type="text" id="receiptTotalPaid" inputmode="decimal"
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                    placeholder="0.00  (optional â€” tracks remainder)"
+                                    onfocus="this.value = this.value.replace(/,/g,'')"
+                                    onblur="this.value = this.value ? parseFloat(this.value.replace(/,/g,'')||0).toLocaleString('en-TZ',{minimumFractionDigits:2}) : ''"
+                                    oninput="recalcReceiptRemaining()">
+                            </div>
+                        </div>
+
+                        <!-- Student selection -->
+                        <div class="border-2 border-blue-200 rounded p-3 bg-blue-50 mb-3">
+                            <h4 class="text-sm font-bold mb-2">Select Student</h4>
+                            <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-xs font-bold mb-1">Date *</label>
-                                    <input type="text" id="voucherDate" required
+                                    <label class="block text-xs font-bold mb-1">Search by Name</label>
+                                    <input type="text" id="studentSearch" onkeyup="searchStudentsByName()"
                                         class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
-                                        placeholder="Select date">
+                                        placeholder="Type student name...">
+                                    <div id="studentSearchResults" class="mt-1"></div>
                                 </div>
                                 <div>
+                                    <label class="block text-xs font-bold mb-1">Select by Class</label>
+                                    <select id="voucherClass" onchange="loadStudentsByClassForVoucher()"
+                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
+                                        <option value="">-- Select Class --</option>
+                                        ${classOptions}
+                                    </select>
+                                    <div id="classStudentsResults" class="mt-1"></div>
+                                </div>
+                            </div>
+                            <input type="hidden" id="selectedStudentId">
+                            <div id="selectedStudentDisplay" class="mt-2 p-2 bg-white rounded border-2 border-green-500 hidden">
+                                <p class="text-xs font-bold text-green-600">Selected Student:</p>
+                                <p id="selectedStudentName" class="font-bold text-sm"></p>
+                            </div>
+                        </div>
+
+                        <!-- Particular entry â€” shown after student is selected -->
+                        <div id="receiptParticularSection" class="hidden">
+
+                            <div class="border-2 border-purple-200 rounded p-3 bg-purple-50 mb-3">
+                                <h4 class="text-sm font-bold mb-2 text-purple-700">Add Particular</h4>
+
+                                <div class="mb-2">
                                     <label class="block text-xs font-bold mb-1">Particular *</label>
-                                    <select id="voucherParticular" required onchange="loadParticularStudents()"
+                                    <select id="receiptParticular" onchange="onReceiptParticularChange()"
                                         class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
                                         <option value="">-- Select Particular --</option>
-                                        ${particularsOptions}
                                     </select>
                                 </div>
-                                <div>
-                                    <label class="block text-xs font-bold mb-1">Voucher Type *</label>
-                                    <select id="voucherType" required onchange="updateVoucherTypeFields()"
-                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
-                                        <option value="">-- Select Type --</option>
-                                        <option value="Sales">Sales (Charge Fee)</option>
-                                        <option value="Receipt">Receipt (Payment)</option>
-                                        <option value="Payment">Payment (Refund)</option>
-                                    </select>
-                                </div>
-                            </div>
 
-                            <div class="border-2 border-blue-200 rounded p-3 bg-blue-50">
-                                <h4 class="text-sm font-bold mb-2">Select Student</h4>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-bold mb-1">Search by Name</label>
-                                        <input type="text" id="studentSearch" onkeyup="searchStudentsByName()"
-                                            class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
-                                            placeholder="Type student name...">
-                                        <div id="studentSearchResults" class="mt-1"></div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold mb-1">Select by Class</label>
-                                        <select id="voucherClass" onchange="loadStudentsByClassForVoucher()"
-                                            class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
-                                            <option value="">-- Select Class --</option>
-                                            ${classOptions}
-                                        </select>
-                                        <div id="classStudentsResults" class="mt-1"></div>
-                                    </div>
-                                </div>
-                                <input type="hidden" id="selectedStudentId" required>
-                                <div id="selectedStudentDisplay" class="mt-2 p-2 bg-white rounded border-2 border-green-500 hidden">
-                                    <p class="text-xs font-bold text-green-600">Selected Student:</p>
-                                    <p id="selectedStudentName" class="font-bold text-sm"></p>
-                                </div>
-                            </div>
-
-                            <div id="amountSection" class="hidden">
-                                <!-- Payment Info Display -->
-                                <div id="paymentInfoDisplay" class="bg-green-50 border-2 border-green-300 rounded p-2 mb-2 hidden">
+                                <!-- Analytics (4 cards) -->
+                                <div id="receiptParticularInfo" class="hidden bg-green-50 border-2 border-green-300 rounded p-2 mb-2">
                                     <h4 class="text-xs font-bold text-green-700 mb-2"> Payment Information</h4>
                                     <div class="grid grid-cols-4 gap-2">
                                         <div class="bg-white p-2 rounded border">
                                             <p class="text-xs text-gray-600">Supposed Amount:</p>
-                                            <p id="supposedAmount" class="text-sm font-bold text-blue-700">TSh 0.00</p>
+                                            <p id="receiptSupposedAmt" class="text-sm font-bold text-blue-700">TSh 0.00</p>
                                         </div>
                                         <div class="bg-white p-2 rounded border">
                                             <p class="text-xs text-gray-600">Already Paid:</p>
-                                            <p id="alreadyPaidAmount" class="text-sm font-bold text-green-700">TSh 0.00</p>
+                                            <p id="receiptAlreadyPaid" class="text-sm font-bold text-green-700">TSh 0.00</p>
                                         </div>
                                         <div class="bg-yellow-50 p-2 rounded border border-yellow-300">
                                             <p class="text-xs text-gray-600">Outstanding:</p>
-                                            <p id="outstandingBalance" class="text-sm font-bold text-red-700">TSh 0.00</p>
+                                            <p id="receiptOutstanding" class="text-sm font-bold text-red-700">TSh 0.00</p>
                                         </div>
                                         <div class="bg-indigo-50 p-2 rounded border border-indigo-300">
                                             <p class="text-xs text-gray-600">Advance available:</p>
-                                            <p id="advanceAvailable" class="text-sm font-bold text-indigo-700">TSh 0.00</p>
+                                            <p id="receiptAdvanceAvail" class="text-sm font-bold text-indigo-700">TSh 0.00</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Apply Advance row: only useful for Receipt type when there is outstanding + advance -->
-                                <div id="applyAdvanceRow" class="hidden bg-indigo-50 border-2 border-indigo-300 rounded p-2 mb-2">
+                                <!-- Apply advance row -->
+                                <div id="receiptApplyAdvRow" class="hidden bg-indigo-50 border-2 border-indigo-300 rounded p-2 mb-2">
                                     <div class="flex items-end gap-2 flex-wrap">
                                         <div class="flex-1 min-w-[200px]">
                                             <label class="block text-xs font-bold text-indigo-800 mb-1">Use advance balance (TSh)</label>
-                                            <input type="text" id="applyAdvanceAmount" inputmode="decimal"
-                                                class="w-full border-2 border-indigo-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
+                                            <input type="text" id="receiptAdvAmt" inputmode="decimal"
+                                                class="w-full border-2 border-indigo-300 rounded px-3 py-1.5 text-sm"
                                                 placeholder="0.00">
-                                            <p class="text-[11px] text-indigo-700 mt-1">Amount must be \u2264 available advance and \u2264 outstanding for this particular.</p>
+                                            <p class="text-[11px] text-indigo-700 mt-1">Must be â‰¤ available advance and â‰¤ outstanding.</p>
                                         </div>
-                                        <button type="button" id="applyAdvanceBtn" onclick="applyAdvanceToParticular()"
-                                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded font-bold text-xs transition">
+                                        <button type="button" id="receiptAdvBtn" onclick="applyReceiptAdvance()"
+                                            class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded font-bold text-xs">
                                             Apply advance
                                         </button>
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
+                                <!-- Amount + Add button -->
+                                <div class="flex gap-2 items-end">
+                                    <div class="flex-1">
                                         <label class="block text-xs font-bold mb-1">Amount (TSh) *</label>
-                                        <input type="text" id="voucherAmount" required
+                                        <input type="text" id="receiptParticularAmt" inputmode="decimal"
                                             class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
-                                            placeholder="0.00">
+                                            placeholder="0.00"
+                                            onfocus="this.value = this.value.replace(/,/g,'')"
+                                            onblur="this.value = this.value ? parseFloat(this.value.replace(/,/g,'')||0).toLocaleString('en-TZ',{minimumFractionDigits:2}) : ''"
+                                            onkeydown="if(event.key==='Enter'){event.preventDefault();addParticularToReceipt();}">
                                     </div>
-                                    <div id="bookSelection" class="hidden">
-                                        <label class="block text-xs font-bold mb-1">Book/Account *</label>
-                                        <select id="voucherBook"
-                                            class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
-                                            <option value="">-- Select Book --</option>
-                                        </select>
-                                    </div>
+                                    <button type="button" onclick="addParticularToReceipt()"
+                                        class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded font-bold text-sm">
+                                        + Add
+                                    </button>
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-xs font-bold mb-1">Reason / description *</label>
-                                <textarea id="voucherNotes" rows="2" required
-                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
-                                    placeholder="Describe this entry (prefilled from type — you can edit)"></textarea>
+                            <!-- Items added so far -->
+                            <div id="receiptItemsList" class="hidden mb-3">
+                                <h4 class="text-sm font-bold text-gray-700 mb-1">Items added:</h4>
+                                <div id="receiptItemsTable"></div>
+                                <div id="receiptRemainingDisplay" class="mt-2 text-sm font-bold text-right"></div>
                             </div>
 
+                            <!-- Notes -->
+                            <div class="mb-3">
+                                <label class="block text-xs font-bold mb-1">Reason / description</label>
+                                <input type="text" id="receiptNotes"
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                    placeholder="Auto-filled on save â€” you can edit">
+                            </div>
+
+                            <!-- Submit -->
                             <div class="flex gap-3 pt-3 border-t-2">
-                                <button type="submit" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-bold transition text-sm">
-                                     Save Entry
+                                <button type="button" id="receiptSubmitBtn" onclick="submitNewReceipt()"
+                                    class="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-bold transition text-sm">
+                                    Save Receipt
                                 </button>
-                                <button type="button" onclick="closeVoucherForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
-                                     Cancel
+                                <button type="button" onclick="closeVoucherForm()"
+                                    class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
+                                    Cancel
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             `;
-            document.getElementById('voucherFormContainer').innerHTML = formHtml;
-            attachMoneyFormatting('voucherAmount');
 
-            // Initialize date picker
-            flatpickr("#voucherDate", {
-                dateFormat: "Y-m-d",
-                defaultDate: "today"
-            });
-
-            voucherNotesTouched = false;
-            const notesEl = document.getElementById('voucherNotes');
-            if (notesEl) {
-                notesEl.addEventListener('input', () => { voucherNotesTouched = true; });
-            }
-            document.getElementById('voucherParticular')?.addEventListener('change', () => {
-                voucherNotesTouched = false;
-                prefillVoucherNotes();
-            });
+            flatpickr('#receiptDate', { dateFormat: 'Y-m-d', defaultDate: 'today' });
         }
 
-        let voucherNotesTouched = false;
-
-        function prefillVoucherNotes() {
-            const notesEl = document.getElementById('voucherNotes');
-            if (!notesEl || voucherNotesTouched) return;
-
-            const voucherType = document.getElementById('voucherType')?.value || '';
-            const studentName = document.getElementById('selectedStudentName')?.textContent?.trim() || 'student';
-            const particularSelect = document.getElementById('voucherParticular');
-            const particularName = particularSelect?.selectedOptions?.[0]?.textContent?.trim() || 'fee';
-            const bookSelect = document.getElementById('voucherBook');
-            const bookName = bookSelect?.value ? (bookSelect.selectedOptions?.[0]?.textContent?.trim() || '') : '';
-
-            let text = '';
-            if (voucherType === 'Sales') {
-                text = `Fee charged: ${particularName} (${studentName})`;
-            } else if (voucherType === 'Receipt') {
-                text = bookName
-                    ? `Cash receipt for ${particularName} (${studentName}) via ${bookName}`
-                    : `Cash receipt for ${particularName} (${studentName})`;
-            } else if (voucherType === 'Payment') {
-                text = `Payment for ${particularName} (${studentName})`;
-            }
-            if (text) notesEl.value = text;
-        }
-
-        function updateVoucherTypeFields() {
-            const voucherType = document.getElementById('voucherType').value;
-            const amountSection = document.getElementById('amountSection');
-            const bookSelection = document.getElementById('bookSelection');
-
-            if (voucherType) {
-                amountSection.classList.remove('hidden');
-
-                if (voucherType === 'Receipt' || voucherType === 'Payment') {
-                    bookSelection.classList.remove('hidden');
-                    document.getElementById('voucherBook').required = true;
-
-                    const bookSelect = document.getElementById('voucherBook');
-                    bookSelect.innerHTML = '<option value="">-- Select Book --</option>' +
-                        allBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-                    bookSelect.onchange = () => prefillVoucherNotes();
-                } else {
-                    bookSelection.classList.add('hidden');
-                    document.getElementById('voucherBook').required = false;
-                }
-                prefillVoucherNotes();
-            } else {
-                amountSection.classList.add('hidden');
-            }
-        }
-
-        async function loadParticularStudents() {
-            const particularId = document.getElementById('voucherParticular').value;
-            if (!particularId) return;
-
-            try {
-                const response = await axios.get(`${API_BASE}/particulars/${particularId}`);
-                const particular = response.data;
-                filteredStudentsForVoucher = particular.students || [];
-
-                // Reload payment info if student is already selected
-                const studentId = document.getElementById('selectedStudentId').value;
-                if (studentId) {
-                    await loadPaymentInfo();
-                }
-            } catch (error) {
-                console.error('Error loading particular students:', error);
-            }
-        }
+        // â”€â”€ Student search / selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         function searchStudentsByName() {
             const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
@@ -575,11 +519,9 @@
                 document.getElementById('studentSearchResults').innerHTML = '';
                 return;
             }
-
             const matches = allStudents.filter(s =>
                 s.name.toLowerCase().includes(searchTerm)
             ).slice(0, 5);
-
             let html = '<div class="space-y-1 max-h-32 overflow-y-auto">';
             matches.forEach(student => {
                 html += `
@@ -600,9 +542,7 @@
                 document.getElementById('classStudentsResults').innerHTML = '';
                 return;
             }
-
             const classStudents = allStudents.filter(s => s.class_id == selectedClass);
-
             let html = '<select class="w-full border-2 border-gray-300 rounded px-2 py-2 text-sm" onchange="selectStudentFromClass(this.value)">';
             html += '<option value="">-- Select Student --</option>';
             classStudents.forEach(student => {
@@ -615,81 +555,171 @@
         function selectStudentFromClass(studentId) {
             if (!studentId) return;
             const student = allStudents.find(s => s.id == studentId);
-            if (student) {
-                selectStudent(student.id, student.name);
-            }
+            if (student) selectStudent(student.id, student.name);
         }
 
         async function selectStudent(studentId, studentName) {
+            receiptStudentId   = studentId;
+            receiptStudentName = studentName;
             document.getElementById('selectedStudentId').value = studentId;
             document.getElementById('selectedStudentName').textContent = studentName;
             document.getElementById('selectedStudentDisplay').classList.remove('hidden');
             document.getElementById('studentSearch').value = '';
             document.getElementById('studentSearchResults').innerHTML = '';
-
-            // Load payment information for this student and particular
-            await loadPaymentInfo();
-            prefillVoucherNotes();
+            await loadStudentReceiptParticulars(studentId);
         }
 
-        async function loadPaymentInfo() {
-            const studentId = document.getElementById('selectedStudentId').value;
-            const particularId = document.getElementById('voucherParticular').value;
-            const voucherType = document.getElementById('voucherType').value;
+        // â”€â”€ Per-student particulars + analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-            if (!studentId || !particularId) {
-                document.getElementById('paymentInfoDisplay').classList.add('hidden');
-                document.getElementById('applyAdvanceRow').classList.add('hidden');
+        async function loadStudentReceiptParticulars(studentId) {
+            try {
+                const res = await axios.get(`${API_BASE}/students/${studentId}/particulars`);
+                receiptParticulars = res.data;
+                const sel = document.getElementById('receiptParticular');
+                if (!sel) return;
+                sel.innerHTML = '<option value="">-- Select Particular --</option>' +
+                    receiptParticulars.map(p => {
+                        const outstanding = Math.max(0, parseFloat(p.balance) || 0);
+                        const label = outstanding > 0
+                            ? `${p.name}  â€”  outstanding: ${formatTSh(outstanding)}`
+                            : `${p.name}  âœ“ fully paid`;
+                        return `<option value="${p.id}">${label}</option>`;
+                    }).join('');
+                document.getElementById('receiptParticularSection').classList.remove('hidden');
+            } catch (e) {
+                showDarasaToast({ type: 'error', title: 'Fee entry', message: 'Could not load particulars for this student.' });
+            }
+        }
+
+        function onReceiptParticularChange() {
+            const particularId = parseInt(document.getElementById('receiptParticular').value);
+            const p = receiptParticulars.find(x => x.id === particularId);
+            const student = allStudents.find(s => s.id == receiptStudentId);
+            const advanceAvail = parseFloat(student?.advance_balance ?? 0) || 0;
+
+            if (!p) {
+                document.getElementById('receiptParticularInfo').classList.add('hidden');
+                document.getElementById('receiptApplyAdvRow').classList.add('hidden');
                 return;
             }
 
-            try {
-                const particularResponse = await axios.get(`${API_BASE}/particulars/${particularId}`);
-                const particular = particularResponse.data;
+            const outstanding = Math.max(0, parseFloat(p.balance) || 0);
+            document.getElementById('receiptSupposedAmt').textContent  = formatTSh(parseFloat(p.sales) || 0);
+            document.getElementById('receiptAlreadyPaid').textContent  = formatTSh(parseFloat(p.credit) || 0);
+            document.getElementById('receiptOutstanding').textContent  = formatTSh(outstanding);
+            document.getElementById('receiptAdvanceAvail').textContent = formatTSh(advanceAvail);
+            document.getElementById('receiptParticularInfo').classList.remove('hidden');
+            document.getElementById('receiptApplyAdvRow').classList.toggle('hidden', !(advanceAvail > 0 && outstanding > 0));
 
-                const studentInParticular = particular.students?.find(s => s.id == studentId);
-
-                let supposedAmount = 0;
-                let alreadyPaid = 0;
-
-                if (studentInParticular) {
-                    supposedAmount = studentInParticular.pivot.sales || 0;
-                    alreadyPaid = studentInParticular.pivot.credit || 0;
-                }
-
-                const outstandingBalance = Math.max(0, supposedAmount - alreadyPaid);
-
-                const studentInList = allStudents.find(s => s.id == studentId);
-                const advanceAvailable = parseFloat(studentInList?.advance_balance ?? 0) || 0;
-
-                document.getElementById('supposedAmount').textContent = formatTSh(supposedAmount);
-                document.getElementById('alreadyPaidAmount').textContent = formatTSh(alreadyPaid);
-                document.getElementById('outstandingBalance').textContent = formatTSh(outstandingBalance);
-                document.getElementById('advanceAvailable').textContent = formatTSh(advanceAvailable);
-                document.getElementById('paymentInfoDisplay').classList.remove('hidden');
-
-                const applyRow = document.getElementById('applyAdvanceRow');
-                if (voucherType === 'Receipt' && advanceAvailable > 0 && outstandingBalance > 0) {
-                    applyRow.classList.remove('hidden');
-                } else {
-                    applyRow.classList.add('hidden');
-                }
-            } catch (error) {
-                console.error('Error loading payment info:', error);
-                document.getElementById('paymentInfoDisplay').classList.add('hidden');
-                document.getElementById('applyAdvanceRow').classList.add('hidden');
+            if (outstanding > 0) {
+                const totalPaid    = parseMoneyInput(document.getElementById('receiptTotalPaid')?.value);
+                const alreadyAdded = receiptItems.reduce((s, i) => s + i.amount, 0);
+                const remaining    = totalPaid > 0 ? totalPaid - alreadyAdded : outstanding;
+                const prefill      = Math.min(outstanding, remaining > 0 ? remaining : outstanding);
+                document.getElementById('receiptParticularAmt').value =
+                    prefill.toLocaleString('en-TZ', { minimumFractionDigits: 2 });
+            } else {
+                document.getElementById('receiptParticularAmt').value = '';
             }
+            document.getElementById('receiptParticularAmt')?.focus();
         }
 
-        async function applyAdvanceToParticular() {
-            const studentId = document.getElementById('selectedStudentId').value;
-            const particularId = document.getElementById('voucherParticular').value;
-            const date = document.getElementById('voucherDate').value;
-            const amount = parseMoneyInput(document.getElementById('applyAdvanceAmount').value);
-            const notes = document.getElementById('voucherNotes').value;
+        function addParticularToReceipt() {
+            const particularId = parseInt(document.getElementById('receiptParticular').value);
+            const p = receiptParticulars.find(x => x.id === particularId);
+            const amount = parseMoneyInput(document.getElementById('receiptParticularAmt').value);
+
+            if (!p) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Select a particular first.' });
+                return;
+            }
+            if (!amount || amount <= 0) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Enter an amount greater than zero.' });
+                return;
+            }
+            if (receiptItems.some(i => i.particularId === particularId)) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: `${p.name} is already in the list. Remove it first to change the amount.` });
+                return;
+            }
+            const totalPaid = parseMoneyInput(document.getElementById('receiptTotalPaid')?.value);
+            if (totalPaid > 0) {
+                const alreadyAdded = receiptItems.reduce((s, i) => s + i.amount, 0);
+                if (alreadyAdded + amount > totalPaid + 0.005) {
+                    showDarasaToast({ type: 'warning', title: 'Fee entry', message: `Adding ${formatTSh(amount)} would exceed total received (${formatTSh(totalPaid)}).` });
+                    return;
+                }
+            }
+
+            receiptItems.push({ particularId, particularName: p.name, amount });
+            document.getElementById('receiptParticular').value = '';
+            document.getElementById('receiptParticularAmt').value = '';
+            document.getElementById('receiptParticularInfo').classList.add('hidden');
+            document.getElementById('receiptApplyAdvRow').classList.add('hidden');
+            renderReceiptItems();
+        }
+
+        function removeReceiptItem(idx) {
+            receiptItems.splice(idx, 1);
+            renderReceiptItems();
+        }
+
+        function renderReceiptItems() {
+            const listEl = document.getElementById('receiptItemsList');
+            if (!listEl) return;
+            if (receiptItems.length === 0) { listEl.classList.add('hidden'); return; }
+
+            const totalPaid  = parseMoneyInput(document.getElementById('receiptTotalPaid')?.value);
+            const totalAdded = receiptItems.reduce((s, i) => s + i.amount, 0);
+            const remainder  = totalPaid > 0 ? totalPaid - totalAdded : null;
+
+            let tbl = `<table class="w-full text-sm border rounded">
+                <thead class="bg-purple-50"><tr>
+                    <th class="p-2 text-left border">Particular</th>
+                    <th class="p-2 text-right border">Amount</th>
+                    <th class="p-2 border w-8"></th>
+                </tr></thead><tbody>`;
+            receiptItems.forEach((item, idx) => {
+                tbl += `<tr class="border-t">
+                    <td class="p-2 border">${item.particularName}</td>
+                    <td class="p-2 border text-right font-bold">${formatTSh(item.amount)}</td>
+                    <td class="p-2 border text-center"><button onclick="removeReceiptItem(${idx})" class="text-red-400 hover:text-red-600 text-lg leading-none">&times;</button></td>
+                </tr>`;
+            });
+            tbl += `<tr class="bg-gray-50 font-bold">
+                <td class="p-2 border">Total</td>
+                <td class="p-2 border text-right">${formatTSh(totalAdded)}</td>
+                <td class="p-2 border"></td>
+            </tr></tbody></table>`;
+
+            let remHtml = '';
+            if (totalPaid > 0) {
+                if (remainder > 0.005) {
+                    remHtml = `<span class=”text-amber-700”>Remaining: ${formatTSh(remainder)} &mdash; add more particulars, or it will go to advance on save.</span>`;
+                } else if (remainder < -0.005) {
+                    remHtml = `<span class="text-red-600">&#9888; Entered ${formatTSh(-remainder)} over total. Reduce an amount or increase Total Received.</span>`;
+                } else {
+                    remHtml = `<span class="text-green-600">&#10003; Fully distributed (${formatTSh(totalPaid)} received).</span>`;
+                }
+            }
+
+            document.getElementById('receiptItemsTable').innerHTML = tbl;
+            document.getElementById('receiptRemainingDisplay').innerHTML = remHtml;
+            listEl.classList.remove('hidden');
+        }
+
+        function recalcReceiptRemaining() {
+            if (receiptItems.length > 0) renderReceiptItems();
+        }
+
+        async function applyReceiptAdvance() {
+            const studentId    = receiptStudentId;
+            const particularId = parseInt(document.getElementById('receiptParticular').value);
+            const date         = document.getElementById('receiptDate').value;
+            const amount       = parseMoneyInput(document.getElementById('receiptAdvAmt').value);
+            const p            = receiptParticulars.find(x => x.id === particularId);
 
             if (!studentId || !particularId) {
-                showDarasaToast({ type: 'warning', title: 'Apply advance', message: 'Select a student and a particular first.' });
+                showDarasaToast({ type: 'warning', title: 'Apply advance', message: 'Select a student and particular first.' });
                 return;
             }
             if (!date) {
@@ -700,118 +730,81 @@
                 showDarasaToast({ type: 'warning', title: 'Apply advance', message: 'Enter the amount to use from advance.' });
                 return;
             }
-
-            let advanceNotes = notes.trim();
-            if (!advanceNotes) {
-                const pName = document.getElementById('voucherParticular')?.selectedOptions?.[0]?.textContent?.trim() || 'fee';
-                const sName = document.getElementById('selectedStudentName')?.textContent?.trim() || 'student';
-                advanceNotes = `Fee payment for ${pName} (${sName}) — paid from advance balance`;
-                document.getElementById('voucherNotes').value = advanceNotes;
-            }
-
-            const btn = document.getElementById('applyAdvanceBtn');
+            const notes = `Fee payment for ${p?.name || 'fee'} (${receiptStudentName}) - paid from advance balance`;
+            const btn = document.getElementById('receiptAdvBtn');
             if (btn) btn.disabled = true;
             try {
                 const res = await axios.post(`${API_BASE}/vouchers/apply-advance`, {
-                    student_id: parseInt(studentId),
-                    particular_id: parseInt(particularId),
-                    amount,
-                    date,
-                    notes: advanceNotes,
+                    student_id: studentId, particular_id: particularId, amount, date, notes,
                 });
-                showDarasaToast({ type: 'success', title: 'Apply advance', message: 'Advance applied. Student/particular balance updated (no extra book cash — advance was already received).' });
-
-                const studentInList = allStudents.find(s => s.id == studentId);
-                if (studentInList) studentInList.advance_balance = res.data?.student_advance_balance ?? 0;
-
-                document.getElementById('applyAdvanceAmount').value = '';
-                await loadPaymentInfo();
+                showDarasaToast({ type: 'success', title: 'Apply advance', message: 'Advance applied. Student/particular balance updated.' });
+                const student = allStudents.find(s => s.id == studentId);
+                if (student) student.advance_balance = res.data?.student_advance_balance ?? 0;
+                document.getElementById('receiptAdvAmt').value = '';
+                await loadStudentReceiptParticulars(studentId);
+                document.getElementById('receiptParticular').value = particularId;
+                onReceiptParticularChange();
                 loadVouchers(currentVoucherPage);
-            } catch (error) {
-                showDarasaToast({ type: 'error', title: 'Apply advance', message: darasaAxiosMessage(error) });
+            } catch (e) {
+                showDarasaToast({ type: 'error', title: 'Apply advance', message: darasaAxiosMessage(e) });
             } finally {
                 if (btn) btn.disabled = false;
             }
         }
 
-        async function createVoucher(event) {
-            event.preventDefault();
-            if (feeEntrySaveInFlight) {
+        async function submitNewReceipt() {
+            if (receiptSaveInFlight) return;
+            const date      = document.getElementById('receiptDate').value;
+            const bookId    = document.getElementById('receiptBook').value;
+            const totalPaid = parseMoneyInput(document.getElementById('receiptTotalPaid')?.value);
+
+            if (!receiptStudentId) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Select a student first.' }); return;
+            }
+            if (!date) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Select a date.' }); return;
+            }
+            if (!bookId) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Select a book / account.' }); return;
+            }
+            if (receiptItems.length === 0) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Add at least one particular before saving.' }); return;
+            }
+
+            const totalAdded = receiptItems.reduce((s, i) => s + i.amount, 0);
+            if (totalPaid > 0 && totalAdded > totalPaid + 0.005) {
+                showDarasaToast({ type: 'error', title: 'Fee entry', message: `Entered amounts (${formatTSh(totalAdded)}) exceed total received (${formatTSh(totalPaid)}).` });
                 return;
             }
 
-            const submitBtn = event.submitter || (event.target && event.target.querySelector && event.target.querySelector('button[type="submit"]'));
+            const advanceAmount = totalPaid > 0 ? Math.max(0, totalPaid - totalAdded) : 0;
+            const notes = document.getElementById('receiptNotes').value.trim() ||
+                `Receipt â€” ${receiptItems.map(i => i.particularName).join(', ')} (${receiptStudentName})`;
 
-            const date = document.getElementById('voucherDate').value;
-            const studentId = document.getElementById('selectedStudentId').value;
-            const particularId = document.getElementById('voucherParticular').value;
-            const voucherType = document.getElementById('voucherType').value;
-            const amount = parseMoneyInput(document.getElementById('voucherAmount').value);
-            const notes = document.getElementById('voucherNotes').value;
-            const bookId = document.getElementById('voucherBook').value || null;
-
-            if (!date || !studentId || !particularId || !voucherType) {
-                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Please complete date, particular, voucher type, and select a student.' });
-                return;
-            }
-            if (!amount || amount <= 0) {
-                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Please enter a valid amount greater than zero.' });
-                return;
-            }
-            if (!notes.trim()) {
-                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Please enter a reason / description for this entry.' });
-                return;
-            }
-            if ((voucherType === 'Receipt' || voucherType === 'Payment') && !bookId) {
-                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Please select the book/account for this receipt or payment.' });
-                return;
-            }
-
-            feeEntrySaveInFlight = true;
-            if (submitBtn) {
-                submitBtn.disabled = true;
-            }
-
-            let debit = 0, credit = 0;
-            if (voucherType === 'Sales') {
-                debit = amount;
-            } else if (voucherType === 'Receipt') {
-                // Stored as debit in DB (cash/book ledgers); fee-entry list shows this under Credit for clarity.
-                debit = amount;
-            } else {
-                // Payment is money out -> CR (credit)
-                credit = amount;
-            }
-
+            receiptSaveInFlight = true;
+            const btn = document.getElementById('receiptSubmitBtn');
+            if (btn) btn.disabled = true;
             try {
-                const res = await axios.post(`${API_BASE}/vouchers`, {
+                await axios.post(`${API_BASE}/vouchers/batch-receipt`, {
                     date,
-                    student_id: parseInt(studentId),
-                    particular_id: parseInt(particularId),
-                    book_id: bookId ? parseInt(bookId) : null,
-                    voucher_type: voucherType,
-                    debit,
-                    credit,
-                    notes
+                    student_id: receiptStudentId,
+                    book_id: parseInt(bookId),
+                    notes,
+                    items: receiptItems.map(i => ({ particular_id: i.particularId, amount: i.amount })),
+                    advance_amount: advanceAmount,
                 });
-                let msg = 'Entry saved successfully.';
-                if (res.data && res.data.advance_voucher) {
-                    msg += '\n\nPart of this receipt was over the fee balance and was recorded separately as an advance on the student (you will see two receipt lines).';
-                }
+                let msg = `${receiptItems.length} particular(s) saved. One entry added to ledger.`;
+                if (advanceAmount > 0.005) msg += ` ${formatTSh(advanceAmount)} added to student advance balance.`;
                 showDarasaToast({ type: 'success', title: 'Fee entry', message: msg, duration: 8000 });
+                closeVoucherForm();
                 loadVouchers();
-                const savedStudentName = document.getElementById('selectedStudentName')?.textContent?.trim() || 'student';
-                showFeeEntryNextAction(savedStudentName);
-            } catch (error) {
-                showDarasaToast({ type: 'error', title: 'Fee entry', message: darasaAxiosMessage(error) });
+            } catch (e) {
+                showDarasaToast({ type: 'error', title: 'Fee entry', message: darasaAxiosMessage(e) });
             } finally {
-                feeEntrySaveInFlight = false;
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                }
+                receiptSaveInFlight = false;
+                if (btn) btn.disabled = false;
             }
         }
-
         async function voidVoucher(id) {
             const reason = prompt('Reason for voiding this voucher (kept on the audit record):');
             if (reason === null) return;
@@ -826,55 +819,6 @@
             } catch (error) {
                 showDarasaToast({ type: 'error', title: 'Fee entry', message: darasaAxiosMessage(error) });
             }
-        }
-
-        function showFeeEntryNextAction(studentName) {
-            const btnArea = document.querySelector('#voucherFormContainer .flex.gap-3.pt-3.border-t-2');
-            if (!btnArea) { closeVoucherForm(); return; }
-            btnArea.innerHTML = `
-                <div class="w-full">
-                    <p class="text-sm font-semibold text-green-700 mb-3">&#10003; Entry saved!</p>
-                    <div class="flex gap-3">
-                        <button type="button" onclick="addAnotherParticular()"
-                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded font-bold transition text-sm">
-                            Add another particular for ${studentName}
-                        </button>
-                        <button type="button" onclick="closeVoucherForm()"
-                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
-                            Done
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function addAnotherParticular() {
-            const particularEl = document.getElementById('voucherParticular');
-            const typeEl = document.getElementById('voucherType');
-            const amountEl = document.getElementById('voucherAmount');
-            const notesEl = document.getElementById('voucherNotes');
-            if (particularEl) particularEl.value = '';
-            if (typeEl) typeEl.value = '';
-            if (amountEl) amountEl.value = '';
-            if (notesEl) notesEl.value = '';
-            document.getElementById('amountSection')?.classList.add('hidden');
-            document.getElementById('paymentInfoDisplay')?.classList.add('hidden');
-            document.getElementById('applyAdvanceRow')?.classList.add('hidden');
-            document.getElementById('bookSelection')?.classList.add('hidden');
-            voucherNotesTouched = false;
-            feeEntrySaveInFlight = false;
-            const btnArea = document.querySelector('#voucherFormContainer .flex.gap-3.pt-3.border-t-2');
-            if (btnArea) {
-                btnArea.innerHTML = `
-                    <button type="submit" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded font-bold transition text-sm">
-                         Save Entry
-                    </button>
-                    <button type="button" onclick="closeVoucherForm()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
-                         Cancel
-                    </button>
-                `;
-            }
-            document.getElementById('voucherParticular')?.focus();
         }
 
         function closeVoucherForm() {
@@ -1433,233 +1377,5 @@
         }
 
         // ── Batch Receipt ──────────────────────────────────────────────────────────
-        // Batch mode: select student once, fill amounts for multiple particulars,
-        // save once. Individual particular_student credits tracked per particular;
-        // bank/cash ledger shows ONE combined voucher entry for reconciliation.
-
-        let batchStudentId = null;
-        let batchStudentName = '';
-        let batchSaveInFlight = false;
-
-        function showBatchPaymentForm() {
-            const classOptions = allClasses.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-            const bookOptions = allBooks.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-            const particularsOptions = allParticulars.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-            batchStudentId = null;
-            batchStudentName = '';
-            batchSaveInFlight = false;
-
-            document.getElementById('voucherFormContainer').innerHTML = `
-                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-2">
-                    <div class="bg-white rounded-lg p-4 max-w-2xl w-full shadow-2xl my-2 max-h-[95vh] overflow-y-auto">
-                        <h3 class="text-xl font-bold mb-1 text-indigo-700">Batch Receipt</h3>
-                        <p class="text-xs text-gray-500 mb-4">Enter all payments for one student at once. One combined entry will appear in the bank/cash ledger.</p>
-
-                        <!-- Student selection -->
-                        <div class="border-2 border-blue-200 rounded p-3 bg-blue-50 mb-3">
-                            <h4 class="text-sm font-bold mb-2 text-blue-800">Select Student</h4>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs font-bold mb-1">Search by Name</label>
-                                    <input type="text" id="batchStudentSearch" onkeyup="batchSearchStudents()"
-                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
-                                        placeholder="Type student name...">
-                                    <div id="batchStudentResults" class="mt-1"></div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold mb-1">Or select by Class</label>
-                                    <select id="batchClass" onchange="batchLoadClassStudents()"
-                                        class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none">
-                                        <option value="">-- Select Class --</option>
-                                        ${classOptions}
-                                    </select>
-                                    <div id="batchClassResults" class="mt-1"></div>
-                                </div>
-                            </div>
-                            <div id="batchSelectedStudentDisplay" class="mt-2 p-2 bg-white rounded border-2 border-green-500 hidden">
-                                <p class="text-xs font-bold text-green-600">Selected:</p>
-                                <p id="batchSelectedStudentName" class="font-bold text-sm"></p>
-                            </div>
-                        </div>
-
-                        <!-- Date + Book -->
-                        <div class="grid grid-cols-2 gap-3 mb-3">
-                            <div>
-                                <label class="block text-xs font-bold mb-1">Date *</label>
-                                <input type="text" id="batchDate" required
-                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
-                                    placeholder="Select date">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-bold mb-1">Book / Account *</label>
-                                <select id="batchBook" required
-                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none">
-                                    <option value="">-- Select Book --</option>
-                                    ${bookOptions}
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Particulars list -->
-                        <div class="mb-3">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-bold text-gray-700">Particulars & Amounts</h4>
-                                <button type="button" onclick="batchAddRow()" class="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded transition">
-                                    + Add particular
-                                </button>
-                            </div>
-                            <div id="batchRows" class="space-y-2">
-                                <!-- rows added dynamically -->
-                            </div>
-                            <div class="mt-2 flex justify-end">
-                                <span class="text-sm font-bold text-gray-700">Total: <span id="batchTotal" class="text-indigo-700">TSh 0.00</span></span>
-                            </div>
-                        </div>
-
-                        <!-- Notes -->
-                        <div class="mb-3">
-                            <label class="block text-xs font-bold mb-1">Notes (optional)</label>
-                            <input type="text" id="batchNotes"
-                                class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-indigo-500 focus:outline-none"
-                                placeholder="e.g. Cash receipt — will prefill automatically">
-                        </div>
-
-                        <div class="flex gap-3 pt-3 border-t-2">
-                            <button type="button" onclick="submitBatchPayment()"
-                                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold transition text-sm">
-                                Save Batch Receipt
-                            </button>
-                            <button type="button" onclick="closeBatchForm()"
-                                class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded font-bold transition text-sm">
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            flatpickr('#batchDate', { dateFormat: 'Y-m-d', defaultDate: 'today' });
-            // Add two initial rows
-            batchAddRow();
-            batchAddRow();
-        }
-
-        function batchAddRow() {
-            const particularsOptions = allParticulars.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-            const rowHtml = `
-                <div class="batch-row flex gap-2 items-center">
-                    <select class="flex-1 border-2 border-gray-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 batch-particular">
-                        <option value="">-- Particular --</option>
-                        ${particularsOptions}
-                    </select>
-                    <input type="text" class="w-32 border-2 border-gray-300 rounded px-2 py-1.5 text-sm focus:border-indigo-500 batch-amount"
-                        placeholder="0.00" inputmode="decimal"
-                        onfocus="this.value = this.value.replace(/,/g,'')"
-                        onblur="this.value = this.value ? parseFloat(this.value.replace(/,/g,'')||0).toLocaleString('en-TZ',{minimumFractionDigits:2}) : ''"
-                        oninput="recalcBatchTotal()">
-                    <button type="button" onclick="this.closest('.batch-row').remove(); recalcBatchTotal()"
-                        class="text-red-400 hover:text-red-600 text-lg leading-none">&times;</button>
-                </div>
-            `;
-            document.getElementById('batchRows').insertAdjacentHTML('beforeend', rowHtml);
-        }
-
-        function recalcBatchTotal() {
-            let total = 0;
-            document.querySelectorAll('.batch-amount').forEach(el => {
-                total += parseMoneyInput(el.value);
-            });
-            const el = document.getElementById('batchTotal');
-            if (el) el.textContent = 'TSh ' + total.toLocaleString('en-TZ', { minimumFractionDigits: 2 });
-        }
-
-        function batchSearchStudents() {
-            const term = document.getElementById('batchStudentSearch').value.toLowerCase();
-            if (term.length < 2) { document.getElementById('batchStudentResults').innerHTML = ''; return; }
-            const matches = allStudents.filter(s => s.name.toLowerCase().includes(term)).slice(0, 5);
-            document.getElementById('batchStudentResults').innerHTML = '<div class="space-y-1 max-h-32 overflow-y-auto">' +
-                matches.map(s => `<div onclick="batchSelectStudent(${s.id},'${s.name.replace(/'/g,"\\'")}')"`+
-                    ` class="p-1.5 bg-white border rounded cursor-pointer hover:bg-indigo-50 text-xs"><strong>${s.name}</strong> · ${s.student_reg_no}</div>`
-                ).join('') + '</div>';
-        }
-
-        function batchLoadClassStudents() {
-            const classId = document.getElementById('batchClass').value;
-            if (!classId) { document.getElementById('batchClassResults').innerHTML = ''; return; }
-            const students = allStudents.filter(s => s.class_id == classId);
-            document.getElementById('batchClassResults').innerHTML =
-                `<select class="w-full border-2 border-gray-300 rounded px-2 py-2 text-sm" onchange="batchSelectStudentFromClass(this.value)">
-                    <option value="">-- Select Student --</option>
-                    ${students.map(s => `<option value="${s.id}">${s.name} (${s.student_reg_no})</option>`).join('')}
-                </select>`;
-        }
-
-        function batchSelectStudentFromClass(id) {
-            if (!id) return;
-            const s = allStudents.find(x => x.id == id);
-            if (s) batchSelectStudent(s.id, s.name);
-        }
-
-        function batchSelectStudent(id, name) {
-            batchStudentId = id;
-            batchStudentName = name;
-            document.getElementById('batchSelectedStudentName').textContent = name;
-            document.getElementById('batchSelectedStudentDisplay').classList.remove('hidden');
-            document.getElementById('batchStudentSearch').value = '';
-            document.getElementById('batchStudentResults').innerHTML = '';
-        }
-
-        async function submitBatchPayment() {
-            if (batchSaveInFlight) return;
-            if (!batchStudentId) {
-                showDarasaToast({ type: 'warning', title: 'Batch receipt', message: 'Select a student first.' });
-                return;
-            }
-            const date = document.getElementById('batchDate').value;
-            const bookId = document.getElementById('batchBook').value;
-            if (!date || !bookId) {
-                showDarasaToast({ type: 'warning', title: 'Batch receipt', message: 'Select date and book.' });
-                return;
-            }
-
-            const rows = [...document.querySelectorAll('.batch-row')];
-            const items = rows.map(row => ({
-                particular_id: parseInt(row.querySelector('.batch-particular').value) || null,
-                amount: parseMoneyInput(row.querySelector('.batch-amount').value),
-            })).filter(i => i.particular_id && i.amount > 0);
-
-            if (items.length === 0) {
-                showDarasaToast({ type: 'warning', title: 'Batch receipt', message: 'Add at least one particular with an amount.' });
-                return;
-            }
-
-            const notes = document.getElementById('batchNotes').value.trim() ||
-                `Batch receipt — ${items.length} particular(s) — ${batchStudentName}`;
-
-            batchSaveInFlight = true;
-            const btn = document.querySelector('#voucherFormContainer button[onclick="submitBatchPayment()"]');
-            if (btn) btn.disabled = true;
-
-            try {
-                await axios.post(`${API_BASE}/vouchers/batch-receipt`, {
-                    date, student_id: batchStudentId, book_id: parseInt(bookId),
-                    notes, items,
-                });
-                showDarasaToast({ type: 'success', title: 'Batch receipt', message: `${items.length} particular(s) saved. One entry added to ledger.`, duration: 6000 });
-                closeBatchForm();
-                loadVouchers();
-            } catch (e) {
-                showDarasaToast({ type: 'error', title: 'Batch receipt', message: darasaAxiosMessage(e) });
-            } finally {
-                batchSaveInFlight = false;
-                if (btn) btn.disabled = false;
-            }
-        }
-
-        function closeBatchForm() {
-            document.getElementById('voucherFormContainer').innerHTML = '';
-            batchStudentId = null;
-            batchStudentName = '';
-        }
     </script>
 @endpush

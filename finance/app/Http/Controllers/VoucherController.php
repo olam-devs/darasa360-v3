@@ -212,13 +212,14 @@ class VoucherController extends Controller
     public function batchReceipt(Request $request)
     {
         $validated = $request->validate([
-            'date'       => 'required|date',
-            'student_id' => 'required|exists:students,id',
-            'book_id'    => 'required|exists:books,id',
-            'notes'      => 'nullable|string',
-            'items'      => 'required|array|min:1',
+            'date'           => 'required|date',
+            'student_id'     => 'required|exists:students,id',
+            'book_id'        => 'required|exists:books,id',
+            'notes'          => 'nullable|string',
+            'items'          => 'required|array|min:1',
             'items.*.particular_id' => 'required|exists:particulars,id',
             'items.*.amount'        => 'required|numeric|min:0.01',
+            'advance_amount' => 'nullable|numeric|min:0',
         ]);
 
         DB::beginTransaction();
@@ -248,8 +249,16 @@ class VoucherController extends Controller
                 $particularsApplied[] = $particular->name;
             }
 
+            // Handle advance (remainder of total received beyond the particulars)
+            $advanceAmount = (float) ($validated['advance_amount'] ?? 0);
+            if ($advanceAmount > 0) {
+                $student->advance_balance = (float) $student->advance_balance + $advanceAmount;
+                $student->save();
+                $totalAmount += $advanceAmount;
+            }
+
             $notes = trim($validated['notes'] ?? '') ?: sprintf(
-                'Batch receipt — %d particular(s) [%s] (%s)',
+                'Receipt — %d particular(s) [%s] (%s)',
                 count($particularsApplied),
                 implode(', ', $particularsApplied),
                 $student->name
@@ -257,21 +266,26 @@ class VoucherController extends Controller
 
             // ONE combined voucher for the book/cash ledger
             $voucher = Voucher::create([
-                'date'       => $validated['date'],
-                'student_id' => $validated['student_id'],
+                'date'          => $validated['date'],
+                'student_id'    => $validated['student_id'],
                 'particular_id' => null,
-                'book_id'    => $validated['book_id'],
-                'voucher_type' => 'Receipt',
-                'debit'      => $totalAmount,
-                'credit'     => 0,
-                'payment_by_receipt_to' => 'Batch Receipt',
-                'notes'      => $notes,
-                'created_by' => auth()->id(),
+                'book_id'       => $validated['book_id'],
+                'voucher_type'  => 'Receipt',
+                'debit'         => $totalAmount,
+                'credit'        => 0,
+                'payment_by_receipt_to' => 'Receipt',
+                'notes'         => $notes,
+                'created_by'    => auth()->id(),
             ]);
 
             DB::commit();
 
-            return response()->json(['voucher' => $voucher, 'total' => $totalAmount], 201);
+            return response()->json([
+                'voucher'          => $voucher,
+                'total'            => $totalAmount,
+                'advance_applied'  => $advanceAmount,
+                'student_advance_balance' => $student->advance_balance,
+            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
 
