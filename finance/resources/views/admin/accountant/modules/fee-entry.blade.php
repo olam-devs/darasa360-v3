@@ -1,4 +1,4 @@
-﻿﻿﻿﻿@extends('layouts.accountant')
+﻿﻿﻿﻿﻿﻿@extends('layouts.accountant')
 
 @section('title', 'Fee Entry — Darasa Finance')
 @section('page_title', 'Fee entry')
@@ -327,11 +327,12 @@
         // â”€â”€ Receipt Entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // One student, multiple particulars, ONE combined bank/cash ledger entry.
 
-        let receiptStudentId    = null;
-        let receiptStudentName  = '';
-        let receiptItems        = [];   // [{particularId, particularName, amount}]
-        let receiptParticulars  = [];   // loaded from API when student is selected
-        let receiptSaveInFlight = false;
+        let receiptStudentId         = null;
+        let receiptStudentName       = '';
+        let receiptItems             = [];   // [{particularId, particularName, amount}]
+        let receiptParticulars       = [];   // loaded from API when student is selected
+        let receiptSaveInFlight      = false;
+        let receiptAdvanceConfirmed  = false; // true after user has acknowledged remainder-to-advance
 
         async function showCreateVoucherForm() {
             const classOptions = allClasses.map(c =>
@@ -339,41 +340,44 @@
             const bookOptions = allBooks.map(b =>
                 `<option value="${b.id}">${b.name}</option>`).join('');
 
-            receiptStudentId    = null;
-            receiptStudentName  = '';
-            receiptItems        = [];
-            receiptParticulars  = [];
-            receiptSaveInFlight = false;
+            receiptStudentId        = null;
+            receiptStudentName      = '';
+            receiptItems            = [];
+            receiptParticulars      = [];
+            receiptSaveInFlight     = false;
+            receiptAdvanceConfirmed = false;
 
             document.getElementById('voucherFormContainer').innerHTML = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-2">
                     <div class="bg-white rounded-lg p-4 max-w-4xl w-full shadow-2xl my-2 max-h-[95vh] overflow-y-auto">
                         <h3 class="text-xl font-bold mb-3 text-purple-600">Record Fee Receipt</h3>
 
-                        <!-- Date &middot; Book &middot; Total Received -->
-                        <div class="grid grid-cols-3 gap-3 mb-3">
+                        <!-- Date / Book / Total Received -->
+                        <div class=”grid grid-cols-3 gap-3 mb-3”>
                             <div>
-                                <label class="block text-xs font-bold mb-1">Date *</label>
-                                <input type="text" id="receiptDate" required
-                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
-                                    placeholder="Select date">
+                                <label class=”block text-xs font-bold mb-1”>Payment Date *</label>
+                                <input type=”text” id=”receiptDate” required
+                                    class=”w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none”
+                                    placeholder=”Select date”>
+                                <p class=”text-[11px] text-gray-400 mt-0.5”>When cash was received (entry time saved automatically)</p>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold mb-1">Book / Account *</label>
-                                <select id="receiptBook" required
-                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
-                                    <option value="">-- Select Book --</option>
+                                <label class=”block text-xs font-bold mb-1”>Book / Account *</label>
+                                <select id=”receiptBook” required
+                                    class=”w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none”>
+                                    <option value=””>-- Select Book --</option>
                                     ${bookOptions}
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold mb-1">Total Received (TSh)</label>
-                                <input type="text" id="receiptTotalPaid" inputmode="decimal"
-                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
-                                    placeholder="0.00  (optional â€” tracks remainder)"
-                                    onfocus="this.value = this.value.replace(/,/g,'')"
-                                    onblur="this.value = this.value ? parseFloat(this.value.replace(/,/g,'')||0).toLocaleString('en-TZ',{minimumFractionDigits:2}) : ''"
-                                    oninput="recalcReceiptRemaining()">
+                                <label class=”block text-xs font-bold mb-1”>Total Received (TSh) *</label>
+                                <input type=”text” id=”receiptTotalPaid” inputmode=”decimal” required
+                                    class=”w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none”
+                                    placeholder=”0.00”
+                                    onfocus=”this.value = this.value.replace(/,/g,'')”
+                                    onblur=”this.value = this.value ? parseFloat(this.value.replace(/,/g,'')||0).toLocaleString('en-TZ',{minimumFractionDigits:2}) : ''”
+                                    oninput=”recalcReceiptRemaining()”>
+                                <p class=”text-[11px] text-gray-400 mt-0.5”>Full cash amount handed over</p>
                             </div>
                         </div>
 
@@ -405,7 +409,7 @@
                             </div>
                         </div>
 
-                        <!-- Particular entry â€” shown after student is selected -->
+                        <!-- Particular entry  --  shown after student is selected -->
                         <div id="receiptParticularSection" class="hidden">
 
                             <div class="border-2 border-purple-200 rounded p-3 bg-purple-50 mb-3">
@@ -450,7 +454,7 @@
                                             <input type="text" id="receiptAdvAmt" inputmode="decimal"
                                                 class="w-full border-2 border-indigo-300 rounded px-3 py-1.5 text-sm"
                                                 placeholder="0.00">
-                                            <p class="text-[11px] text-indigo-700 mt-1">Must be â‰¤ available advance and â‰¤ outstanding.</p>
+                                            <p class="text-[11px] text-indigo-700 mt-1">Must be &#8804; available advance and &#8804; outstanding.</p>
                                         </div>
                                         <button type="button" id="receiptAdvBtn" onclick="applyReceiptAdvance()"
                                             class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded font-bold text-xs">
@@ -489,7 +493,14 @@
                                 <label class="block text-xs font-bold mb-1">Reason / description</label>
                                 <input type="text" id="receiptNotes"
                                     class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
-                                    placeholder="Auto-filled on save â€” you can edit">
+                                    placeholder="Auto-filled on save  --  you can edit">
+                            </div>
+
+                            <!-- Advance-to-balance confirmation banner (shown when remainder > 0 at save time) -->
+                            <div id="receiptAdvanceWarning" class="hidden mb-3 p-3 bg-amber-50 border-2 border-amber-400 rounded">
+                                <p class="text-sm font-bold text-amber-800 mb-1">&#9888; Remainder will go to advance balance</p>
+                                <p id="receiptAdvanceWarningText" class="text-xs text-amber-700 mb-2"></p>
+                                <p class="text-xs text-amber-600">If this is a typing error, adjust Total Received or add another particular. Otherwise click <strong>Confirm &amp; Save</strong>.</p>
                             </div>
 
                             <!-- Submit -->
@@ -581,8 +592,8 @@
                     receiptParticulars.map(p => {
                         const outstanding = Math.max(0, parseFloat(p.balance) || 0);
                         const label = outstanding > 0
-                            ? `${p.name}  â€”  outstanding: ${formatTSh(outstanding)}`
-                            : `${p.name}  âœ“ fully paid`;
+                            ? `${p.name}   --   outstanding: ${formatTSh(outstanding)}`
+                            : `${p.name}  &#10003; fully paid`;
                         return `<option value="${p.id}">${label}</option>`;
                     }).join('');
                 document.getElementById('receiptParticularSection').classList.remove('hidden');
@@ -651,15 +662,21 @@
             }
 
             receiptItems.push({ particularId, particularName: p.name, amount });
+            receiptAdvanceConfirmed = false;
             document.getElementById('receiptParticular').value = '';
             document.getElementById('receiptParticularAmt').value = '';
             document.getElementById('receiptParticularInfo').classList.add('hidden');
             document.getElementById('receiptApplyAdvRow').classList.add('hidden');
+            document.getElementById('receiptAdvanceWarning')?.classList.add('hidden');
+            document.getElementById('receiptSubmitBtn') && (document.getElementById('receiptSubmitBtn').textContent = 'Save Receipt');
             renderReceiptItems();
         }
 
         function removeReceiptItem(idx) {
             receiptItems.splice(idx, 1);
+            receiptAdvanceConfirmed = false;
+            document.getElementById('receiptAdvanceWarning')?.classList.add('hidden');
+            document.getElementById('receiptSubmitBtn') && (document.getElementById('receiptSubmitBtn').textContent = 'Save Receipt');
             renderReceiptItems();
         }
 
@@ -694,11 +711,17 @@
             let remHtml = '';
             if (totalPaid > 0) {
                 if (remainder > 0.005) {
-                    remHtml = `<span class=”text-amber-700”>Remaining: ${formatTSh(remainder)} &mdash; add more particulars, or it will go to advance on save.</span>`;
+                    remHtml = `<span class=”inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-100 border border-amber-400 text-amber-800 text-xs font-semibold”>` +
+                        `&#9888; Remaining unallocated: ${formatTSh(remainder)} &mdash; add another particular, or it will go to advance balance on save.` +
+                        `</span>`;
                 } else if (remainder < -0.005) {
-                    remHtml = `<span class="text-red-600">&#9888; Entered ${formatTSh(-remainder)} over total. Reduce an amount or increase Total Received.</span>`;
+                    remHtml = `<span class=”inline-flex items-center gap-1 px-2 py-1 rounded bg-red-100 border border-red-400 text-red-800 text-xs font-semibold”>` +
+                        `&#9888; Particulars total (${formatTSh(totalAdded)}) exceeds Total Received (${formatTSh(totalPaid)}) by ${formatTSh(-remainder)}. Reduce an amount or increase Total Received.` +
+                        `</span>`;
                 } else {
-                    remHtml = `<span class="text-green-600">&#10003; Fully distributed (${formatTSh(totalPaid)} received).</span>`;
+                    remHtml = `<span class=”inline-flex items-center gap-1 px-2 py-1 rounded bg-green-100 border border-green-400 text-green-800 text-xs font-semibold”>` +
+                        `&#10003; Fully distributed &mdash; ${formatTSh(totalPaid)} received.` +
+                        `</span>`;
                 }
             }
 
@@ -708,6 +731,10 @@
         }
 
         function recalcReceiptRemaining() {
+            receiptAdvanceConfirmed = false;
+            document.getElementById('receiptAdvanceWarning')?.classList.add('hidden');
+            const btn = document.getElementById('receiptSubmitBtn');
+            if (btn) btn.textContent = 'Save Receipt';
             if (receiptItems.length > 0) renderReceiptItems();
         }
 
@@ -762,24 +789,45 @@
                 showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Select a student first.' }); return;
             }
             if (!date) {
-                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Select a date.' }); return;
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Select the payment date.' }); return;
             }
             if (!bookId) {
                 showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Select a book / account.' }); return;
+            }
+            if (!totalPaid || totalPaid <= 0) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Enter the total amount received.' }); return;
             }
             if (receiptItems.length === 0) {
                 showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Add at least one particular before saving.' }); return;
             }
 
             const totalAdded = receiptItems.reduce((s, i) => s + i.amount, 0);
-            if (totalPaid > 0 && totalAdded > totalPaid + 0.005) {
-                showDarasaToast({ type: 'error', title: 'Fee entry', message: `Entered amounts (${formatTSh(totalAdded)}) exceed total received (${formatTSh(totalPaid)}).` });
+            if (totalAdded > totalPaid + 0.005) {
+                showDarasaToast({ type: 'error', title: 'Fee entry', message: `Particulars total (${formatTSh(totalAdded)}) exceeds Total Received (${formatTSh(totalPaid)}). Reduce an amount or increase Total Received.` });
                 return;
             }
 
-            const advanceAmount = totalPaid > 0 ? Math.max(0, totalPaid - totalAdded) : 0;
+            const advanceAmount = Math.max(0, totalPaid - totalAdded);
+
+            // If there's a remainder heading to advance, ask user to confirm once
+            if (advanceAmount > 0.005 && !receiptAdvanceConfirmed) {
+                receiptAdvanceConfirmed = true;
+                const warnEl = document.getElementById('receiptAdvanceWarning');
+                const warnText = document.getElementById('receiptAdvanceWarningText');
+                if (warnEl && warnText) {
+                    warnText.textContent =
+                        `${formatTSh(advanceAmount)} (= Total Received ${formatTSh(totalPaid)} minus particulars ${formatTSh(totalAdded)}) ` +
+                        `will be added to ${receiptStudentName}'s advance balance.`;
+                    warnEl.classList.remove('hidden');
+                    warnEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+                const btn = document.getElementById('receiptSubmitBtn');
+                if (btn) btn.textContent = 'Confirm & Save';
+                return;
+            }
+
             const notes = document.getElementById('receiptNotes').value.trim() ||
-                `Receipt â€” ${receiptItems.map(i => i.particularName).join(', ')} (${receiptStudentName})`;
+                `Receipt - ${receiptItems.map(i => i.particularName).join(', ')} (${receiptStudentName})`;
 
             receiptSaveInFlight = true;
             const btn = document.getElementById('receiptSubmitBtn');
