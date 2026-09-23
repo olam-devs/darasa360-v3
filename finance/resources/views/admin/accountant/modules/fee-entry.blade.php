@@ -30,6 +30,8 @@
 @push('scripts')
     <script>
         const API_BASE = '/api';
+        const SCHOOL_NAME = @json(optional($settings)->school_name ?: config('app.name', 'Darasa Finance'));
+        const SCHOOL_LOGO = @json(optional($settings)->logo_path ? asset('storage/' . $settings->logo_path) : null);
         let allBooks = [];
         let allParticulars = [];
         let allStudents = [];
@@ -324,7 +326,7 @@
             }, 350);
         }
 
-        // â”€â”€ Receipt Entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // â"€â"€ Receipt Entry â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
         // One student, multiple particulars, ONE combined bank/cash ledger entry.
 
         let receiptStudentId         = null;
@@ -353,31 +355,31 @@
                         <h3 class="text-xl font-bold mb-3 text-purple-600">Record Fee Receipt</h3>
 
                         <!-- Date / Book / Total Received -->
-                        <div class=”grid grid-cols-3 gap-3 mb-3”>
+                        <div class="grid grid-cols-3 gap-3 mb-3">
                             <div>
-                                <label class=”block text-xs font-bold mb-1”>Payment Date *</label>
-                                <input type=”text” id=”receiptDate” required
-                                    class=”w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none”
-                                    placeholder=”Select date”>
-                                <p class=”text-[11px] text-gray-400 mt-0.5”>When cash was received (entry time saved automatically)</p>
+                                <label class="block text-xs font-bold mb-1">Payment Date *</label>
+                                <input type="text" id="receiptDate" required
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                    placeholder="Select date">
+                                <p class="text-[11px] text-gray-400 mt-0.5">When cash was received (entry time saved automatically)</p>
                             </div>
                             <div>
-                                <label class=”block text-xs font-bold mb-1”>Book / Account *</label>
-                                <select id=”receiptBook” required
-                                    class=”w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none”>
-                                    <option value=””>-- Select Book --</option>
+                                <label class="block text-xs font-bold mb-1">Book / Account *</label>
+                                <select id="receiptBook" required
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none">
+                                    <option value="">-- Select Book --</option>
                                     ${bookOptions}
                                 </select>
                             </div>
                             <div>
-                                <label class=”block text-xs font-bold mb-1”>Total Received (TSh) *</label>
-                                <input type=”text” id=”receiptTotalPaid” inputmode=”decimal” required
-                                    class=”w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none”
-                                    placeholder=”0.00”
-                                    onfocus=”this.value = this.value.replace(/,/g,'')”
-                                    onblur=”this.value = this.value ? parseFloat(this.value.replace(/,/g,'')||0).toLocaleString('en-TZ',{minimumFractionDigits:2}) : ''”
-                                    oninput=”recalcReceiptRemaining()”>
-                                <p class=”text-[11px] text-gray-400 mt-0.5”>Full cash amount handed over</p>
+                                <label class="block text-xs font-bold mb-1">Total Received (TSh) *</label>
+                                <input type="text" id="receiptTotalPaid" inputmode="decimal" required
+                                    class="w-full border-2 border-gray-300 rounded px-3 py-1.5 text-sm focus:border-purple-500 focus:outline-none"
+                                    placeholder="0.00"
+                                    onfocus="this.value = this.value.replace(/,/g,'')"
+                                    onblur="this.value = this.value ? parseFloat(this.value.replace(/,/g,'')||0).toLocaleString('en-TZ',{minimumFractionDigits:2}) : ''"
+                                    oninput="recalcReceiptRemaining()">
+                                <p class="text-[11px] text-gray-400 mt-0.5">Full cash amount handed over</p>
                             </div>
                         </div>
 
@@ -522,7 +524,7 @@
             flatpickr('#receiptDate', { dateFormat: 'Y-m-d', defaultDate: 'today' });
         }
 
-        // â”€â”€ Student search / selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // â"€â"€ Student search / selection â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
         function searchStudentsByName() {
             const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
@@ -580,7 +582,7 @@
             await loadStudentReceiptParticulars(studentId);
         }
 
-        // â”€â”€ Per-student particulars + analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // â"€â"€ Per-student particulars + analytics â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
         async function loadStudentReceiptParticulars(studentId) {
             try {
@@ -711,15 +713,15 @@
             let remHtml = '';
             if (totalPaid > 0) {
                 if (remainder > 0.005) {
-                    remHtml = `<span class=”inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-100 border border-amber-400 text-amber-800 text-xs font-semibold”>` +
+                    remHtml = `<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-100 border border-amber-400 text-amber-800 text-xs font-semibold">` +
                         `&#9888; Remaining unallocated: ${formatTSh(remainder)} &mdash; add another particular, or it will go to advance balance on save.` +
                         `</span>`;
                 } else if (remainder < -0.005) {
-                    remHtml = `<span class=”inline-flex items-center gap-1 px-2 py-1 rounded bg-red-100 border border-red-400 text-red-800 text-xs font-semibold”>` +
+                    remHtml = `<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-100 border border-red-400 text-red-800 text-xs font-semibold">` +
                         `&#9888; Particulars total (${formatTSh(totalAdded)}) exceeds Total Received (${formatTSh(totalPaid)}) by ${formatTSh(-remainder)}. Reduce an amount or increase Total Received.` +
                         `</span>`;
                 } else {
-                    remHtml = `<span class=”inline-flex items-center gap-1 px-2 py-1 rounded bg-green-100 border border-green-400 text-green-800 text-xs font-semibold”>` +
+                    remHtml = `<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-100 border border-green-400 text-green-800 text-xs font-semibold">` +
                         `&#10003; Fully distributed &mdash; ${formatTSh(totalPaid)} received.` +
                         `</span>`;
                 }
@@ -833,7 +835,7 @@
             const btn = document.getElementById('receiptSubmitBtn');
             if (btn) btn.disabled = true;
             try {
-                await axios.post(`${API_BASE}/vouchers/batch-receipt`, {
+                const res = await axios.post(`${API_BASE}/vouchers/batch-receipt`, {
                     date,
                     student_id: receiptStudentId,
                     book_id: parseInt(bookId),
@@ -841,11 +843,20 @@
                     items: receiptItems.map(i => ({ particular_id: i.particularId, amount: i.amount })),
                     advance_amount: advanceAmount,
                 });
-                let msg = `${receiptItems.length} particular(s) saved. One entry added to ledger.`;
-                if (advanceAmount > 0.005) msg += ` ${formatTSh(advanceAmount)} added to student advance balance.`;
-                showDarasaToast({ type: 'success', title: 'Fee entry', message: msg, duration: 8000 });
-                closeVoucherForm();
                 loadVouchers();
+                const bookName  = (allBooks.find(b => b.id == bookId) || {}).name || bookId;
+                const student   = allStudents.find(s => s.id == receiptStudentId);
+                showReceiptPreview({
+                    voucherId:   res.data.voucher?.id,
+                    date,
+                    studentName: receiptStudentName,
+                    className:   student?.school_class?.name || '',
+                    items:       receiptItems,
+                    totalPaid:   parseFloat(totalPaid),
+                    advance:     advanceAmount,
+                    bookName,
+                    notes,
+                });
             } catch (e) {
                 showDarasaToast({ type: 'error', title: 'Fee entry', message: darasaAxiosMessage(e) });
             } finally {
@@ -871,6 +882,120 @@
 
         function closeVoucherForm() {
             document.getElementById('voucherFormContainer').innerHTML = '';
+        }
+
+        function showReceiptPreview({ voucherId, date, studentName, className, items, totalPaid, advance, bookName, notes }) {
+            const rows = items.map(i => `
+                <tr>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;">${i.particularName}</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-family:monospace;">${formatTSh(i.amount)}</td>
+                </tr>`).join('');
+
+            const advanceRow = advance > 0.005 ? `
+                <tr>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;font-style:italic;color:#6b7280;">Advance balance added</td>
+                    <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-family:monospace;color:#6b7280;">${formatTSh(advance)}</td>
+                </tr>` : '';
+
+            const logoHtml = SCHOOL_LOGO
+                ? `<img src="${SCHOOL_LOGO}" style="height:52px;object-fit:contain;margin:0 auto 6px;" onerror="this.style.display='none'">`
+                : '';
+
+            const receiptNo = voucherId ? `#${String(voucherId).padStart(5, '0')}` : '';
+            const safeStudent = studentName.replace(/'/g, "\\'");
+
+            const container = document.getElementById('voucherFormContainer');
+            container.innerHTML = `
+                <style id="receipt-print-style">
+                    @media print {
+                        body * { visibility: hidden; }
+                        #receipt-print-root, #receipt-print-root * { visibility: visible; }
+                        #receipt-print-root {
+                            position: fixed !important; inset: 0; background: white !important;
+                            display: flex; align-items: flex-start; justify-content: center;
+                            padding: 20px; overflow: visible;
+                        }
+                        .receipt-card { box-shadow: none !important; border: 1px solid #ccc !important; max-width: 420px !important; }
+                        .no-print { display: none !important; }
+                    }
+                </style>
+                <div id="receipt-print-root" class="fixed inset-0 bg-black bg-opacity-60 flex items-start justify-center z-50 overflow-y-auto py-6 px-4">
+                    <div class="receipt-card bg-white rounded-xl shadow-2xl w-full max-w-md">
+
+                        <!-- Receipt header -->
+                        <div style="background:linear-gradient(135deg,#6d28d9,#4f46e5);border-radius:12px 12px 0 0;padding:20px 24px 16px;text-align:center;color:white;">
+                            ${logoHtml}
+                            <div style="font-size:1.1rem;font-weight:700;letter-spacing:.3px;">${SCHOOL_NAME}</div>
+                            <div style="font-size:.75rem;opacity:.85;margin-top:2px;">Fee Payment Receipt</div>
+                            ${receiptNo ? `<div style="font-size:.7rem;opacity:.7;margin-top:2px;">Receipt No. ${receiptNo}</div>` : ''}
+                        </div>
+
+                        <!-- Meta row -->
+                        <div style="display:flex;justify-content:space-between;padding:12px 20px;background:#f9fafb;font-size:.78rem;color:#4b5563;border-bottom:1px solid #e5e7eb;">
+                            <div><span style="font-weight:600;">Date:</span> ${date}</div>
+                            <div><span style="font-weight:600;">Book:</span> ${bookName}</div>
+                        </div>
+
+                        <!-- Student -->
+                        <div style="padding:14px 20px;border-bottom:1px solid #e5e7eb;">
+                            <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px;color:#9ca3af;margin-bottom:2px;">Received from</div>
+                            <div style="font-weight:700;font-size:1rem;color:#1f2937;">${studentName}</div>
+                            ${className ? `<div style="font-size:.8rem;color:#6b7280;">Class: ${className}</div>` : ''}
+                        </div>
+
+                        <!-- Items table -->
+                        <div style="padding:0 20px 4px;">
+                            <table style="width:100%;border-collapse:collapse;font-size:.85rem;color:#374151;">
+                                <thead>
+                                    <tr style="background:#f3f4f6;">
+                                        <th style="padding:8px 10px;text-align:left;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;">Particular</th>
+                                        <th style="padding:8px 10px;text-align:right;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;color:#6b7280;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}${advanceRow}</tbody>
+                                <tfoot>
+                                    <tr style="background:#ede9fe;">
+                                        <td style="padding:10px;font-weight:700;color:#4c1d95;">TOTAL RECEIVED</td>
+                                        <td style="padding:10px;text-align:right;font-weight:700;font-family:monospace;font-size:1rem;color:#4c1d95;">${formatTSh(totalPaid)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        ${notes ? `<div style="padding:8px 20px 4px;font-size:.78rem;color:#6b7280;font-style:italic;">${notes}</div>` : ''}
+
+                        <!-- Signature line -->
+                        <div style="display:flex;justify-content:space-between;padding:16px 24px 8px;font-size:.78rem;color:#9ca3af;">
+                            <div style="border-top:1px solid #d1d5db;padding-top:4px;min-width:120px;text-align:center;">Received by</div>
+                            <div style="border-top:1px solid #d1d5db;padding-top:4px;min-width:120px;text-align:center;">Student / Guardian</div>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="no-print" style="padding:12px 20px 20px;display:flex;flex-direction:column;gap:8px;">
+                            <button onclick="window.print()"
+                                style="width:100%;background:#4f46e5;color:white;font-weight:700;padding:10px;border:none;border-radius:8px;cursor:pointer;font-size:.875rem;display:flex;align-items:center;justify-content:center;gap:6px;">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M9 22h6v-4H9v4z"/></svg>
+                                Print Receipt
+                            </button>
+                            <button onclick="addAnotherParticular(${voucherId ? parseInt(items[0]?.particularId) || 0 : 0}, '${safeStudent}')"
+                                style="width:100%;background:#ede9fe;color:#5b21b6;font-weight:600;padding:10px;border:none;border-radius:8px;cursor:pointer;font-size:.875rem;">
+                                + Add another particular for this student
+                            </button>
+                            <button onclick="closeVoucherForm()"
+                                style="width:100%;background:#f3f4f6;color:#374151;font-weight:500;padding:10px;border:none;border-radius:8px;cursor:pointer;font-size:.875rem;">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function addAnotherParticular(_, studentName) {
+            const sid  = receiptStudentId;
+            const snam = receiptStudentName || studentName;
+            await showCreateVoucherForm();
+            selectStudent(sid, snam);
         }
 
         // Scholarship Management Functions
