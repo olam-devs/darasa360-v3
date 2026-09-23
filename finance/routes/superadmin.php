@@ -33,6 +33,8 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
 Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [SuperAdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/owner-dashboard', [SuperAdminDashboardController::class, 'ownerDashboard'])->name('owner-dashboard');
+    Route::get('/api/schools-live-stats', [SuperAdminDashboardController::class, 'schoolsLiveStats'])->name('api.schools-live-stats');
 
     // School Management
     Route::resource('schools', SchoolController::class);

@@ -19,6 +19,7 @@
                 <span class="hidden truncate text-sm text-slate-600 sm:inline">@yield('nav_title', 'Super Admin')</span>
             </div>
             <div class="flex flex-wrap items-center justify-end gap-2 text-sm sm:gap-4">
+                <a href="{{ route('superadmin.owner-dashboard') }}" class="rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 {{ request()->routeIs('superadmin.owner-dashboard') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Overview</a>
                 <a href="{{ route('superadmin.dashboard') }}" class="rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 {{ request()->routeIs('superadmin.dashboard') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Dashboard</a>
                 <a href="{{ route('superadmin.schools.index') }}" class="rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 {{ request()->routeIs('superadmin.schools.*') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Schools</a>
                 <a href="{{ route('superadmin.activity-logs') }}" class="rounded-lg px-2 py-1 text-slate-600 hover:bg-blue-50 hover:text-blue-800 {{ request()->routeIs('superadmin.activity-logs') ? 'bg-blue-100 font-semibold text-blue-800' : '' }}">Logs</a>

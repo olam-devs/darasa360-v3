@@ -7,6 +7,7 @@ use App\Models\Central\School;
 use App\Models\Central\ActivityLog;
 use App\Models\Central\AnalyticsSummary;
 use App\Models\Central\AppErrorLog;
+use App\Services\TenantDatabaseManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -147,5 +148,89 @@ class SuperAdminDashboardController extends Controller
         $schools = School::orderBy('name')->get(['id', 'name']);
 
         return view('superadmin.error-logs', compact('logs', 'schools'));
+    }
+
+    public function ownerDashboard()
+    {
+        $schools = School::active()->orderBy('name')->get();
+        return view('superadmin.owner-dashboard', compact('schools'));
+    }
+
+    public function schoolsLiveStats(TenantDatabaseManager $tenantManager)
+    {
+        $schools = School::active()->orderBy('name')->get();
+        $results = [];
+
+        foreach ($schools as $school) {
+            try {
+                $tenantManager->switchToSchool($school);
+                $conn = DB::connection('tenant');
+
+                $todayCollection = (float) $conn->table('vouchers')
+                    ->where('voucher_type', 'Receipt')
+                    ->whereDate('date', today())
+                    ->sum('debit');
+
+                $monthCollection = (float) $conn->table('vouchers')
+                    ->where('voucher_type', 'Receipt')
+                    ->whereYear('date', now()->year)
+                    ->whereMonth('date', now()->month)
+                    ->sum('debit');
+
+                $yearCollection = (float) $conn->table('vouchers')
+                    ->where('voucher_type', 'Receipt')
+                    ->whereYear('date', now()->year)
+                    ->sum('debit');
+
+                $outstanding = (float) $conn->table('particular_student')
+                    ->selectRaw('SUM(GREATEST(0, sales - credit)) as total')
+                    ->value('total');
+
+                $advanceTotal = (float) $conn->table('students')
+                    ->where('is_active', 1)
+                    ->sum('advance_balance');
+
+                $studentCount = $conn->table('students')->where('is_active', 1)->count();
+
+                $recentReceipts = $conn->table('vouchers')
+                    ->join('students', 'vouchers.student_id', '=', 'students.id')
+                    ->select(
+                        'vouchers.id',
+                        'vouchers.date',
+                        'vouchers.debit as amount',
+                        'students.name as student_name',
+                        'vouchers.notes',
+                        'vouchers.created_at'
+                    )
+                    ->where('vouchers.voucher_type', 'Receipt')
+                    ->whereNull('vouchers.voided_at')
+                    ->orderByDesc('vouchers.created_at')
+                    ->limit(5)
+                    ->get();
+
+                $results[] = [
+                    'id'               => $school->id,
+                    'name'             => $school->name,
+                    'logo'             => $school->logo ? asset('storage/' . $school->logo) : null,
+                    'students'         => $studentCount,
+                    'today_collection' => $todayCollection,
+                    'month_collection' => $monthCollection,
+                    'year_collection'  => $yearCollection,
+                    'outstanding'      => $outstanding,
+                    'advance_total'    => $advanceTotal,
+                    'recent_receipts'  => $recentReceipts,
+                    'error'            => null,
+                ];
+            } catch (\Exception $e) {
+                $results[] = [
+                    'id'    => $school->id,
+                    'name'  => $school->name,
+                    'logo'  => null,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json($results);
     }
 }

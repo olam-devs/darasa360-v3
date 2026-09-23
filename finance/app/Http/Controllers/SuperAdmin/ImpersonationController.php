@@ -54,9 +54,17 @@ class ImpersonationController extends Controller
             'current_school_id' => $school->id,
         ]);
 
-        // Redirect to school's accountant dashboard
-        return redirect()->route('accountant.dashboard')
-            ->with('success', "Now viewing {$school->name}'s dashboard");
+        // Redirect to requested destination or default dashboard
+        $destination = $request->input('redirect_to');
+        $namedRoutes = [
+            'fee-entry'   => 'accountant.fee-entry',
+            'ledgers'     => 'accountant.ledgers',
+            'students'    => 'accountant.students',
+            'particulars' => 'accountant.particulars',
+        ];
+        $route = isset($namedRoutes[$destination]) ? route($namedRoutes[$destination]) : route('accountant.dashboard');
+
+        return redirect($route)->with('success', "Now viewing {$school->name}'s portal");
     }
 
     /**
