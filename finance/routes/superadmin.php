@@ -7,6 +7,7 @@ use App\Http\Controllers\SuperAdmin\ImpersonationController;
 use App\Http\Controllers\SuperAdmin\SuperAdminManagementController;
 use App\Http\Controllers\SuperAdmin\PlatformStudentController;
 use App\Http\Controllers\SuperAdmin\CrossAccessController;
+use App\Http\Controllers\SuperAdmin\OwnerController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -33,8 +34,15 @@ Route::prefix('superadmin')->name('superadmin.')->group(function () {
 Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [SuperAdminDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/owner-dashboard', [SuperAdminDashboardController::class, 'ownerDashboard'])->name('owner-dashboard');
-    Route::get('/api/schools-live-stats', [SuperAdminDashboardController::class, 'schoolsLiveStats'])->name('api.schools-live-stats');
+    // Owner command-centre (no impersonation required — superadmin already authenticated)
+    Route::prefix('owner')->name('owner.')->group(function () {
+        Route::get('/', [SuperAdminDashboardController::class, 'ownerDashboard'])->name('dashboard');
+        Route::get('live-stats', [OwnerController::class, 'liveStats'])->name('live-stats');
+        Route::get('search', [OwnerController::class, 'search'])->name('search');
+        Route::get('student/{school}/{studentId}', [OwnerController::class, 'studentDetail'])->name('student');
+        Route::get('invoice/{school}/{studentId}', [OwnerController::class, 'downloadInvoice'])->name('invoice');
+        Route::post('receipt/{school}', [OwnerController::class, 'recordReceipt'])->name('receipt');
+    });
 
     // School Management
     Route::resource('schools', SchoolController::class);
