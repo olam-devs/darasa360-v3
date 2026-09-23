@@ -38,6 +38,34 @@ class OwnerController extends Controller
                     $trend[$day] = (float) ($raw[$day] ?? 0);
                 }
 
+                // Collection rate
+                $totalBilled    = (float) ($conn->table('particular_student')->sum('sales') ?? 0);
+                $totalCollected = (float) ($conn->table('particular_student')->sum('credit') ?? 0);
+                $collectionRate = $totalBilled > 0 ? round($totalCollected / $totalBilled * 100, 1) : 0;
+
+                // Outstanding aging (SQL: bucket students-with-outstanding by days since last receipt)
+                $agingRow = $conn->selectOne("
+                    SELECT
+                        SUM(CASE WHEN DATEDIFF(CURDATE(), COALESCE(lr.last_date,'2000-01-01')) < 30  THEN 1 ELSE 0 END) as recent,
+                        SUM(CASE WHEN DATEDIFF(CURDATE(), COALESCE(lr.last_date,'2000-01-01')) BETWEEN 30 AND 89 THEN 1 ELSE 0 END) as overdue,
+                        SUM(CASE WHEN DATEDIFF(CURDATE(), COALESCE(lr.last_date,'2000-01-01')) >= 90  THEN 1 ELSE 0 END) as critical
+                    FROM (SELECT student_id FROM particular_student
+                          GROUP BY student_id HAVING SUM(GREATEST(0,sales-credit)) > 0) owed
+                    LEFT JOIN (SELECT student_id, MAX(date) as last_date FROM vouchers
+                               WHERE voucher_type='Receipt' AND voided_at IS NULL GROUP BY student_id) lr
+                           ON lr.student_id = owed.student_id
+                ");
+
+                // Expenses this month
+                $monthExpenses = 0;
+                try {
+                    $monthExpenses = (float) $conn->table('expense_submissions')
+                        ->whereIn('status', ['approved', 'partially_approved'])
+                        ->whereYear('transaction_date', now()->year)
+                        ->whereMonth('transaction_date', now()->month)
+                        ->sum('total_amount');
+                } catch (\Exception) {}
+
                 $results[] = [
                     'id'               => $school->id,
                     'name'             => $school->name,
@@ -48,6 +76,15 @@ class OwnerController extends Controller
                     'year_collection'  => (float) $conn->table('vouchers')->where('voucher_type', 'Receipt')->whereYear('date', now()->year)->sum('debit'),
                     'outstanding'      => (float) ($conn->table('particular_student')->selectRaw('SUM(GREATEST(0, sales - credit)) as t')->value('t') ?? 0),
                     'advance_total'    => (float) $conn->table('students')->where('is_active', 1)->sum('advance_balance'),
+                    'total_billed'     => $totalBilled,
+                    'total_collected'  => $totalCollected,
+                    'collection_rate'  => $collectionRate,
+                    'month_expenses'   => $monthExpenses,
+                    'aging'            => [
+                        'recent'   => (int) ($agingRow->recent   ?? 0),
+                        'overdue'  => (int) ($agingRow->overdue  ?? 0),
+                        'critical' => (int) ($agingRow->critical ?? 0),
+                    ],
                     'recent_receipts'  => $conn->table('vouchers')
                         ->join('students', 'vouchers.student_id', '=', 'students.id')
                         ->select('vouchers.id', 'vouchers.date', 'vouchers.debit as amount', 'students.id as student_id', 'students.name as student_name', 'vouchers.created_at')
@@ -209,6 +246,148 @@ class OwnerController extends Controller
             'school_id'        => $school->id,
             'school_logo'      => $school->logo ? asset('storage/' . $school->logo) : null,
             'school_settings'  => $schoolSettings,
+        ]);
+    }
+
+    // ── Per-school analytics ─────────────────────────────────────────────────
+
+    public function schoolAnalytics(School $school)
+    {
+        $this->tenantManager->switchToSchool($school);
+        $conn = DB::connection('tenant');
+
+        // ── Collection funnel ────────────────────────────────────────────────
+        $totalBilled    = (float) ($conn->table('particular_student')->sum('sales') ?? 0);
+        $totalCollected = (float) ($conn->table('particular_student')->sum('credit') ?? 0);
+        $totalOutstanding = max(0, $totalBilled - $totalCollected);
+        $collectionRate   = $totalBilled > 0 ? round($totalCollected / $totalBilled * 100, 1) : 0;
+
+        // ── Per-particular breakdown ─────────────────────────────────────────
+        $particulars = $conn->table('particular_student as ps')
+            ->join('particulars as p', 'p.id', '=', 'ps.particular_id')
+            ->select(
+                'p.id', 'p.name',
+                DB::raw('SUM(ps.sales) as total_billed'),
+                DB::raw('SUM(ps.credit) as total_collected'),
+                DB::raw('SUM(GREATEST(0, ps.sales - ps.credit)) as total_outstanding'),
+                DB::raw('COUNT(DISTINCT ps.student_id) as student_count')
+            )
+            ->groupBy('p.id', 'p.name')
+            ->having('total_billed', '>', 0)
+            ->orderByDesc('total_outstanding')
+            ->get()
+            ->map(function ($p) {
+                $p->collection_rate = $p->total_billed > 0
+                    ? round($p->total_collected / $p->total_billed * 100, 1) : 0;
+                return $p;
+            });
+
+        // ── Outstanding by class ─────────────────────────────────────────────
+        $byClass = $conn->table('particular_student as ps')
+            ->join('students as s', 's.id', '=', 'ps.student_id')
+            ->leftJoin('school_classes as c', 'c.id', '=', 's.school_class_id')
+            ->select(
+                DB::raw('COALESCE(c.name, "No Class") as class_name'),
+                DB::raw('COUNT(DISTINCT ps.student_id) as student_count'),
+                DB::raw('SUM(GREATEST(0, ps.sales - ps.credit)) as outstanding')
+            )
+            ->where('s.is_active', 1)
+            ->groupBy('c.name')
+            ->having('outstanding', '>', 0)
+            ->orderByDesc('outstanding')
+            ->get();
+
+        // ── Top 10 debtors ───────────────────────────────────────────────────
+        $topDebtors = $conn->table('particular_student as ps')
+            ->join('students as s', 's.id', '=', 'ps.student_id')
+            ->leftJoin('school_classes as c', 'c.id', '=', 's.school_class_id')
+            ->leftJoin(DB::raw('(SELECT student_id, MAX(date) as last_receipt FROM vouchers WHERE voucher_type = "Receipt" AND voided_at IS NULL GROUP BY student_id) lr'), 'lr.student_id', '=', 'ps.student_id')
+            ->select(
+                's.id', 's.name',
+                DB::raw('c.name as class_name'),
+                DB::raw('SUM(GREATEST(0, ps.sales - ps.credit)) as outstanding'),
+                'lr.last_receipt'
+            )
+            ->where('s.is_active', 1)
+            ->groupBy('s.id', 's.name', 'c.name', 'lr.last_receipt')
+            ->having('outstanding', '>', 0)
+            ->orderByDesc('outstanding')
+            ->limit(10)
+            ->get()
+            ->map(function ($d) {
+                $d->days_since_payment = $d->last_receipt
+                    ? now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($d->last_receipt)->startOfDay())
+                    : null;
+                return $d;
+            });
+
+        // ── 6-month collection trend (monthly) ───────────────────────────────
+        $months = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $m = now()->subMonths($i);
+            $months[] = ['label' => $m->format('M Y'), 'year' => $m->year, 'month' => $m->month];
+        }
+        $monthlyRaw = $conn->table('vouchers')
+            ->where('voucher_type', 'Receipt')->whereNull('voided_at')
+            ->where('date', '>=', now()->subMonths(5)->startOfMonth()->toDateString())
+            ->selectRaw('YEAR(date) as y, MONTH(date) as m, SUM(debit) as total')
+            ->groupByRaw('YEAR(date), MONTH(date)')->get()
+            ->keyBy(fn($r) => $r->y . '-' . str_pad($r->m, 2, '0', STR_PAD_LEFT));
+        $trend6 = array_map(fn($m) => [
+            'label'  => $m['label'],
+            'amount' => (float)($monthlyRaw[$m['year'].'-'.str_pad($m['month'],2,'0',STR_PAD_LEFT)]->total ?? 0),
+        ], $months);
+
+        // ── Expense budget burn ──────────────────────────────────────────────
+        $expenseBudget    = [];
+        $pendingApprovals = 0;
+        try {
+            $currentYearId = $conn->table('academic_years')->where('is_current', 1)->value('id');
+            if ($currentYearId) {
+                $expenseBudget = $conn->table('expense_categories as ec')
+                    ->join('expense_category_plans as ecp', function ($j) use ($currentYearId) {
+                        $j->on('ecp.expense_category_id', '=', 'ec.id')
+                          ->where('ecp.academic_year_id', $currentYearId);
+                    })
+                    ->leftJoin(DB::raw(
+                        '(SELECT expense_category_id, SUM(total_amount) as spent
+                          FROM expense_submissions
+                          WHERE status IN ("approved","partially_approved")
+                          GROUP BY expense_category_id) es'
+                    ), 'es.expense_category_id', '=', 'ec.id')
+                    ->select(
+                        'ec.name',
+                        DB::raw('SUM(ecp.expected_amount) as budgeted'),
+                        DB::raw('COALESCE(MAX(es.spent), 0) as spent')
+                    )
+                    ->where('ec.status', 'approved')
+                    ->groupBy('ec.id', 'ec.name')
+                    ->orderByDesc('budgeted')
+                    ->limit(8)->get()
+                    ->map(function ($e) {
+                        $e->burn_rate = $e->budgeted > 0
+                            ? round($e->spent / $e->budgeted * 100, 1) : 0;
+                        $e->remaining = max(0, $e->budgeted - $e->spent);
+                        return $e;
+                    });
+            }
+            $pendingApprovals = $conn->table('expense_submissions')->where('status', 'pending')->count();
+        } catch (\Exception) {}
+
+        // ── SMS credits (central DB) ─────────────────────────────────────────
+        $smsRemaining = max(0, (int)($school->sms_credits_assigned ?? 0) - (int)($school->sms_credits_used ?? 0));
+
+        return response()->json([
+            'school_name'      => $school->name,
+            'school_id'        => $school->id,
+            'funnel'           => compact('totalBilled', 'totalCollected', 'totalOutstanding', 'collectionRate'),
+            'particulars'      => $particulars,
+            'by_class'         => $byClass,
+            'top_debtors'      => $topDebtors,
+            'trend_6m'         => $trend6,
+            'expense_budget'   => $expenseBudget,
+            'pending_approvals'=> $pendingApprovals,
+            'sms_remaining'    => $smsRemaining,
         ]);
     }
 

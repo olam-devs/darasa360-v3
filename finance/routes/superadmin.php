@@ -44,6 +44,7 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin'])->gr
         Route::post('receipt/{school}', [OwnerController::class, 'recordReceipt'])->name('receipt');
         Route::get('students/{school}', [OwnerController::class, 'students'])->name('students');
         Route::get('enter/{school}', [OwnerController::class, 'enterSchool'])->name('enter');
+        Route::get('analytics/{school}', [OwnerController::class, 'schoolAnalytics'])->name('analytics');
     });
 
     // School Management
