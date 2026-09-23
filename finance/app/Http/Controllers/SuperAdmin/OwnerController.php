@@ -25,6 +25,19 @@ class OwnerController extends Controller
                 $this->tenantManager->switchToSchool($school);
                 $conn = DB::connection('tenant');
 
+                // 7-day collection trend
+                $raw = $conn->table('vouchers')
+                    ->where('voucher_type', 'Receipt')
+                    ->whereNull('voided_at')
+                    ->where('date', '>=', now()->subDays(6)->toDateString())
+                    ->selectRaw('DATE(date) as day, SUM(debit) as total')
+                    ->groupBy('day')->orderBy('day')->get()->pluck('total', 'day');
+                $trend = [];
+                for ($i = 6; $i >= 0; $i--) {
+                    $day = now()->subDays($i)->toDateString();
+                    $trend[$day] = (float) ($raw[$day] ?? 0);
+                }
+
                 $results[] = [
                     'id'               => $school->id,
                     'name'             => $school->name,
@@ -42,6 +55,7 @@ class OwnerController extends Controller
                         ->whereNull('vouchers.voided_at')
                         ->orderByDesc('vouchers.created_at')
                         ->limit(5)->get(),
+                    'trend'            => $trend,
                     'error'            => null,
                 ];
             } catch (\Exception $e) {
@@ -50,6 +64,65 @@ class OwnerController extends Controller
         }
 
         return response()->json($results);
+    }
+
+    // ── Paginated student list (per school) ──────────────────────────────────
+
+    public function students(School $school, Request $request)
+    {
+        $this->tenantManager->switchToSchool($school);
+        $q = trim($request->get('q', ''));
+
+        $query = DB::connection('tenant')
+            ->table('students as s')
+            ->leftJoin('school_classes as c', 'c.id', '=', 's.school_class_id')
+            ->select(
+                's.id', 's.name', 's.advance_balance',
+                DB::raw('c.name as class_name'),
+                DB::raw('(SELECT SUM(GREATEST(0, ps.sales - ps.credit)) FROM particular_student ps WHERE ps.student_id = s.id) as outstanding')
+            )
+            ->where('s.is_active', 1)
+            ->orderBy('s.name');
+
+        if ($q) {
+            $query->where('s.name', 'like', "%{$q}%");
+        }
+
+        return response()->json($query->paginate(40));
+    }
+
+    // ── Direct school entry (no master-password; superadmin already auth'd) ──
+
+    public function enterSchool(School $school, Request $request)
+    {
+        if (!$school->is_active) {
+            return redirect()->route('superadmin.owner.dashboard')->with('error', 'School is inactive.');
+        }
+
+        $superAdmin = auth('superadmin')->user();
+
+        session([
+            'impersonating'                => true,
+            'impersonating_super_admin_id' => $superAdmin->id,
+            'current_school_slug'          => $school->slug,
+            'current_school_id'            => $school->id,
+        ]);
+
+        $destinations = [
+            'fee-entry'   => 'accountant.fee-entry',
+            'sms'         => 'accountant.sms',
+            'sms-logs'    => 'accountant.sms-logs',
+            'expenses'    => 'accountant.expenses',
+            'ledgers'     => 'accountant.ledgers',
+            'students'    => 'accountant.students',
+            'invoices'    => 'accountant.invoices-page',
+            'particulars' => 'accountant.particulars',
+        ];
+
+        $to    = $request->get('to', '');
+        $route = isset($destinations[$to]) ? route($destinations[$to]) : route('accountant.dashboard');
+
+        return redirect($route)->with('success', "Now viewing {$school->name}");
     }
 
     // ── Cross-school student search ──────────────────────────────────────────

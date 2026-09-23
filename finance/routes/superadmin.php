@@ -42,6 +42,8 @@ Route::prefix('superadmin')->name('superadmin.')->middleware(['superadmin'])->gr
         Route::get('student/{school}/{studentId}', [OwnerController::class, 'studentDetail'])->name('student');
         Route::get('invoice/{school}/{studentId}', [OwnerController::class, 'downloadInvoice'])->name('invoice');
         Route::post('receipt/{school}', [OwnerController::class, 'recordReceipt'])->name('receipt');
+        Route::get('students/{school}', [OwnerController::class, 'students'])->name('students');
+        Route::get('enter/{school}', [OwnerController::class, 'enterSchool'])->name('enter');
     });
 
     // School Management
