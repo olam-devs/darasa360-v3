@@ -16,6 +16,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class LedgerController extends Controller
 {
@@ -1367,11 +1368,168 @@ class LedgerController extends Controller
     }
 
     /**
-     * Build fee statement data for a student (single or bulk PDF).
+     * Build fee statement data for a student.
+     * Uses the quarter-based format if any assignments have quarters set; otherwise falls back to legacy format.
      */
     protected function buildStudentInvoiceData(Student $student): array
     {
-        $student->loadMissing(['schoolClass', 'particulars', 'scholarships']);
+        $student->loadMissing(['schoolClass', 'scholarships']);
+
+        // Fetch all particular_student rows directly to support multiple rows per particular (one per quarter)
+        $rows = DB::connection('tenant')->table('particular_student as ps')
+            ->join('particulars as p', 'p.id', '=', 'ps.particular_id')
+            ->leftJoin('academic_years as ay', 'ay.id', '=', 'ps.academic_year_id')
+            ->where('ps.student_id', $student->id)
+            ->select(
+                'p.id as particular_id', 'p.name',
+                'ps.quarter', 'ps.sales', 'ps.credit', 'ps.deadline',
+                'ps.academic_year_id', 'ay.name as year_name', 'ay.start_date as year_start'
+            )
+            ->orderByRaw('COALESCE(ay.start_date, "9999-01-01")')
+            ->orderBy('p.name')
+            ->orderBy('ps.quarter')
+            ->get();
+
+        $hasQuarters = $rows->whereNotNull('quarter')->count() > 0;
+
+        if (! $hasQuarters) {
+            return $this->buildStudentInvoiceDataLegacy($student);
+        }
+
+        // Quarter labels from DB; fall back to defaults
+        $quarterLabels = DB::connection('tenant')->table('quarter_labels')
+            ->orderBy('quarter_number')
+            ->pluck('label', 'quarter_number')
+            ->toArray();
+        if (empty($quarterLabels)) {
+            $quarterLabels = [1 => 'Q1', 2 => 'Q2', 3 => 'Q3', 4 => 'Q4'];
+        }
+
+        // Scholarship map
+        $scholarshipMap = [];
+        $totalScholarshipForgiven = 0;
+        if ($student->scholarships) {
+            foreach ($student->scholarships->where('is_active', true) as $sch) {
+                $key = $sch->particular_id.'_'.($sch->academic_year_id ?? 'none');
+                $scholarshipMap[$key] = $sch;
+                $totalScholarshipForgiven += $sch->forgiven_amount;
+            }
+        }
+
+        $itemsByYear = [];
+        $globalActiveQuarters = [];
+        $totalFees = 0;
+        $totalPaid = 0;
+
+        foreach ($rows as $row) {
+            if ($row->quarter === null) {
+                continue; // skip legacy rows without quarter
+            }
+
+            $yearKey = $row->academic_year_id ?? 'none';
+            $yearName = $row->year_name ?? 'Unassigned';
+
+            if (! isset($itemsByYear[$yearKey])) {
+                $itemsByYear[$yearKey] = [
+                    'year_id'         => $row->academic_year_id,
+                    'year_name'       => $yearName,
+                    'start_date'      => $row->year_start,
+                    'particulars'     => [],
+                    'active_quarters' => [],
+                ];
+            }
+
+            $partId = $row->particular_id;
+            if (! isset($itemsByYear[$yearKey]['particulars'][$partId])) {
+                $scholarshipKey = $row->particular_id.'_'.($row->academic_year_id ?? 'none');
+                $sch = $scholarshipMap[$scholarshipKey] ?? null;
+                $itemsByYear[$yearKey]['particulars'][$partId] = [
+                    'name'            => $row->name,
+                    'quarters'        => [],
+                    'has_scholarship' => $sch !== null,
+                    'scholarship_type' => $sch?->scholarship_type,
+                    'scholarship_name' => $sch?->scholarship_name,
+                ];
+            }
+
+            $q = (int) $row->quarter;
+            $itemsByYear[$yearKey]['particulars'][$partId]['quarters'][$q] = [
+                'charged' => (float) ($row->sales ?? 0),
+                'paid'    => (float) ($row->credit ?? 0),
+            ];
+            $itemsByYear[$yearKey]['active_quarters'][$q] = true;
+            $globalActiveQuarters[$q] = true;
+
+            $totalFees += (float) ($row->sales ?? 0);
+            $totalPaid += (float) ($row->credit ?? 0);
+        }
+
+        // Sort years, compute per-year totals
+        uasort($itemsByYear, function ($a, $b) {
+            if ($a['start_date'] === null) {
+                return 1;
+            }
+            if ($b['start_date'] === null) {
+                return -1;
+            }
+
+            return strtotime($a['start_date']) - strtotime($b['start_date']);
+        });
+
+        foreach ($itemsByYear as &$yearData) {
+            ksort($yearData['active_quarters']);
+            $yearData['active_quarters'] = array_keys($yearData['active_quarters']);
+
+            $yearQuarterTotals = [];
+            foreach ($yearData['particulars'] as &$part) {
+                $part['total_charged']   = array_sum(array_column($part['quarters'], 'charged'));
+                $part['total_paid']      = array_sum(array_column($part['quarters'], 'paid'));
+                $part['total_remaining'] = $part['total_charged'] - $part['total_paid'];
+
+                foreach ($part['quarters'] as $q => $qData) {
+                    if (! isset($yearQuarterTotals[$q])) {
+                        $yearQuarterTotals[$q] = ['charged' => 0, 'paid' => 0, 'remaining' => 0];
+                    }
+                    $yearQuarterTotals[$q]['charged']   += $qData['charged'];
+                    $yearQuarterTotals[$q]['paid']       += $qData['paid'];
+                    $yearQuarterTotals[$q]['remaining']  += $qData['charged'] - $qData['paid'];
+                }
+            }
+            unset($part);
+
+            ksort($yearQuarterTotals);
+            $yearData['quarter_totals']    = $yearQuarterTotals;
+            $yearData['subtotal_fees']     = array_sum(array_column($yearQuarterTotals, 'charged'));
+            $yearData['subtotal_paid']     = array_sum(array_column($yearQuarterTotals, 'paid'));
+            $yearData['subtotal_balance']  = $yearData['subtotal_fees'] - $yearData['subtotal_paid'];
+            $yearData['particulars']       = array_values($yearData['particulars']);
+        }
+        unset($yearData);
+
+        ksort($globalActiveQuarters);
+
+        return [
+            'items_by_year'          => array_values($itemsByYear),
+            'active_quarters'        => array_keys($globalActiveQuarters),
+            'quarter_labels'         => $quarterLabels,
+            'total_fees'             => $totalFees,
+            'total_paid'             => $totalPaid,
+            'balance_remaining'      => $totalFees - $totalPaid,
+            'total_original_fees'    => $totalFees,
+            'total_scholarship_amount' => $totalScholarshipForgiven,
+            'has_scholarships'       => $totalScholarshipForgiven > 0,
+            'use_quarter_format'     => true,
+            // keep legacy keys so old invoice view doesn't break
+            'items'                  => [],
+        ];
+    }
+
+    /**
+     * Legacy invoice builder for schools without quarter assignments.
+     */
+    protected function buildStudentInvoiceDataLegacy(Student $student): array
+    {
+        $student->loadMissing(['particulars', 'scholarships']);
 
         $academicYears = AcademicYear::orderBy('start_date', 'asc')->get();
 
@@ -1408,41 +1566,41 @@ class LedgerController extends Controller
 
             if (! isset($itemsByYear[$yearName])) {
                 $itemsByYear[$yearName] = [
-                    'year_name' => $yearName,
-                    'year_id' => $academicYearId,
-                    'start_date' => $academicYear ? $academicYear->start_date : null,
-                    'items' => [],
-                    'subtotal_fees' => 0,
-                    'subtotal_paid' => 0,
-                    'subtotal_balance' => 0,
-                    'subtotal_original' => 0,
+                    'year_name'           => $yearName,
+                    'year_id'             => $academicYearId,
+                    'start_date'          => $academicYear ? $academicYear->start_date : null,
+                    'items'               => [],
+                    'subtotal_fees'       => 0,
+                    'subtotal_paid'       => 0,
+                    'subtotal_balance'    => 0,
+                    'subtotal_original'   => 0,
                     'subtotal_scholarship' => 0,
                 ];
             }
 
             $itemsByYear[$yearName]['items'][] = [
-                'name' => $particular->name,
-                'original_amount' => $originalAmount,
+                'name'             => $particular->name,
+                'original_amount'  => $originalAmount,
                 'scholarship_amount' => $scholarshipAmount,
-                'has_scholarship' => $scholarship !== null,
+                'has_scholarship'  => $scholarship !== null,
                 'scholarship_type' => $scholarship ? $scholarship->scholarship_type : null,
                 'scholarship_name' => $scholarship ? $scholarship->scholarship_name : null,
-                'amount' => $sales,
-                'paid' => $credit,
-                'balance' => $balance,
-                'deadline' => $deadline,
-                'is_overdue' => $isOverdue,
+                'amount'           => $sales,
+                'paid'             => $credit,
+                'balance'          => $balance,
+                'deadline'         => $deadline,
+                'is_overdue'       => $isOverdue,
             ];
 
-            $itemsByYear[$yearName]['subtotal_fees'] += $sales;
-            $itemsByYear[$yearName]['subtotal_paid'] += $credit;
-            $itemsByYear[$yearName]['subtotal_balance'] += $balance;
-            $itemsByYear[$yearName]['subtotal_original'] += $originalAmount;
+            $itemsByYear[$yearName]['subtotal_fees']      += $sales;
+            $itemsByYear[$yearName]['subtotal_paid']       += $credit;
+            $itemsByYear[$yearName]['subtotal_balance']    += $balance;
+            $itemsByYear[$yearName]['subtotal_original']   += $originalAmount;
             $itemsByYear[$yearName]['subtotal_scholarship'] += $scholarshipAmount;
 
             $totalOriginalFees += $originalAmount;
-            $totalFees += $sales;
-            $totalPaid += $credit;
+            $totalFees         += $sales;
+            $totalPaid         += $credit;
         }
 
         uasort($itemsByYear, function ($a, $b) {
@@ -1465,14 +1623,15 @@ class LedgerController extends Controller
         }
 
         return [
-            'items' => $items,
-            'items_by_year' => array_values($itemsByYear),
-            'total_fees' => $totalFees,
-            'total_paid' => $totalPaid,
-            'balance_remaining' => $totalFees - $totalPaid,
-            'total_original_fees' => $totalOriginalFees,
+            'items'                  => $items,
+            'items_by_year'          => array_values($itemsByYear),
+            'total_fees'             => $totalFees,
+            'total_paid'             => $totalPaid,
+            'balance_remaining'      => $totalFees - $totalPaid,
+            'total_original_fees'    => $totalOriginalFees,
             'total_scholarship_amount' => $totalScholarshipForgiven,
-            'has_scholarships' => $totalScholarshipForgiven > 0,
+            'has_scholarships'       => $totalScholarshipForgiven > 0,
+            'use_quarter_format'     => false,
         ];
     }
 

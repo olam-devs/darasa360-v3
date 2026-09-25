@@ -57,14 +57,14 @@ class Student extends BaseModel
     public function particulars()
     {
         return $this->belongsToMany(Particular::class, 'particular_student')
-            ->withPivot('sales', 'debit', 'credit', 'overpayment', 'deadline', 'academic_year_id')
+            ->withPivot('sales', 'debit', 'credit', 'overpayment', 'deadline', 'academic_year_id', 'quarter')
             ->withTimestamps();
     }
 
     public function particularsForAcademicYear($academicYearId)
     {
         return $this->belongsToMany(Particular::class, 'particular_student')
-            ->withPivot('sales', 'debit', 'credit', 'overpayment', 'deadline', 'academic_year_id')
+            ->withPivot('sales', 'debit', 'credit', 'overpayment', 'deadline', 'academic_year_id', 'quarter')
             ->wherePivot('academic_year_id', $academicYearId)
             ->withTimestamps();
     }

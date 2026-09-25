@@ -29,6 +29,135 @@
 </div>
 @endif
 
+@php $useQuarterFormat = isset($invoiceData['use_quarter_format']) && $invoiceData['use_quarter_format']; @endphp
+
+@if($useQuarterFormat)
+{{-- ── QUARTER-BASED INVOICE ─────────────────────────────── --}}
+@php
+    $activeQuarters = $invoiceData['active_quarters'] ?? [];
+    $quarterLabels  = $invoiceData['quarter_labels']  ?? [];
+@endphp
+
+@if(count($invoiceData['items_by_year'] ?? []) > 0)
+    @foreach($invoiceData['items_by_year'] as $yearData)
+    @php
+        $yq = $yearData['active_quarters'];
+        $ql = $quarterLabels;
+    @endphp
+    <div class="year-block">
+        <div class="year-header">
+            Academic Year: {{ $yearData['year_name'] }}
+            @if($yearData['subtotal_balance'] > 0)
+                <span class="year-badge year-badge-due">Balance: TSh {{ number_format($yearData['subtotal_balance'], 2) }}</span>
+            @else
+                <span class="year-badge year-badge-paid">Paid</span>
+            @endif
+        </div>
+
+        <table class="fees-table" style="margin-top: 0;">
+            <thead>
+                <tr>
+                    <th style="width: 34%; text-align: left;">Fee Item</th>
+                    @foreach($yq as $q)
+                        <th style="text-align: right; width: {{ round(46 / count($yq), 0) }}%;">{{ $ql[$q] ?? 'Q'.$q }}</th>
+                    @endforeach
+                    <th style="text-align: right; width: 12%;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($yearData['particulars'] as $part)
+                {{-- Row 1: Charged --}}
+                <tr>
+                    <td style="font-weight: bold;">
+                        {{ $part['name'] }}
+                        @if(!empty($part['has_scholarship']))
+                            <span class="scholarship-badge"> {{ $part['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
+                            @if(!empty($part['scholarship_name']))
+                                <br><small style="color: #856404; font-size: 7px;">{{ $part['scholarship_name'] }}</small>
+                            @endif
+                        @endif
+                    </td>
+                    @foreach($yq as $q)
+                        <td class="amount">
+                            @if(isset($part['quarters'][$q]))
+                                TSh {{ number_format($part['quarters'][$q]['charged'], 2) }}
+                            @else
+                                <span style="color:#bbb;">—</span>
+                            @endif
+                        </td>
+                    @endforeach
+                    <td class="amount">TSh {{ number_format($part['total_charged'], 2) }}</td>
+                </tr>
+                {{-- Row 2: Paid --}}
+                <tr class="paid-row">
+                    <td style="padding-left: 14px; font-style: italic; color: #555;">↳ Paid</td>
+                    @foreach($yq as $q)
+                        <td class="amount" style="color: #2e7d32;">
+                            @if(isset($part['quarters'][$q]))
+                                TSh {{ number_format($part['quarters'][$q]['paid'], 2) }}
+                            @else
+                                <span style="color:#bbb;">—</span>
+                            @endif
+                        </td>
+                    @endforeach
+                    <td class="amount" style="color: #2e7d32;">TSh {{ number_format($part['total_paid'], 2) }}</td>
+                </tr>
+                @endforeach
+
+                {{-- Quarter totals section --}}
+                <tr class="total-row" style="background-color: #1976d2; color: white;">
+                    <td><strong>Total Charged</strong></td>
+                    @foreach($yq as $q)
+                        <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['charged'] ?? 0, 2) }}</td>
+                    @endforeach
+                    <td class="amount">TSh {{ number_format($yearData['subtotal_fees'], 2) }}</td>
+                </tr>
+                <tr class="total-row" style="background-color: #388e3c; color: white;">
+                    <td><strong>Total Paid</strong></td>
+                    @foreach($yq as $q)
+                        <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['paid'] ?? 0, 2) }}</td>
+                    @endforeach
+                    <td class="amount">TSh {{ number_format($yearData['subtotal_paid'], 2) }}</td>
+                </tr>
+                <tr class="total-row" style="background-color: {{ $yearData['subtotal_balance'] > 0 ? '#c62828' : '#2e7d32' }}; color: white;">
+                    <td><strong>Balance Remaining</strong></td>
+                    @foreach($yq as $q)
+                        <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['remaining'] ?? 0, 2) }}</td>
+                    @endforeach
+                    <td class="amount">TSh {{ number_format($yearData['subtotal_balance'], 2) }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    @endforeach
+
+    {{-- Grand total (only if more than one year) --}}
+    @if(count($invoiceData['items_by_year']) > 1)
+    <table class="fees-table">
+        <tbody>
+            <tr class="total-row" style="background-color: #0d47a1; color: white;">
+                <td style="width: 34%;"><strong>GRAND TOTAL (All Years)</strong></td>
+                @foreach($activeQuarters as $q)
+                    @php
+                        $grandCharged = collect($invoiceData['items_by_year'])->sum(fn($y) => $y['quarter_totals'][$q]['charged'] ?? 0);
+                    @endphp
+                    <td class="amount" style="width: {{ round(46 / count($activeQuarters), 0) }}%;">TSh {{ number_format($grandCharged, 2) }}</td>
+                @endforeach
+                <td class="amount" style="width: 12%;">TSh {{ number_format($invoiceData['total_fees'], 2) }}</td>
+            </tr>
+        </tbody>
+    </table>
+    @endif
+@else
+    <table class="fees-table">
+        <tbody>
+            <tr><td colspan="{{ 2 + count($activeQuarters) }}" style="text-align: center; padding: 15px;">No fees assigned yet</td></tr>
+        </tbody>
+    </table>
+@endif
+
+@else
+{{-- ── LEGACY INVOICE (no quarters) ─────────────────────── --}}
 @if(isset($invoiceData['items_by_year']) && count($invoiceData['items_by_year']) > 0)
     @foreach($invoiceData['items_by_year'] as $yearData)
     <div class="year-block">
@@ -142,10 +271,12 @@
         </tbody>
     </table>
 @endif
+@endif
+{{-- ── END FORMAT SWITCH ─────────────────────────────────── --}}
 
 <div class="balance-box {{ $invoiceData['balance_remaining'] <= 0 ? 'paid-full' : '' }}">
     @if($invoiceData['balance_remaining'] > 0)
-        <div style="font-size: 11px; margin-bottom: 5px; font-weight: bold;">TOTAL AMOUNT:</div>
+        <div style="font-size: 11px; margin-bottom: 5px; font-weight: bold;">TOTAL AMOUNT DUE:</div>
         <div class="balance-amount">TSh {{ number_format($invoiceData['balance_remaining'], 2) }}</div>
         <div style="margin-top: 8px; font-size: 9px; color: #666;">
             Please ensure payment is made by the deadline date(s) indicated above.

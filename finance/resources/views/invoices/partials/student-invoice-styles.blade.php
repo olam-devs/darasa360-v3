@@ -36,3 +36,4 @@ body { font-family: Arial, sans-serif; font-size: 9px; margin: 0; padding: 0; }
 .year-badge { float: right; padding: 2px 8px; border-radius: 3px; font-size: 9px; }
 .year-badge-due { background: #f44336; }
 .year-badge-paid { background: #4caf50; }
+.paid-row { background-color: #f1f8e9; font-size: 8px; }
