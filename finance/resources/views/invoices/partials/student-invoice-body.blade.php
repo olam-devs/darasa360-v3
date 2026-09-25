@@ -54,31 +54,29 @@
             @endif
         </div>
 
+        @php $qCount = count($yq); $qW = $qCount > 0 ? round(52 / $qCount, 0) : 20; @endphp
         <table class="fees-table" style="margin-top: 0;">
             <thead>
                 <tr>
-                    <th style="width: 34%; text-align: left;">Fee Item</th>
+                    <th style="width: 26%; text-align: left;">FEE ITEM</th>
+                    <th style="width: 10%; text-align: center;">STATUS</th>
                     @foreach($yq as $q)
-                        <th style="text-align: right; width: {{ round(46 / count($yq), 0) }}%;">{{ $ql[$q] ?? 'Q'.$q }}</th>
+                        <th style="text-align: right; width: {{ $qW }}%;">{{ $ql[$q] ?? 'Q'.$q }}</th>
                     @endforeach
                     <th style="text-align: right; width: 12%;">Total</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($yearData['particulars'] as $part)
-                {{-- Row 1: Charged --}}
+                {{-- Row 1: Charged — name cell spans 2 rows --}}
                 <tr>
-                    <td style="padding:0;">
-                        <div style="display:flex; align-items:stretch;">
-                            <div style="flex:1; padding:3px 5px; font-weight:bold;">
-                                {{ $part['name'] }}
-                                @if(!empty($part['has_scholarship']))
-                                    <span class="scholarship-badge"> {{ $part['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
-                                @endif
-                            </div>
-                            <div style="border-left:1px solid #bbb; padding:3px 5px; font-size:7px; color:#888; white-space:nowrap;">charged</div>
-                        </div>
+                    <td rowspan="2" style="font-weight:bold; vertical-align:middle; border-right:2px solid #ddd;">
+                        {{ $part['name'] }}
+                        @if(!empty($part['has_scholarship']))
+                            <span class="scholarship-badge"> {{ $part['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
+                        @endif
                     </td>
+                    <td style="text-align:center; font-size:7.5px; color:#555; background:#f5f5f5;">Charged</td>
                     @foreach($yq as $q)
                         <td class="amount">
                             @if(isset($part['quarters'][$q]))
@@ -92,14 +90,9 @@
                 </tr>
                 {{-- Row 2: Paid --}}
                 <tr class="paid-row">
-                    <td style="padding:0;">
-                        <div style="display:flex; align-items:stretch;">
-                            <div style="flex:1; padding:3px 5px;"></div>
-                            <div style="border-left:1px solid #bbb; padding:3px 5px; font-size:7px; color:#2e7d32; white-space:nowrap;">paid</div>
-                        </div>
-                    </td>
+                    <td style="text-align:center; font-size:7.5px; color:#2e7d32; background:#f1f8e9;">Paid</td>
                     @foreach($yq as $q)
-                        <td class="amount" style="color: #2e7d32;">
+                        <td class="amount" style="color:#2e7d32;">
                             @if(isset($part['quarters'][$q]))
                                 TSh {{ number_format($part['quarters'][$q]['paid'], 2) }}
                             @else
@@ -107,27 +100,27 @@
                             @endif
                         </td>
                     @endforeach
-                    <td class="amount" style="color: #2e7d32;">TSh {{ number_format($part['total_paid'], 2) }}</td>
+                    <td class="amount" style="color:#2e7d32;">TSh {{ number_format($part['total_paid'], 2) }}</td>
                 </tr>
                 @endforeach
 
                 {{-- Quarter totals section --}}
-                <tr class="total-row" style="background-color: #1976d2; color: white;">
-                    <td><strong>Total Charged</strong></td>
+                <tr class="total-row" style="background-color:#1976d2; color:white;">
+                    <td colspan="2"><strong>Total Charged</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['charged'] ?? 0, 2) }}</td>
                     @endforeach
                     <td class="amount">TSh {{ number_format($yearData['subtotal_fees'], 2) }}</td>
                 </tr>
-                <tr class="total-row" style="background-color: #388e3c; color: white;">
-                    <td><strong>Total Paid</strong></td>
+                <tr class="total-row" style="background-color:#388e3c; color:white;">
+                    <td colspan="2"><strong>Total Paid</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['paid'] ?? 0, 2) }}</td>
                     @endforeach
                     <td class="amount">TSh {{ number_format($yearData['subtotal_paid'], 2) }}</td>
                 </tr>
-                <tr class="total-row" style="background-color: {{ $yearData['subtotal_balance'] > 0 ? '#c62828' : '#2e7d32' }}; color: white;">
-                    <td><strong>Balance Remaining</strong></td>
+                <tr class="total-row" style="background-color:{{ $yearData['subtotal_balance'] > 0 ? '#c62828' : '#2e7d32' }}; color:white;">
+                    <td colspan="2"><strong>Balance Remaining</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['remaining'] ?? 0, 2) }}</td>
                     @endforeach
@@ -143,7 +136,7 @@
     <table class="fees-table">
         <tbody>
             <tr class="total-row" style="background-color: #0d47a1; color: white;">
-                <td style="width: 34%;"><strong>GRAND TOTAL (All Years)</strong></td>
+                <td colspan="2"><strong>GRAND TOTAL (All Years)</strong></td>
                 @foreach($activeQuarters as $q)
                     @php
                         $grandCharged = collect($invoiceData['items_by_year'])->sum(fn($y) => $y['quarter_totals'][$q]['charged'] ?? 0);
