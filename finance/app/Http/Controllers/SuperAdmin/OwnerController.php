@@ -70,12 +70,12 @@ class OwnerController extends Controller
                     'id'               => $school->id,
                     'name'             => $school->name,
                     'logo'             => $school->logo ? asset('storage/' . $school->logo) : null,
-                    'students'         => $conn->table('students')->where('is_active', 1)->count(),
+                    'students'         => $conn->table('students')->where('status', 'active')->count(),
                     'today_collection' => (float) $conn->table('vouchers')->where('voucher_type', 'Receipt')->whereDate('date', today())->sum('debit'),
                     'month_collection' => (float) $conn->table('vouchers')->where('voucher_type', 'Receipt')->whereYear('date', now()->year)->whereMonth('date', now()->month)->sum('debit'),
                     'year_collection'  => (float) $conn->table('vouchers')->where('voucher_type', 'Receipt')->whereYear('date', now()->year)->sum('debit'),
                     'outstanding'      => (float) ($conn->table('particular_student')->selectRaw('SUM(GREATEST(0, sales - credit)) as t')->value('t') ?? 0),
-                    'advance_total'    => (float) $conn->table('students')->where('is_active', 1)->sum('advance_balance'),
+                    'advance_total'    => (float) $conn->table('students')->where('status', 'active')->sum('advance_balance'),
                     'total_billed'     => $totalBilled,
                     'total_collected'  => $totalCollected,
                     'collection_rate'  => $collectionRate,
@@ -118,7 +118,7 @@ class OwnerController extends Controller
                 DB::raw('c.name as class_name'),
                 DB::raw('(SELECT SUM(GREATEST(0, ps.sales - ps.credit)) FROM particular_student ps WHERE ps.student_id = s.id) as outstanding')
             )
-            ->where('s.is_active', 1)
+            ->where('s.status', 'active')
             ->orderBy('s.name');
 
         if ($q) {
@@ -291,7 +291,7 @@ class OwnerController extends Controller
                 DB::raw('COUNT(DISTINCT ps.student_id) as student_count'),
                 DB::raw('SUM(GREATEST(0, ps.sales - ps.credit)) as outstanding')
             )
-            ->where('s.is_active', 1)
+            ->where('s.status', 'active')
             ->groupBy('c.name')
             ->having('outstanding', '>', 0)
             ->orderByDesc('outstanding')
@@ -308,7 +308,7 @@ class OwnerController extends Controller
                 DB::raw('SUM(GREATEST(0, ps.sales - ps.credit)) as outstanding'),
                 'lr.last_receipt'
             )
-            ->where('s.is_active', 1)
+            ->where('s.status', 'active')
             ->groupBy('s.id', 's.name', 'c.name', 'lr.last_receipt')
             ->having('outstanding', '>', 0)
             ->orderByDesc('outstanding')

@@ -68,14 +68,12 @@
                 @foreach($yearData['particulars'] as $part)
                 {{-- Row 1: Charged --}}
                 <tr>
-                    <td style="font-weight: bold;">
-                        {{ $part['name'] }}
+                    <td>
+                        <span style="font-weight:bold;">{{ $part['name'] }}</span>
                         @if(!empty($part['has_scholarship']))
                             <span class="scholarship-badge"> {{ $part['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
-                            @if(!empty($part['scholarship_name']))
-                                <br><small style="color: #856404; font-size: 7px;">{{ $part['scholarship_name'] }}</small>
-                            @endif
                         @endif
+                        <span style="float:right; font-size:7px; color:#888; font-weight:normal; margin-left:4px;">charged</span>
                     </td>
                     @foreach($yq as $q)
                         <td class="amount">
@@ -90,7 +88,7 @@
                 </tr>
                 {{-- Row 2: Paid --}}
                 <tr class="paid-row">
-                    <td style="padding-left: 14px; font-style: italic; color: #555;">↳ Paid</td>
+                    <td style="text-align:right; color:#2e7d32; font-size:7px; padding-right:4px;">paid</td>
                     @foreach($yq as $q)
                         <td class="amount" style="color: #2e7d32;">
                             @if(isset($part['quarters'][$q]))
