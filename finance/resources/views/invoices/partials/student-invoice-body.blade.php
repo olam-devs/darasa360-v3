@@ -68,12 +68,16 @@
                 @foreach($yearData['particulars'] as $part)
                 {{-- Row 1: Charged --}}
                 <tr>
-                    <td>
-                        <span style="font-weight:bold;">{{ $part['name'] }}</span>
-                        @if(!empty($part['has_scholarship']))
-                            <span class="scholarship-badge"> {{ $part['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
-                        @endif
-                        <span style="float:right; font-size:7px; color:#888; font-weight:normal; margin-left:4px;">charged</span>
+                    <td style="padding:0;">
+                        <div style="display:flex; align-items:stretch;">
+                            <div style="flex:1; padding:3px 5px; font-weight:bold;">
+                                {{ $part['name'] }}
+                                @if(!empty($part['has_scholarship']))
+                                    <span class="scholarship-badge"> {{ $part['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
+                                @endif
+                            </div>
+                            <div style="border-left:1px solid #bbb; padding:3px 5px; font-size:7px; color:#888; white-space:nowrap;">charged</div>
+                        </div>
                     </td>
                     @foreach($yq as $q)
                         <td class="amount">
@@ -88,7 +92,12 @@
                 </tr>
                 {{-- Row 2: Paid --}}
                 <tr class="paid-row">
-                    <td style="text-align:right; color:#2e7d32; font-size:7px; padding-right:4px;">paid</td>
+                    <td style="padding:0;">
+                        <div style="display:flex; align-items:stretch;">
+                            <div style="flex:1; padding:3px 5px;"></div>
+                            <div style="border-left:1px solid #bbb; padding:3px 5px; font-size:7px; color:#2e7d32; white-space:nowrap;">paid</div>
+                        </div>
+                    </td>
                     @foreach($yq as $q)
                         <td class="amount" style="color: #2e7d32;">
                             @if(isset($part['quarters'][$q]))
