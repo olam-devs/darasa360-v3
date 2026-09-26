@@ -73,6 +73,7 @@ class ParticularController extends Controller
             'sales' => 'required|numeric|min:0',
             'deadline' => 'nullable|date',
             'academic_year_id' => 'required|exists:academic_years,id',
+            'quarter' => 'required|integer|between:1,4',
             'use_advance' => 'nullable|boolean',
         ]);
 
@@ -80,10 +81,11 @@ class ParticularController extends Controller
         try {
             $useAdvance = (bool) ($validated['use_advance'] ?? false);
             foreach ($validated['student_ids'] as $studentId) {
-                // Check if already assigned for this academic year
+                // Check if already assigned for this academic year + quarter
                 $existingAssignment = $particular->students()
                     ->where('student_id', $studentId)
                     ->wherePivot('academic_year_id', $validated['academic_year_id'])
+                    ->wherePivot('quarter', $validated['quarter'])
                     ->exists();
 
                 if (! $existingAssignment) {
@@ -95,6 +97,7 @@ class ParticularController extends Controller
                         'credit' => 0,
                         'overpayment' => 0,
                         'academic_year_id' => $validated['academic_year_id'],
+                        'quarter' => $validated['quarter'],
                     ]);
 
                     // Create Sales voucher for ledger visibility
@@ -122,6 +125,7 @@ class ParticularController extends Controller
                                     ->where('particular_id', $id)
                                     ->where('student_id', $studentId)
                                     ->where('academic_year_id', $validated['academic_year_id'])
+                                    ->where('quarter', $validated['quarter'])
                                     ->increment('credit', $apply);
 
                                 $student->advance_balance = max(0, (float) $student->advance_balance - $apply);
@@ -164,6 +168,7 @@ class ParticularController extends Controller
             'assignments.*.sales' => 'required|numeric|min:0',
             'assignments.*.deadline' => 'nullable|date',
             'academic_year_id' => 'required|exists:academic_years,id',
+            'quarter' => 'required|integer|between:1,4',
             'use_advance' => 'nullable|boolean',
         ]);
 
@@ -173,10 +178,11 @@ class ParticularController extends Controller
             foreach ($validated['assignments'] as $assignment) {
                 $studentId = $assignment['student_id'];
 
-                // Check if already assigned for this academic year
+                // Check if already assigned for this academic year + quarter
                 $existingAssignment = $particular->students()
                     ->where('student_id', $studentId)
                     ->wherePivot('academic_year_id', $validated['academic_year_id'])
+                    ->wherePivot('quarter', $validated['quarter'])
                     ->exists();
 
                 if (! $existingAssignment) {
@@ -188,6 +194,7 @@ class ParticularController extends Controller
                         'credit' => 0,
                         'overpayment' => 0,
                         'academic_year_id' => $validated['academic_year_id'],
+                        'quarter' => $validated['quarter'],
                     ]);
 
                     // Create Sales voucher for ledger visibility
@@ -215,6 +222,7 @@ class ParticularController extends Controller
                                     ->where('particular_id', $id)
                                     ->where('student_id', $studentId)
                                     ->where('academic_year_id', $validated['academic_year_id'])
+                                    ->where('quarter', $validated['quarter'])
                                     ->increment('credit', $apply);
 
                                 $student->advance_balance = max(0, (float) $student->advance_balance - $apply);
@@ -432,17 +440,19 @@ class ParticularController extends Controller
             'sales' => 'required|numeric|min:0',
             'deadline' => 'nullable|date',
             'academic_year_id' => 'required|exists:academic_years,id',
+            'quarter' => 'required|integer|between:1,4',
             'use_advance' => 'nullable|boolean',
         ]);
 
-        // Check if assignment already exists for this academic year
+        // Check if assignment already exists for this academic year + quarter
         $existingAssignment = $particular->students()
             ->where('student_id', $validated['student_id'])
             ->wherePivot('academic_year_id', $validated['academic_year_id'])
+            ->wherePivot('quarter', $validated['quarter'])
             ->exists();
 
         if ($existingAssignment) {
-            return response()->json(['error' => 'This student already has this particular assigned for this academic year'], 400);
+            return response()->json(['error' => 'This student already has this particular assigned for this academic year and quarter'], 400);
         }
 
         DB::beginTransaction();
@@ -458,6 +468,7 @@ class ParticularController extends Controller
                 'overpayment' => 0,
                 'deadline' => $validated['deadline'] ?? null,
                 'academic_year_id' => $validated['academic_year_id'],
+                'quarter' => $validated['quarter'],
             ]);
 
             // Create Sales voucher for ledger visibility
@@ -484,6 +495,7 @@ class ParticularController extends Controller
                             ->where('particular_id', $particularId)
                             ->where('student_id', $studentId)
                             ->where('academic_year_id', $validated['academic_year_id'])
+                            ->where('quarter', $validated['quarter'])
                             ->increment('credit', $apply);
 
                         $student->advance_balance = max(0, (float) $student->advance_balance - $apply);

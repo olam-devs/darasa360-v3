@@ -29,6 +29,7 @@ const API_BASE = '/api';
         let allClasses = [];
         let allAcademicYears = [];
         let selectedAcademicYearId = null;
+        let selectedQuarter = null;
         let _cachedAssignmentStudents = null; // {key: particularId+'-'+yearId, data: [...]}
         let _searchDebounceTimer = null;
 
@@ -329,6 +330,18 @@ const API_BASE = '/api';
                             <p class="text-sm text-yellow-600 text-center mt-2">All fee assignments will be linked to this academic year</p>
                         </div>
 
+                        <!-- Quarter Selection (Required) -->
+                        <div class="mb-6 p-6 bg-purple-50 rounded-lg border-2 border-purple-400">
+                            <label class="block text-lg font-bold mb-3 text-center text-purple-700"> Step 2: Select Quarter (Required)</label>
+                            <div class="flex justify-center gap-3">
+                                <button type="button" onclick="onQuarterChange(1)" id="qbtn-1" class="quarter-btn px-6 py-3 rounded-lg font-bold border-2 border-purple-300 bg-white text-purple-700 hover:bg-purple-100 transition">Q1</button>
+                                <button type="button" onclick="onQuarterChange(2)" id="qbtn-2" class="quarter-btn px-6 py-3 rounded-lg font-bold border-2 border-purple-300 bg-white text-purple-700 hover:bg-purple-100 transition">Q2</button>
+                                <button type="button" onclick="onQuarterChange(3)" id="qbtn-3" class="quarter-btn px-6 py-3 rounded-lg font-bold border-2 border-purple-300 bg-white text-purple-700 hover:bg-purple-100 transition">Q3</button>
+                                <button type="button" onclick="onQuarterChange(4)" id="qbtn-4" class="quarter-btn px-6 py-3 rounded-lg font-bold border-2 border-purple-300 bg-white text-purple-700 hover:bg-purple-100 transition">Q4</button>
+                            </div>
+                            <p class="text-sm text-purple-600 text-center mt-2">All new assignments in this session will be linked to the selected quarter</p>
+                        </div>
+
                         <!-- Advance Payment Option -->
                         <div class="mb-6 p-5 bg-emerald-50 rounded-lg border-2 border-emerald-300">
                             <label class="flex items-center justify-center gap-3 text-emerald-800 font-bold">
@@ -339,7 +352,7 @@ const API_BASE = '/api';
                         </div>
 
                         <div class="mb-6 p-6 bg-blue-50 rounded-lg border-2 border-blue-300">
-                            <label class="block text-lg font-bold mb-4 text-center"> Step 2: Find Students</label>
+                            <label class="block text-lg font-bold mb-4 text-center"> Step 3: Find Students</label>
 
                             <!-- Search by name (cross-class) -->
                             <div class="mb-4">
@@ -382,6 +395,19 @@ const API_BASE = '/api';
             const si = document.getElementById('studentSearchInput');
             if (si) si.value = '';
             document.getElementById('studentsListContainer').innerHTML = '<p class="text-center text-gray-500 p-4">Select a class to view students for the selected academic year.</p>';
+        }
+
+        function onQuarterChange(q) {
+            selectedQuarter = q;
+            document.querySelectorAll('.quarter-btn').forEach(btn => {
+                btn.classList.remove('bg-purple-600', 'text-white', 'border-purple-700');
+                btn.classList.add('bg-white', 'text-purple-700', 'border-purple-300');
+            });
+            const active = document.getElementById('qbtn-' + q);
+            if (active) {
+                active.classList.remove('bg-white', 'text-purple-700', 'border-purple-300');
+                active.classList.add('bg-purple-600', 'text-white', 'border-purple-700');
+            }
         }
 
         function toggleSelectAllVisibleStudents(checked) {
@@ -675,6 +701,11 @@ const API_BASE = '/api';
                 return;
             }
 
+            if (!selectedQuarter) {
+                alert(' Please select a Quarter first (Step 2)');
+                return;
+            }
+
             const selected = getSelectedRowsForBulk();
             if (selected.length === 0) {
                 alert(' Select at least one student');
@@ -699,6 +730,7 @@ const API_BASE = '/api';
                 await axios.post(`${API_BASE}/particulars/${particularId}/bulk-opening-balance`, {
                     assignments,
                     academic_year_id: selectedAcademicYearId,
+                    quarter: selectedQuarter,
                     use_advance: useAdvance,
                 });
                 alert(` Bulk assign complete for ${assignments.length} student(s)`);
@@ -757,6 +789,11 @@ const API_BASE = '/api';
                 return;
             }
 
+            if (!selectedQuarter) {
+                alert(' Please select a Quarter first (Step 2)');
+                return;
+            }
+
             const amountInput = document.querySelector(`.student-amount[data-student-id="${studentId}"]`);
             const deadlineInput = document.querySelector(`.student-deadline[data-student-id="${studentId}"]`);
 
@@ -773,7 +810,8 @@ const API_BASE = '/api';
                     student_id: studentId,
                     sales: amount,
                     deadline: deadline || null,
-                    academic_year_id: selectedAcademicYearId
+                    academic_year_id: selectedAcademicYearId,
+                    quarter: selectedQuarter
                 });
 
                 alert(' Student assigned successfully!');
