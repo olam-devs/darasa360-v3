@@ -55,9 +55,11 @@
         </div>
 
         @php
-            $qCount = count($yq);
-            $qW = 16; // fixed per-quarter column width %
-            $feeItemW = max(20, 100 - 9 - 12 - ($qCount * $qW)); // STATUS=9%, TOTAL=12%
+            $qCount   = count($yq);
+            $showTotal = $qCount > 1;           // hide Total column when only 1 quarter
+            $qW       = 16;                     // fixed per-quarter column width %
+            $totalW   = $showTotal ? 12 : 0;
+            $feeItemW = max(20, 100 - 9 - $totalW - ($qCount * $qW));
         @endphp
         <table class="fees-table" style="margin-top: 0; table-layout: fixed; width: 100%;">
             <colgroup>
@@ -66,7 +68,7 @@
                 @foreach($yq as $q)
                     <col style="width: {{ $qW }}%;">
                 @endforeach
-                <col style="width: 12%;">
+                @if($showTotal)<col style="width: 12%;">@endif
             </colgroup>
             <thead>
                 <tr>
@@ -75,7 +77,7 @@
                     @foreach($yq as $q)
                         <th style="text-align: right;">{{ $ql[$q] ?? 'Q'.$q }}</th>
                     @endforeach
-                    <th style="text-align: right;">Total</th>
+                    @if($showTotal)<th style="text-align: right;">Total</th>@endif
                 </tr>
             </thead>
             <tbody>
@@ -103,7 +105,7 @@
                             @endif
                         </td>
                     @endforeach
-                    <td class="amount">TSh {{ number_format($part['total_charged'], 2) }}</td>
+                    @if($showTotal)<td class="amount">TSh {{ number_format($part['total_charged'], 2) }}</td>@endif
                 </tr>
                 {{-- Row 2: Paid --}}
                 <tr class="paid-row">
@@ -117,31 +119,32 @@
                             @endif
                         </td>
                     @endforeach
-                    <td class="amount">TSh {{ number_format($part['total_paid'], 2) }}</td>
+                    @if($showTotal)<td class="amount">TSh {{ number_format($part['total_paid'], 2) }}</td>@endif
                 </tr>
                 @endforeach
 
-                {{-- Quarter totals section --}}
-                <tr class="total-row" style="background-color:#1976d2; color:white;">
+                {{-- Quarter totals section — pale colours, dark text --}}
+                <tr class="total-row" style="background-color:#bbdefb; color:#0d47a1;">
                     <td colspan="2"><strong>Total Required</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['charged'] ?? 0, 2) }}</td>
                     @endforeach
-                    <td class="amount">TSh {{ number_format($yearData['subtotal_fees'], 2) }}</td>
+                    @if($showTotal)<td class="amount">TSh {{ number_format($yearData['subtotal_fees'], 2) }}</td>@endif
                 </tr>
-                <tr class="total-row" style="background-color:#388e3c; color:white;">
+                <tr class="total-row" style="background-color:#c8e6c9; color:#1b5e20;">
                     <td colspan="2"><strong>Total Paid</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['paid'] ?? 0, 2) }}</td>
                     @endforeach
-                    <td class="amount">TSh {{ number_format($yearData['subtotal_paid'], 2) }}</td>
+                    @if($showTotal)<td class="amount">TSh {{ number_format($yearData['subtotal_paid'], 2) }}</td>@endif
                 </tr>
-                <tr class="total-row" style="background-color:{{ $yearData['subtotal_balance'] > 0 ? '#c62828' : '#2e7d32' }}; color:white;">
+                @php $balColor = $yearData['subtotal_balance'] > 0 ? '#ffcdd2' : '#c8e6c9'; $balText = $yearData['subtotal_balance'] > 0 ? '#b71c1c' : '#1b5e20'; @endphp
+                <tr class="total-row" style="background-color:{{ $balColor }}; color:{{ $balText }};">
                     <td colspan="2"><strong>Balance Remaining</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['remaining'] ?? 0, 2) }}</td>
                     @endforeach
-                    <td class="amount">TSh {{ number_format($yearData['subtotal_balance'], 2) }}</td>
+                    @if($showTotal)<td class="amount">TSh {{ number_format($yearData['subtotal_balance'], 2) }}</td>@endif
                 </tr>
             </tbody>
         </table>
@@ -152,15 +155,16 @@
     @if(count($invoiceData['items_by_year']) > 1)
     <table class="fees-table">
         <tbody>
-            <tr class="total-row" style="background-color: #0d47a1; color: white;">
+            @php $grandShowTotal = count($activeQuarters) > 1; @endphp
+            <tr class="total-row" style="background-color:#bbdefb; color:#0d47a1;">
                 <td colspan="2"><strong>GRAND TOTAL (All Years)</strong></td>
                 @foreach($activeQuarters as $q)
                     @php
                         $grandCharged = collect($invoiceData['items_by_year'])->sum(fn($y) => $y['quarter_totals'][$q]['charged'] ?? 0);
                     @endphp
-                    <td class="amount" style="width: {{ round(46 / count($activeQuarters), 0) }}%;">TSh {{ number_format($grandCharged, 2) }}</td>
+                    <td class="amount">TSh {{ number_format($grandCharged, 2) }}</td>
                 @endforeach
-                <td class="amount" style="width: 12%;">TSh {{ number_format($invoiceData['total_fees'], 2) }}</td>
+                @if($grandShowTotal)<td class="amount">TSh {{ number_format($invoiceData['total_fees'], 2) }}</td>@endif
             </tr>
         </tbody>
     </table>
