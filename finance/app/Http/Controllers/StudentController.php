@@ -600,21 +600,39 @@ class StudentController extends Controller
 
     public function getStudentParticulars($studentId)
     {
-        $student = Student::with('particulars')->findOrFail($studentId);
+        Student::findOrFail($studentId);
 
-        $particulars = $student->particulars->map(function ($particular) {
-            return [
-                'id' => $particular->id,
-                'name' => $particular->name,
-                'sales' => $particular->pivot->sales,
-                'debit' => $particular->pivot->debit,
-                'credit' => $particular->pivot->credit,
-                'balance' => $particular->pivot->sales + $particular->pivot->debit - $particular->pivot->credit,
-                'deadline' => $particular->pivot->deadline,
-            ];
-        });
+        $rows = DB::connection('tenant')->table('particular_student as ps')
+            ->join('particulars as p', 'p.id', '=', 'ps.particular_id')
+            ->where('ps.student_id', $studentId)
+            ->select(
+                'p.id',
+                'p.name',
+                'ps.sales',
+                'ps.debit',
+                'ps.credit',
+                'ps.deadline',
+                'ps.quarter',
+                'ps.academic_year_id'
+            )
+            ->orderBy('p.name')
+            ->orderBy('ps.quarter')
+            ->get()
+            ->map(function ($row) {
+                return [
+                    'id'               => $row->id,
+                    'name'             => $row->name,
+                    'quarter'          => $row->quarter,
+                    'academic_year_id' => $row->academic_year_id,
+                    'sales'            => (float) $row->sales,
+                    'debit'            => (float) ($row->debit ?? 0),
+                    'credit'           => (float) $row->credit,
+                    'balance'          => (float) $row->sales + (float) ($row->debit ?? 0) - (float) $row->credit,
+                    'deadline'         => $row->deadline,
+                ];
+            });
 
-        return response()->json($particulars);
+        return response()->json($rows);
     }
 
     public function getStudentParticularDetails($studentId, $particularId)

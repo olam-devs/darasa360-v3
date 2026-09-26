@@ -219,6 +219,7 @@ class VoucherController extends Controller
             'items'          => 'required|array|min:1',
             'items.*.particular_id' => 'required|exists:particulars,id',
             'items.*.amount'        => 'required|numeric|min:0.01',
+            'items.*.quarter'       => 'nullable|integer|between:1,4',
             'advance_amount' => 'nullable|numeric|min:0',
         ]);
 
@@ -231,21 +232,33 @@ class VoucherController extends Controller
             foreach ($validated['items'] as $item) {
                 $particular = Particular::findOrFail($item['particular_id']);
                 $amount = (float) $item['amount'];
+                $quarter = isset($item['quarter']) ? (int) $item['quarter'] : null;
                 $totalAmount += $amount;
 
-                // Ensure pivot row exists
-                $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
-                if (! $pivot) {
-                    $student->particulars()->attach($particular->id, [
-                        'sales' => 0, 'debit' => 0, 'credit' => 0, 'overpayment' => 0,
-                    ]);
-                    $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
-                }
+                if ($quarter) {
+                    // Quarter-aware: update the specific quarter row directly
+                    $updated = DB::connection('tenant')->table('particular_student')
+                        ->where('student_id', $student->id)
+                        ->where('particular_id', $particular->id)
+                        ->where('quarter', $quarter)
+                        ->increment('credit', $amount);
 
-                // Apply to particular: credit tracks payments received
-                $student->particulars()->updateExistingPivot($particular->id, [
-                    'credit' => (float) $pivot->pivot->credit + $amount,
-                ]);
+                    if (! $updated) {
+                        throw new \Exception("No Q{$quarter} assignment found for {$particular->name}");
+                    }
+                } else {
+                    // Legacy path: no quarter specified, use the first matching pivot row
+                    $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
+                    if (! $pivot) {
+                        $student->particulars()->attach($particular->id, [
+                            'sales' => 0, 'debit' => 0, 'credit' => 0, 'overpayment' => 0,
+                        ]);
+                        $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
+                    }
+                    $student->particulars()->updateExistingPivot($particular->id, [
+                        'credit' => (float) $pivot->pivot->credit + $amount,
+                    ]);
+                }
                 $particularsApplied[] = $particular->name;
             }
 

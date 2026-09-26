@@ -590,13 +590,14 @@
                 receiptParticulars = res.data;
                 const sel = document.getElementById('receiptParticular');
                 if (!sel) return;
+                const quarterLabel = q => q ? ` (Q${q})` : '';
                 sel.innerHTML = '<option value="">-- Select Particular --</option>' +
                     receiptParticulars.map(p => {
                         const outstanding = Math.max(0, parseFloat(p.balance) || 0);
                         const label = outstanding > 0
-                            ? `${p.name}   --   outstanding: ${formatTSh(outstanding)}`
-                            : `${p.name}  &#10003; fully paid`;
-                        return `<option value="${p.id}">${label}</option>`;
+                            ? `${p.name}${quarterLabel(p.quarter)}   --   outstanding: ${formatTSh(outstanding)}`
+                            : `${p.name}${quarterLabel(p.quarter)}  &#10003; fully paid`;
+                        return `<option value="${p.id}_${p.quarter || 0}">${label}</option>`;
                     }).join('');
                 document.getElementById('receiptParticularSection').classList.remove('hidden');
             } catch (e) {
@@ -604,9 +605,20 @@
             }
         }
 
+        function parseReceiptParticularValue(compositeVal) {
+            const parts = String(compositeVal || '').split('_');
+            const particularId = parseInt(parts[0]) || 0;
+            const quarter = parseInt(parts[1]) || 0;
+            return { particularId, quarter: quarter || null };
+        }
+
+        function findReceiptParticular(particularId, quarter) {
+            return receiptParticulars.find(x => x.id === particularId && (x.quarter || 0) === (quarter || 0));
+        }
+
         function onReceiptParticularChange() {
-            const particularId = parseInt(document.getElementById('receiptParticular').value);
-            const p = receiptParticulars.find(x => x.id === particularId);
+            const { particularId, quarter } = parseReceiptParticularValue(document.getElementById('receiptParticular').value);
+            const p = findReceiptParticular(particularId, quarter);
             const student = allStudents.find(s => s.id == receiptStudentId);
             const advanceAvail = parseFloat(student?.advance_balance ?? 0) || 0;
 
@@ -638,8 +650,8 @@
         }
 
         function addParticularToReceipt() {
-            const particularId = parseInt(document.getElementById('receiptParticular').value);
-            const p = receiptParticulars.find(x => x.id === particularId);
+            const { particularId, quarter } = parseReceiptParticularValue(document.getElementById('receiptParticular').value);
+            const p = findReceiptParticular(particularId, quarter);
             const amount = parseMoneyInput(document.getElementById('receiptParticularAmt').value);
 
             if (!p) {
@@ -650,8 +662,9 @@
                 showDarasaToast({ type: 'warning', title: 'Fee entry', message: 'Enter an amount greater than zero.' });
                 return;
             }
-            if (receiptItems.some(i => i.particularId === particularId)) {
-                showDarasaToast({ type: 'warning', title: 'Fee entry', message: `${p.name} is already in the list. Remove it first to change the amount.` });
+            const qSuffix = quarter ? ` Q${quarter}` : '';
+            if (receiptItems.some(i => i.particularId === particularId && (i.quarter || 0) === (quarter || 0))) {
+                showDarasaToast({ type: 'warning', title: 'Fee entry', message: `${p.name}${qSuffix} is already in the list. Remove it first to change the amount.` });
                 return;
             }
             const totalPaid = parseMoneyInput(document.getElementById('receiptTotalPaid')?.value);
@@ -663,7 +676,8 @@
                 }
             }
 
-            receiptItems.push({ particularId, particularName: p.name, amount });
+            const particularLabel = quarter ? `${p.name} (Q${quarter})` : p.name;
+            receiptItems.push({ particularId, particularName: particularLabel, quarter, amount });
             receiptAdvanceConfirmed = false;
             document.getElementById('receiptParticular').value = '';
             document.getElementById('receiptParticularAmt').value = '';
@@ -840,7 +854,7 @@
                     student_id: receiptStudentId,
                     book_id: parseInt(bookId),
                     notes,
-                    items: receiptItems.map(i => ({ particular_id: i.particularId, amount: i.amount })),
+                    items: receiptItems.map(i => ({ particular_id: i.particularId, amount: i.amount, quarter: i.quarter || null })),
                     advance_amount: advanceAmount,
                 });
                 loadVouchers();
