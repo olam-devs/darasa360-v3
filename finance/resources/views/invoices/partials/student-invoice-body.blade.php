@@ -95,7 +95,7 @@
                         <td class="amount">
                             @if(isset($part['quarters'][$q]))
                                 TSh {{ number_format($part['quarters'][$q]['charged'], 2) }}
-                                @if(!empty($part['quarters'][$q]['deadline']))
+                                @if(!empty($part['quarters'][$q]['deadline']) && $part['quarters'][$q]['paid'] < $part['quarters'][$q]['charged'])
                                     <div style="font-size:6px; font-weight:normal; color:#1565c0; background:#e3f2fd; border-radius:2px; padding:1px 3px; margin-top:2px; white-space:nowrap;">
                                         Due: {{ date('d M Y', strtotime($part['quarters'][$q]['deadline'])) }}
                                     </div>
