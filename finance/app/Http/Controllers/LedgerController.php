@@ -1700,6 +1700,11 @@ class LedgerController extends Controller
         $bankAccounts = BankAccount::all();
 
         $invoiceHeading = trim($request->get('heading', 'FEE STATEMENT')) ?: 'FEE STATEMENT';
+
+        if ($request->get('preview') === '1') {
+            return view('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading'));
+        }
+
         $pdf = Pdf::loadView('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading'));
 
         $safeName = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $student->name);
