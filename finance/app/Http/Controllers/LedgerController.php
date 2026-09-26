@@ -1454,8 +1454,9 @@ class LedgerController extends Controller
 
             $q = (int) $row->quarter;
             $itemsByYear[$yearKey]['particulars'][$partId]['quarters'][$q] = [
-                'charged' => (float) ($row->sales ?? 0),
-                'paid'    => (float) ($row->credit ?? 0),
+                'charged'  => (float) ($row->sales ?? 0),
+                'paid'     => (float) ($row->credit ?? 0),
+                'deadline' => $row->deadline ?? null,
             ];
             $itemsByYear[$yearKey]['active_quarters'][$q] = true;
             $globalActiveQuarters[$q] = true;
