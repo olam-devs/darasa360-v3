@@ -112,7 +112,7 @@ class OwnerController extends Controller
 
         $query = DB::connection('tenant')
             ->table('students as s')
-            ->leftJoin('school_classes as c', 'c.id', '=', 's.school_class_id')
+            ->leftJoin('school_classes as c', 'c.id', '=', 's.class_id')
             ->select(
                 's.id', 's.name', 's.advance_balance',
                 DB::raw('c.name as class_name'),
@@ -179,7 +179,7 @@ class OwnerController extends Controller
 
                 $rows = DB::connection('tenant')
                     ->table('students as s')
-                    ->leftJoin('school_classes as c', 'c.id', '=', 's.school_class_id')
+                    ->leftJoin('school_classes as c', 'c.id', '=', 's.class_id')
                     ->select('s.id', 's.name', 's.advance_balance',
                              DB::raw('c.name as class_name'),
                              DB::raw('(SELECT SUM(GREATEST(0, ps.sales - ps.credit)) FROM particular_student ps WHERE ps.student_id = s.id) as outstanding'))
@@ -210,7 +210,7 @@ class OwnerController extends Controller
         $conn = DB::connection('tenant');
 
         $student = $conn->table('students as s')
-            ->leftJoin('school_classes as c', 'c.id', '=', 's.school_class_id')
+            ->leftJoin('school_classes as c', 'c.id', '=', 's.class_id')
             ->select('s.id', 's.name', 's.advance_balance', DB::raw('c.name as class_name'))
             ->where('s.id', $studentId)->first();
 
@@ -285,7 +285,7 @@ class OwnerController extends Controller
         // ── Outstanding by class ─────────────────────────────────────────────
         $byClass = $conn->table('particular_student as ps')
             ->join('students as s', 's.id', '=', 'ps.student_id')
-            ->leftJoin('school_classes as c', 'c.id', '=', 's.school_class_id')
+            ->leftJoin('school_classes as c', 'c.id', '=', 's.class_id')
             ->select(
                 DB::raw('COALESCE(c.name, "No Class") as class_name'),
                 DB::raw('COUNT(DISTINCT ps.student_id) as student_count'),
@@ -300,7 +300,7 @@ class OwnerController extends Controller
         // ── Top 10 debtors ───────────────────────────────────────────────────
         $topDebtors = $conn->table('particular_student as ps')
             ->join('students as s', 's.id', '=', 'ps.student_id')
-            ->leftJoin('school_classes as c', 'c.id', '=', 's.school_class_id')
+            ->leftJoin('school_classes as c', 'c.id', '=', 's.class_id')
             ->leftJoin(DB::raw('(SELECT student_id, MAX(date) as last_receipt FROM vouchers WHERE voucher_type = "Receipt" AND voided_at IS NULL GROUP BY student_id) lr'), 'lr.student_id', '=', 'ps.student_id')
             ->select(
                 's.id', 's.name',
