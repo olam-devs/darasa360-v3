@@ -33,6 +33,7 @@ class AnalyticsController extends Controller
     public function getAnalytics($period = 'month')
     {
         [$dateFrom, $dateTo] = $this->getPeriodDates($period);
+        $quarter = $this->resolveQuarter(request()->integer('quarter', 0));
 
         // Fee Expected/Collected should depend ONLY on student particular assignments (NOT book deposits).
         // Scholarships reduce the expected amount (forgiven), and collections are what has been paid (pivot credit).
@@ -44,6 +45,7 @@ class AnalyticsController extends Controller
                     // null-safe match on academic_year_id (both null or equal)
                     ->whereRaw('sch.academic_year_id <=> ps.academic_year_id');
             })
+            ->when($quarter, fn ($q) => $q->where('ps.quarter', $quarter))
             ->selectRaw('COALESCE(SUM(ps.sales), 0) as expected_gross')
             ->selectRaw('COALESCE(SUM(ps.credit), 0) as collected_total')
             ->selectRaw('COALESCE(SUM(COALESCE(sch.forgiven_amount, 0)), 0) as scholarships_total')
@@ -85,13 +87,14 @@ class AnalyticsController extends Controller
         $booksBalances = $this->getBooksBalances();
 
         // Particulars data for bar chart
-        $particularsData = $this->getParticularsData();
+        $particularsData = $this->getParticularsData($quarter);
 
         // Student payment completion status by class (collected amounts match selected period)
-        $classStats = $this->getClassPaymentStats($dateFrom, $dateTo);
+        $classStats = $this->getClassPaymentStats($dateFrom, $dateTo, $quarter);
 
         return response()->json([
             'period' => $period,
+            'quarter' => $quarter,
             'date_from' => $dateFrom->toDateString(),
             'date_to' => $dateTo->toDateString(),
             'summary' => [
@@ -263,7 +266,12 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function getParticularsData()
+    private function resolveQuarter(int $q): int
+    {
+        return ($q >= 1 && $q <= 4) ? $q : 0;
+    }
+
+    private function getParticularsData(int $quarter = 0)
     {
         $particulars = Particular::where('is_active', true)->get();
         $data = [];
@@ -277,6 +285,7 @@ class AnalyticsController extends Controller
                         ->whereRaw('sch.academic_year_id <=> ps.academic_year_id');
                 })
                 ->where('ps.particular_id', $particular->id)
+                ->when($quarter, fn ($q) => $q->where('ps.quarter', $quarter))
                 ->selectRaw('COALESCE(SUM(ps.sales), 0) as expected_gross')
                 ->selectRaw('COALESCE(SUM(ps.credit), 0) as collected')
                 ->selectRaw('COALESCE(SUM(COALESCE(sch.forgiven_amount, 0)), 0) as scholarships')
@@ -305,7 +314,7 @@ class AnalyticsController extends Controller
         return $data;
     }
 
-    private function getClassPaymentStats($dateFrom = null, $dateTo = null)
+    private function getClassPaymentStats($dateFrom = null, $dateTo = null, int $quarter = 0)
     {
         $classes = SchoolClass::where('is_active', true)
             ->orderBy('display_order')
@@ -331,6 +340,7 @@ class AnalyticsController extends Controller
                         ->whereRaw('sch.academic_year_id <=> ps.academic_year_id');
                 })
                 ->whereIn('ps.student_id', $studentIds)
+                ->when($quarter, fn ($q) => $q->where('ps.quarter', $quarter))
                 ->groupBy('ps.student_id')
                 ->select('ps.student_id')
                 ->selectRaw('COALESCE(SUM(GREATEST(ps.sales - COALESCE(sch.forgiven_amount, 0), 0)), 0) as expected')
@@ -340,8 +350,19 @@ class AnalyticsController extends Controller
                 ->keyBy('student_id')
                 ->map(fn ($r) => (float) ($r->expected ?? 0));
 
-            // Collected: either pivot total (all-time) or receipts within date range
-            if ($dateFrom && $dateTo) {
+            // When a quarter filter is active, collected = pivot credit for that quarter only.
+            // Otherwise use date-range receipts (period-bound) or all-time pivot totals.
+            if ($quarter) {
+                $collectedByStudent = DB::table('particular_student as ps')
+                    ->whereIn('ps.student_id', $studentIds)
+                    ->where('ps.quarter', $quarter)
+                    ->groupBy('ps.student_id')
+                    ->select('ps.student_id')
+                    ->selectRaw('COALESCE(SUM(ps.credit), 0) as collected')
+                    ->get()
+                    ->keyBy('student_id')
+                    ->map(fn ($r) => (float) ($r->collected ?? 0));
+            } elseif ($dateFrom && $dateTo) {
                 $collectedByStudent = Voucher::whereBetween('date', [$dateFrom, $dateTo])
                     ->where('voucher_type', 'Receipt')
                     ->whereNotNull('student_id')
@@ -516,6 +537,7 @@ class AnalyticsController extends Controller
 
         $dateFrom = Carbon::parse($validated['from_date'])->startOfDay();
         $dateTo = Carbon::parse($validated['to_date'])->endOfDay();
+        $quarter = $this->resolveQuarter($request->integer('quarter', 0));
 
         $assignmentTotals = DB::table('particular_student as ps')
             ->leftJoin('scholarships as sch', function ($join) {
@@ -524,6 +546,7 @@ class AnalyticsController extends Controller
                     ->where('sch.is_active', '=', 1)
                     ->whereRaw('sch.academic_year_id <=> ps.academic_year_id');
             })
+            ->when($quarter, fn ($q) => $q->where('ps.quarter', $quarter))
             ->selectRaw('COALESCE(SUM(ps.sales), 0) as expected_gross')
             ->selectRaw('COALESCE(SUM(ps.credit), 0) as collected_total')
             ->selectRaw('COALESCE(SUM(COALESCE(sch.forgiven_amount, 0)), 0) as scholarships_total')
@@ -560,15 +583,16 @@ class AnalyticsController extends Controller
         $booksDistribution = $this->getBooksDistribution($dateFrom, $dateTo);
 
         // Particulars data for bar chart
-        $particularsData = $this->getParticularsData();
+        $particularsData = $this->getParticularsData($quarter);
 
         // Student payment completion status by class (filtered to custom date range)
-        $classStats = $this->getClassPaymentStats($dateFrom, $dateTo);
+        $classStats = $this->getClassPaymentStats($dateFrom, $dateTo, $quarter);
 
         $booksBalances = $this->getBooksBalances();
 
         return response()->json([
             'period' => 'custom',
+            'quarter' => $quarter,
             'date_from' => $dateFrom->toDateString(),
             'date_to' => $dateTo->toDateString(),
             'summary' => [

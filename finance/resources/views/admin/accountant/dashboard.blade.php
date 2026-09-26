@@ -100,6 +100,26 @@
                 <h2 class="text-lg font-semibold text-slate-900 md:text-xl">Analytics and reports</h2>
             </div>
 
+            <!-- Quarter Selector -->
+            <div class="mb-3 flex flex-wrap items-center gap-2 md:mb-4">
+                <span class="text-sm font-semibold text-slate-600 mr-1">Quarter:</span>
+                <button type="button" onclick="setQuarter(0)" id="qbtn-all" class="quarter-filter-btn rounded-lg border border-indigo-700 bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
+                    All Quarters
+                </button>
+                <button type="button" onclick="setQuarter(1)" id="qbtn-1" class="quarter-filter-btn rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    Q1 (Apr)
+                </button>
+                <button type="button" onclick="setQuarter(2)" id="qbtn-2" class="quarter-filter-btn rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    Q2 (Jul)
+                </button>
+                <button type="button" onclick="setQuarter(3)" id="qbtn-3" class="quarter-filter-btn rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    Q3 (Sep)
+                </button>
+                <button type="button" onclick="setQuarter(4)" id="qbtn-4" class="quarter-filter-btn rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+                    Q4 (Dec)
+                </button>
+            </div>
+
             <!-- Time Period Selector -->
             <div class="mb-4 flex flex-wrap gap-2 md:mb-6 md:gap-3">
                 <button type="button" onclick="loadAnalytics('today')" id="btn-today" class="analytics-btn rounded-lg border border-blue-700 bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 md:px-6 md:py-3 md:text-base">
@@ -172,7 +192,7 @@
             <!-- Particulars Bar Graph: Expected vs Collected -->
             <div class="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-6">
                 <div class="mb-4 flex items-center justify-between gap-3">
-                    <h3 class="text-lg font-semibold text-slate-900 md:text-xl">Fees by particular (expected vs collected)</h3>
+                    <h3 class="text-lg font-semibold text-slate-900 md:text-xl" id="particulars-chart-title">Fees by particular (expected vs collected)</h3>
                     <div class="flex gap-2">
                         <label class="flex items-center gap-2">
                             <input type="checkbox" id="select-all-particulars" onchange="toggleAllParticulars()" checked>
@@ -514,6 +534,7 @@
     <script>
         let collectionChart, paymentMethodsChart, particularsChart;
         let currentPeriod = 'today';
+        let selectedQuarter = 0;  // 0=all, 1-4=specific quarter
         let chartsInitialized = false;
         let allClassStats = [];
         let allParticularStats = [];
@@ -558,6 +579,11 @@
             `;
         }
 
+        function quarterLabel(q) {
+            const map = { 0: '', 1: ' · Q1 (Apr)', 2: ' · Q2 (Jul)', 3: ' · Q3 (Sep)', 4: ' · Q4 (Dec)' };
+            return map[q] || '';
+        }
+
         function formatPeriodLabel(period, data) {
             if (period === 'custom' && data?.date_from && data?.date_to) {
                 return `${data.date_from} to ${data.date_to}`;
@@ -569,12 +595,27 @@
                 yearly: 'This year',
                 custom: 'Custom range',
             };
-            return labels[period] || period;
+            return (labels[period] || period) + quarterLabel(selectedQuarter);
+        }
+
+        function setQuarter(q) {
+            selectedQuarter = q;
+            // Update quarter button styles
+            document.querySelectorAll('.quarter-filter-btn').forEach(btn => {
+                btn.classList.remove('border-indigo-700', 'bg-indigo-600', 'text-white');
+                btn.classList.add('border-slate-200', 'bg-white', 'text-slate-700');
+            });
+            const activeQBtn = document.getElementById('qbtn-' + (q === 0 ? 'all' : q));
+            if (activeQBtn) {
+                activeQBtn.classList.remove('border-slate-200', 'bg-white', 'text-slate-700');
+                activeQBtn.classList.add('border-indigo-700', 'bg-indigo-600', 'text-white');
+            }
+            // Reload with the same period but new quarter
+            loadAnalytics(currentPeriod);
         }
 
         function loadAnalytics(period) {
             currentPeriod = period;
-            console.log('Loading analytics for period:', period);
 
             // Hide custom date picker when switching to preset periods
             const customPicker = document.getElementById('custom-date-picker');
@@ -595,10 +636,11 @@
             // Show skeleton while loading
             showSkeletonCards();
 
+            const params = selectedQuarter ? { quarter: selectedQuarter } : {};
+
             // Fetch analytics data
-            axios.get('/api/analytics/' + period)
+            axios.get('/api/analytics/' + period, { params })
                 .then(response => {
-                    console.log('Analytics data received for', period, ':', response.data);
                     setTimeout(() => updateAnalyticsUI(response.data), 300);
                 })
                 .catch(error => {
@@ -772,6 +814,11 @@
             }
 
             // Update particular statistics
+            const partTitle = document.getElementById('particulars-chart-title');
+            if (partTitle) {
+                const qSuffix = selectedQuarter ? ` — ${['','Q1 (Apr)','Q2 (Jul)','Q3 (Sep)','Q4 (Dec)'][selectedQuarter]}` : '';
+                partTitle.textContent = `Fees by particular (expected vs collected)${qSuffix}`;
+            }
             if (data.particulars_data && data.particulars_data.length > 0) {
                 allParticularStats = data.particulars_data;
                 populateParticularCheckboxes(allParticularStats);
@@ -1509,12 +1556,9 @@
             showSkeletonCards();
 
             // Fetch analytics data with custom date range
-            axios.get('/api/analytics/custom', {
-                params: {
-                    from_date: fromDate,
-                    to_date: toDate
-                }
-            })
+            const customParams = { from_date: fromDate, to_date: toDate };
+            if (selectedQuarter) customParams.quarter = selectedQuarter;
+            axios.get('/api/analytics/custom', { params: customParams })
             .then(response => {
                 setTimeout(() => updateAnalyticsUI(response.data), 300);
             })
