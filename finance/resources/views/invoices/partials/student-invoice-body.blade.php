@@ -54,21 +54,33 @@
             @endif
         </div>
 
-        @php $qCount = count($yq); $qW = $qCount > 0 ? round(52 / $qCount, 0) : 20; @endphp
-        <table class="fees-table" style="margin-top: 0;">
+        @php
+            $qCount = count($yq);
+            $qW = 16; // fixed per-quarter column width %
+            $feeItemW = max(20, 100 - 9 - 12 - ($qCount * $qW)); // STATUS=9%, TOTAL=12%
+        @endphp
+        <table class="fees-table" style="margin-top: 0; table-layout: fixed; width: 100%;">
+            <colgroup>
+                <col style="width: {{ $feeItemW }}%;">
+                <col style="width: 9%;">
+                @foreach($yq as $q)
+                    <col style="width: {{ $qW }}%;">
+                @endforeach
+                <col style="width: 12%;">
+            </colgroup>
             <thead>
                 <tr>
-                    <th style="width: 26%; text-align: left;">FEE ITEM</th>
-                    <th style="width: 10%; text-align: center;">STATUS</th>
+                    <th style="text-align: left;">FEE ITEM</th>
+                    <th style="text-align: center;">STATUS</th>
                     @foreach($yq as $q)
-                        <th style="text-align: right; width: {{ $qW }}%;">{{ $ql[$q] ?? 'Q'.$q }}</th>
+                        <th style="text-align: right;">{{ $ql[$q] ?? 'Q'.$q }}</th>
                     @endforeach
-                    <th style="text-align: right; width: 12%;">Total</th>
+                    <th style="text-align: right;">Total</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($yearData['particulars'] as $part)
-                {{-- Row 1: Charged — name cell spans 2 rows --}}
+                {{-- Row 1: Required — name cell spans 2 rows --}}
                 <tr>
                     <td rowspan="2" style="font-weight:bold; vertical-align:middle; border-right:2px solid #ddd;">
                         {{ $part['name'] }}
@@ -76,7 +88,7 @@
                             <span class="scholarship-badge"> {{ $part['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
                         @endif
                     </td>
-                    <td style="text-align:center; font-size:7.5px; color:#555; background:#f5f5f5;">Charged</td>
+                    <td style="text-align:center; font-size:7.5px; color:#555; background:#f5f5f5;">Required</td>
                     @foreach($yq as $q)
                         <td class="amount">
                             @if(isset($part['quarters'][$q]))
@@ -90,9 +102,9 @@
                 </tr>
                 {{-- Row 2: Paid --}}
                 <tr class="paid-row">
-                    <td style="text-align:center; font-size:7.5px; color:#2e7d32; background:#f1f8e9;">Paid</td>
+                    <td style="text-align:center; font-size:7.5px; color:#444; background:#f1f8e9;">Paid</td>
                     @foreach($yq as $q)
-                        <td class="amount" style="color:#2e7d32;">
+                        <td class="amount">
                             @if(isset($part['quarters'][$q]))
                                 TSh {{ number_format($part['quarters'][$q]['paid'], 2) }}
                             @else
@@ -100,13 +112,13 @@
                             @endif
                         </td>
                     @endforeach
-                    <td class="amount" style="color:#2e7d32;">TSh {{ number_format($part['total_paid'], 2) }}</td>
+                    <td class="amount">TSh {{ number_format($part['total_paid'], 2) }}</td>
                 </tr>
                 @endforeach
 
                 {{-- Quarter totals section --}}
                 <tr class="total-row" style="background-color:#1976d2; color:white;">
-                    <td colspan="2"><strong>Total Charged</strong></td>
+                    <td colspan="2"><strong>Total Required</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['charged'] ?? 0, 2) }}</td>
                     @endforeach
