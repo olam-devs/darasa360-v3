@@ -613,24 +613,32 @@
             try {
                 const res = await axios.get(`${API_BASE}/students/${studentId}/particulars`);
                 receiptParticulars = res.data;
-                const sel = document.getElementById('receiptParticular');
-                if (!sel) return;
-                const quarterLabel = q => q ? ` (Q${q})` : '';
-                sel.innerHTML = '<option value="">-- Select Particular --</option>' +
-                    receiptParticulars.map(p => {
-                        const outstanding = Math.max(0, parseFloat(p.balance) || 0);
-                        const label = outstanding > 0
-                            ? `${p.name}${quarterLabel(p.quarter)}   --   outstanding: ${formatTSh(outstanding)}`
-                            : `${p.name}${quarterLabel(p.quarter)}  &#10003; fully paid`;
-                        return `<option value="${p.id}_${p.quarter || 0}">${label}</option>`;
-                    }).join('');
+                if (!document.getElementById('receiptParticular')) return;
                 document.getElementById('receiptParticularSection').classList.remove('hidden');
+                rebuildParticularDropdown();
 
                 // Populate FIFO section
                 refreshFifoAdvSection();
             } catch (e) {
                 showDarasaToast({ type: 'error', title: 'Fee entry', message: 'Could not load particulars for this student.' });
             }
+        }
+
+        function rebuildParticularDropdown() {
+            const sel = document.getElementById('receiptParticular');
+            if (!sel) return;
+            const quarterLabel = q => q ? ` (Q${q})` : '';
+            const usedKeys = new Set(receiptItems.map(i => `${i.particularId}_${i.quarter || 0}`));
+            sel.innerHTML = '<option value="">-- Select Particular --</option>' +
+                receiptParticulars
+                    .filter(p => !usedKeys.has(`${p.id}_${p.quarter || 0}`))
+                    .map(p => {
+                        const outstanding = Math.max(0, parseFloat(p.balance) || 0);
+                        const label = outstanding > 0
+                            ? `${p.name}${quarterLabel(p.quarter)}   --   outstanding: ${formatTSh(outstanding)}`
+                            : `${p.name}${quarterLabel(p.quarter)}  &#10003; fully paid`;
+                        return `<option value="${p.id}_${p.quarter || 0}">${label}</option>`;
+                    }).join('');
         }
 
         function refreshFifoAdvSection() {
@@ -785,7 +793,7 @@
             const particularLabel = quarter ? `${p.name} (Q${quarter})` : p.name;
             receiptItems.push({ particularId, particularName: particularLabel, quarter, amount });
             receiptAdvanceConfirmed = false;
-            document.getElementById('receiptParticular').value = '';
+            rebuildParticularDropdown();
             document.getElementById('receiptParticularAmt').value = '';
             document.getElementById('receiptParticularInfo').classList.add('hidden');
             document.getElementById('receiptApplyAdvRow').classList.add('hidden');
@@ -799,6 +807,7 @@
             receiptAdvanceConfirmed = false;
             document.getElementById('receiptAdvanceWarning')?.classList.add('hidden');
             document.getElementById('receiptSubmitBtn') && (document.getElementById('receiptSubmitBtn').textContent = 'Save Receipt');
+            rebuildParticularDropdown();
             renderReceiptItems();
         }
 

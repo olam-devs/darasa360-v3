@@ -277,6 +277,14 @@ class VoucherController extends Controller
                 $student->name
             );
 
+            // Embed per-particular breakdown so void can reverse the correct pivot rows
+            $batchMeta = array_map(fn($i) => [
+                'pid' => (int) $i['particular_id'],
+                'q'   => isset($i['quarter']) && $i['quarter'] !== null ? (int) $i['quarter'] : null,
+                'amt' => (float) $i['amount'],
+            ], $validated['items']);
+            $notes .= ' __BATCH:' . json_encode(['items' => $batchMeta, 'adv' => $advanceAmount]);
+
             // ONE combined voucher for the book/cash ledger
             $voucher = Voucher::create([
                 'date'          => $validated['date'],
@@ -418,6 +426,44 @@ class VoucherController extends Controller
                             'sales' => max(0, (float) $pivot->pivot->sales - $salesDelta),
                             'credit' => max(0, (float) $pivot->pivot->credit - $creditDelta),
                         ]);
+                    }
+                }
+            }
+
+            // Batch receipt (particular_id = null): reverse per-particular pivot credits from embedded payload
+            if ($student && ! $particular) {
+                $batchPos = strpos((string) $voucher->notes, '__BATCH:');
+                if ($batchPos !== false) {
+                    $payload = json_decode(substr((string) $voucher->notes, $batchPos + 8), true);
+                    if (is_array($payload) && isset($payload['items'])) {
+                        foreach ($payload['items'] as $item) {
+                            $pid = (int) ($item['pid'] ?? 0);
+                            $q   = isset($item['q']) && $item['q'] !== null ? (int) $item['q'] : null;
+                            $amt = (float) ($item['amt'] ?? 0);
+                            if ($pid <= 0 || $amt <= 0) continue;
+
+                            $qry = DB::table('particular_student')
+                                ->where('student_id', $student->id)
+                                ->where('particular_id', $pid);
+                            if ($q !== null) {
+                                $qry->where('quarter', $q);
+                            }
+                            $row = $qry->first();
+                            if ($row) {
+                                DB::table('particular_student')
+                                    ->where('id', $row->id)
+                                    ->update([
+                                        'credit'     => max(0.0, (float) $row->credit - $amt),
+                                        'updated_at' => now(),
+                                    ]);
+                            }
+                        }
+                        // Reverse any advance portion that was stored on the student
+                        $adv = (float) ($payload['adv'] ?? 0);
+                        if ($adv > 0) {
+                            $student->advance_balance = max(0.0, (float) ($student->advance_balance ?? 0) - $adv);
+                            $student->save();
+                        }
                     }
                 }
             }
