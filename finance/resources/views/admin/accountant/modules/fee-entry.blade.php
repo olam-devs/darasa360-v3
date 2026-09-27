@@ -414,6 +414,31 @@
                         <!-- Particular entry  --  shown after student is selected -->
                         <div id="receiptParticularSection" class="hidden">
 
+                            <!-- FIFO advance auto-distribution (shown when advance_balance > 0 and there are outstanding quarters) -->
+                            <div id="fifoAdvSection" class="hidden border-2 border-emerald-400 rounded p-3 bg-emerald-50 mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-sm font-bold text-emerald-800"> Use Advance Balance (FIFO)</h4>
+                                    <span id="fifoAdvBal" class="text-sm font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded"></span>
+                                </div>
+                                <p class="text-xs text-emerald-700 mb-2">Automatically distributes the advance across all outstanding fees in the selected quarter — first particular first (FIFO) — until the advance is fully used or the quarter is fully paid.</p>
+                                <div class="flex items-end gap-2 flex-wrap">
+                                    <div>
+                                        <label class="block text-xs font-bold text-emerald-800 mb-1">Quarter to apply to</label>
+                                        <select id="fifoAdvQuarter" class="border-2 border-emerald-300 rounded px-3 py-1.5 text-sm min-w-[160px]">
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-emerald-800 mb-1">Date</label>
+                                        <input type="date" id="fifoAdvDate" class="border-2 border-emerald-300 rounded px-3 py-1.5 text-sm">
+                                    </div>
+                                    <button type="button" id="fifoAdvBtn" onclick="applyAdvanceFifoUi()"
+                                        class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded font-bold text-xs">
+                                        Apply FIFO
+                                    </button>
+                                </div>
+                                <div id="fifoAdvResult" class="hidden mt-2 text-xs text-emerald-800 bg-white rounded border border-emerald-300 p-2"></div>
+                            </div>
+
                             <div class="border-2 border-purple-200 rounded p-3 bg-purple-50 mb-3">
                                 <h4 class="text-sm font-bold mb-2 text-purple-700">Add Particular</h4>
 
@@ -600,8 +625,89 @@
                         return `<option value="${p.id}_${p.quarter || 0}">${label}</option>`;
                     }).join('');
                 document.getElementById('receiptParticularSection').classList.remove('hidden');
+
+                // Populate FIFO section
+                refreshFifoAdvSection();
             } catch (e) {
                 showDarasaToast({ type: 'error', title: 'Fee entry', message: 'Could not load particulars for this student.' });
+            }
+        }
+
+        function refreshFifoAdvSection() {
+            const student = allStudents.find(s => s.id == receiptStudentId);
+            const advance = parseFloat(student?.advance_balance ?? 0) || 0;
+            const section = document.getElementById('fifoAdvSection');
+            if (!section) return;
+
+            // Find quarters that still have outstanding fees
+            const outstandingByQ = {};
+            receiptParticulars.forEach(p => {
+                const q = p.quarter || 0;
+                if (!q) return;
+                const bal = Math.max(0, parseFloat(p.balance) || 0);
+                if (bal > 0) outstandingByQ[q] = (outstandingByQ[q] || 0) + bal;
+            });
+            const outstandingQuarters = Object.keys(outstandingByQ).map(Number).sort();
+
+            if (advance <= 0 || outstandingQuarters.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            section.classList.remove('hidden');
+            document.getElementById('fifoAdvBal').textContent = 'Advance: ' + formatTSh(advance);
+            const qSel = document.getElementById('fifoAdvQuarter');
+            qSel.innerHTML = outstandingQuarters.map(q =>
+                `<option value="${q}">Q${q} — outstanding ${formatTSh(outstandingByQ[q])}</option>`
+            ).join('');
+
+            // Default date to today
+            const dateEl = document.getElementById('fifoAdvDate');
+            if (!dateEl.value) dateEl.value = new Date().toISOString().slice(0, 10);
+        }
+
+        async function applyAdvanceFifoUi() {
+            const student = allStudents.find(s => s.id == receiptStudentId);
+            const quarter = parseInt(document.getElementById('fifoAdvQuarter').value);
+            const date    = document.getElementById('fifoAdvDate').value;
+            const btn     = document.getElementById('fifoAdvBtn');
+
+            if (!receiptStudentId || !quarter) {
+                showDarasaToast({ type: 'warning', title: 'FIFO advance', message: 'Select a student and quarter first.' });
+                return;
+            }
+            if (!date) {
+                showDarasaToast({ type: 'warning', title: 'FIFO advance', message: 'Pick a date.' });
+                return;
+            }
+
+            // Get the academic_year_id from the first outstanding particular for that quarter
+            const sample = receiptParticulars.find(p => (p.quarter || 0) === quarter && (parseFloat(p.balance) || 0) > 0);
+            const academicYearId = sample?.academic_year_id ?? 1;
+
+            btn.disabled = true;
+            try {
+                const res = await axios.post(`${API_BASE}/vouchers/apply-advance-fifo`, {
+                    student_id: receiptStudentId,
+                    academic_year_id: academicYearId,
+                    quarter,
+                    date,
+                });
+                const data = res.data;
+                if (student) student.advance_balance = data.student_advance_balance ?? 0;
+
+                const lines = data.applied.map(a => `${a.particular}: ${formatTSh(a.amount)}`).join('<br>');
+                const resultEl = document.getElementById('fifoAdvResult');
+                resultEl.innerHTML = `<strong>Applied TSh ${formatTSh(data.advance_used)} from advance:</strong><br>${lines}<br><em>Remaining advance: ${formatTSh(data.student_advance_balance)}</em>`;
+                resultEl.classList.remove('hidden');
+
+                showDarasaToast({ type: 'success', title: 'FIFO advance', message: `TSh ${formatTSh(data.advance_used)} applied to Q${quarter}.` });
+                await loadStudentReceiptParticulars(receiptStudentId);
+                loadVouchers(currentVoucherPage);
+            } catch (e) {
+                showDarasaToast({ type: 'error', title: 'FIFO advance', message: darasaAxiosMessage(e) });
+            } finally {
+                btn.disabled = false;
             }
         }
 

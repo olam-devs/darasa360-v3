@@ -68,6 +68,21 @@
             <h3 class="font-semibold text-slate-900">Invoice contents</h3>
             <p class="mt-2">Each PDF keeps one student’s full statement together on its own page (header, fees, balance, bank details). Class filters now apply to bulk downloads.</p>
         </div>
+
+        <!-- Quarter label editor -->
+        <div class="rounded-xl border border-indigo-200 bg-white p-6 shadow-sm">
+            <h3 class="mb-1 text-base font-semibold text-slate-900">Quarter column headings</h3>
+            <p class="mb-4 text-sm text-slate-500">These labels appear as column headers in every student’s fee statement. Edit the month span to match your school’s term calendar.</p>
+            <div id="quarterLabelsForm" class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div class="text-center text-slate-400 text-sm col-span-4 py-2">Loading…</div>
+            </div>
+            <div class="mt-3 flex justify-end">
+                <button type="button" onclick="saveQuarterLabels()"
+                    class="rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 text-sm font-semibold">
+                    Save labels
+                </button>
+            </div>
+        </div>
     </div>
 @endsection
 
@@ -218,5 +233,42 @@
         }
 
         loadInitialData();
+
+        // ── Quarter label editor ────────────────────────────────────────────
+        async function loadQuarterLabels() {
+            try {
+                const res = await axios.get(`${API_BASE}/quarter-labels`);
+                const labels = res.data; // {1: 'Q1 (Jan–Mar)', ...}
+                const form = document.getElementById('quarterLabelsForm');
+                form.innerHTML = Object.entries(labels).map(([q, label]) => `
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-semibold text-slate-600">Quarter ${q}</label>
+                        <input type="text" id="qlabel_${q}" value="${label}"
+                            class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
+                            placeholder="e.g. Q${q} (Apr–Jun)" maxlength="30">
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('quarterLabelsForm').innerHTML = '<p class="text-red-500 text-sm col-span-4">Failed to load labels.</p>';
+            }
+        }
+
+        async function saveQuarterLabels() {
+            const updates = [];
+            for (let q = 1; q <= 4; q++) {
+                const el = document.getElementById(`qlabel_${q}`);
+                if (el) updates.push({ q, label: el.value.trim() });
+            }
+            try {
+                await Promise.all(updates.map(u =>
+                    axios.put(`${API_BASE}/quarter-labels/${u.q}`, { label: u.label })
+                ));
+                showDarasaToast({ type: 'success', title: 'Quarter labels', message: 'Labels saved. They will appear on all new invoices.' });
+            } catch (e) {
+                showDarasaToast({ type: 'error', title: 'Quarter labels', message: 'Failed to save — try again.' });
+            }
+        }
+
+        loadQuarterLabels();
     </script>
 @endpush

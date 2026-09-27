@@ -1358,6 +1358,41 @@ class LedgerController extends Controller
         exit;
     }
 
+    // ── Quarter label CRUD ──────────────────────────────────────────────────
+
+    public function getQuarterLabels()
+    {
+        $rows = DB::connection('tenant')->table('quarter_labels')
+            ->orderBy('quarter_number')
+            ->get(['quarter_number', 'label']);
+
+        // Fill in defaults for any missing quarters
+        $defaults = [1 => 'Q1 (Jan–Mar)', 2 => 'Q2 (Apr–Jun)', 3 => 'Q3 (Jul–Sep)', 4 => 'Q4 (Oct–Dec)'];
+        $map = $rows->pluck('label', 'quarter_number')->toArray();
+        foreach ($defaults as $q => $def) {
+            if (!isset($map[$q])) $map[$q] = $def;
+        }
+        ksort($map);
+
+        return response()->json($map);
+    }
+
+    public function updateQuarterLabel(Request $request, int $quarter)
+    {
+        if ($quarter < 1 || $quarter > 4) {
+            return response()->json(['error' => 'Quarter must be 1–4.'], 422);
+        }
+        $validated = $request->validate(['label' => 'required|string|max:30']);
+
+        DB::connection('tenant')->table('quarter_labels')
+            ->updateOrInsert(
+                ['quarter_number' => $quarter],
+                ['label' => trim($validated['label']), 'updated_at' => now(), 'created_at' => now()]
+            );
+
+        return response()->json(['quarter_number' => $quarter, 'label' => trim($validated['label'])]);
+    }
+
     // Invoice pages
     public function invoicesPage()
     {

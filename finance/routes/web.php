@@ -207,6 +207,9 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::put('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
         // Invoice download routes
+        Route::get('api/quarter-labels', [LedgerController::class, 'getQuarterLabels'])->name('api.quarter-labels.index');
+        Route::put('api/quarter-labels/{quarter}', [LedgerController::class, 'updateQuarterLabel'])->name('api.quarter-labels.update');
+
         Route::get('/invoices/all-students/pdf', [LedgerController::class, 'exportAllStudentsInvoicesPdf'])->name('invoices.all-students.pdf');
         Route::get('/invoices/class/{className}/pdf', [LedgerController::class, 'exportClassInvoicesPdf'])->name('invoices.class.pdf');
         Route::get('/invoices/student/{studentId}/pdf', [LedgerController::class, 'exportStudentInvoicePdf'])->name('invoices.student.pdf');
@@ -322,6 +325,7 @@ Route::middleware(['tenant.context', 'headmaster.tenant.context', 'finance.porta
         Route::delete('api/vouchers/{id}', [VoucherController::class, 'destroy'])->name('api.vouchers.destroy');
         Route::post('api/vouchers/{id}/void', [VoucherController::class, 'void'])->name('api.vouchers.void');
         Route::post('api/vouchers/apply-advance', [VoucherController::class, 'applyAdvance'])->name('api.vouchers.apply-advance');
+        Route::post('api/vouchers/apply-advance-fifo', [VoucherController::class, 'applyAdvanceFifo'])->name('api.vouchers.apply-advance-fifo');
         Route::post('api/vouchers/batch-receipt', [VoucherController::class, 'batchReceipt'])->name('api.vouchers.batch-receipt');
         Route::get('api/vouchers/search/student', [VoucherController::class, 'searchStudent'])->name('api.vouchers.search');
 

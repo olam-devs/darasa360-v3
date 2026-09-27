@@ -559,4 +559,103 @@ class VoucherController extends Controller
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * FIFO advance distribution: apply advance_balance across all outstanding
+     * particulars for a specific quarter, in order of particular_id (FIFO).
+     * Creates one "Advance Used" voucher per particular credited.
+     */
+    public function applyAdvanceFifo(Request $request)
+    {
+        $validated = $request->validate([
+            'student_id'       => 'required|exists:students,id',
+            'academic_year_id' => 'required|integer',
+            'quarter'          => 'required|integer|between:1,4',
+            'date'             => 'required|date',
+        ]);
+
+        $student   = Student::findOrFail($validated['student_id']);
+        $available = (float) ($student->advance_balance ?? 0);
+
+        if ($available <= 0.004) {
+            return response()->json(['error' => 'No advance balance available.'], 400);
+        }
+
+        // Outstanding rows for this quarter, ordered by particular_id (FIFO)
+        $rows = DB::table('particular_student as ps')
+            ->join('particulars as p', 'p.id', '=', 'ps.particular_id')
+            ->where('ps.student_id', $validated['student_id'])
+            ->where('ps.academic_year_id', $validated['academic_year_id'])
+            ->where('ps.quarter', $validated['quarter'])
+            ->whereRaw('ps.sales + ps.debit > ps.credit')
+            ->orderBy('ps.particular_id')
+            ->select('ps.id as pivot_id', 'ps.particular_id', 'ps.sales', 'ps.debit', 'ps.credit', 'p.name as particular_name')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return response()->json(['error' => 'No outstanding fees in Q'.$validated['quarter'].' for this student.'], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $remaining = $available;
+            $applied   = [];
+
+            foreach ($rows as $row) {
+                if ($remaining <= 0.004) break;
+
+                $outstanding = max(0.0, (float)$row->sales + (float)$row->debit - (float)$row->credit);
+                if ($outstanding <= 0.004) continue;
+
+                $amount = min($outstanding, $remaining);
+
+                $voucher = Voucher::create([
+                    'date'                   => $validated['date'],
+                    'student_id'             => $student->id,
+                    'particular_id'          => $row->particular_id,
+                    'book_id'                => null,
+                    'voucher_type'           => 'Receipt',
+                    'debit'                  => $amount,
+                    'credit'                 => 0,
+                    'payment_by_receipt_to'  => 'Advance Used',
+                    'notes'                  => "Q{$validated['quarter']} {$row->particular_name} — paid from advance balance (FIFO)",
+                    'created_by'             => auth()->id(),
+                ]);
+
+                // Update pivot row directly by its primary-key id to avoid touching other quarters
+                DB::table('particular_student')
+                    ->where('id', $row->pivot_id)
+                    ->update(['credit' => (float)$row->credit + $amount, 'updated_at' => now()]);
+
+                $remaining -= $amount;
+                $applied[] = [
+                    'particular' => $row->particular_name,
+                    'amount'     => $amount,
+                    'voucher_id' => $voucher->id,
+                ];
+            }
+
+            $student->advance_balance = max(0.0, $remaining);
+            $student->save();
+
+            DB::commit();
+
+            $used = $available - $remaining;
+            ActivityLogger::log(
+                'advance_applied',
+                "FIFO advance Q{$validated['quarter']}: TSh ".number_format($used, 2)." applied to ".count($applied)." particulars for {$student->name}",
+                null,
+                ['student_id' => $student->id, 'quarter' => $validated['quarter'], 'applied' => $applied]
+            );
+
+            return response()->json([
+                'applied'                 => $applied,
+                'advance_used'            => $used,
+                'student_advance_balance' => (float) $student->advance_balance,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
