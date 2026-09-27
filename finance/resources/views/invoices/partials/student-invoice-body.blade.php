@@ -295,6 +295,7 @@
 @endif
 {{-- ── END FORMAT SWITCH ─────────────────────────────────── --}}
 
+@php $advanceBalance = $student->advance_balance ?? 0; @endphp
 <div class="balance-box {{ $invoiceData['balance_remaining'] <= 0 ? 'paid-full' : '' }}">
     @if($invoiceData['balance_remaining'] > 0)
         <div style="font-size: 11px; margin-bottom: 5px; font-weight: bold;">TOTAL AMOUNT DUE:</div>
@@ -302,6 +303,13 @@
         <div style="margin-top: 8px; font-size: 9px; color: #666;">
             Please ensure payment is made by the deadline date(s) indicated above.
         </div>
+
+        @if($advanceBalance > 0)
+        <div style="margin-top: 8px; font-size: 9px; background: #e8f5e9; border-left: 3px solid #2e7d32; padding: 5px 7px; border-radius: 3px; color: #1b5e20;">
+            <strong>Advance Credit on Account: TSh {{ number_format($advanceBalance, 2) }}</strong><br>
+            This credit will be applied to your next fee assignment.
+        </div>
+        @endif
 
         @if(isset($bankAccounts) && $bankAccounts->count() > 0)
         <div class="bank-section">
@@ -318,6 +326,12 @@
         <div style="margin-top: 3px; font-size: 10px; color: #155724;">
             Thank you for your prompt payment!
         </div>
+        @if($advanceBalance > 0)
+        <div style="margin-top: 8px; font-size: 9px; background: #fff8e1; border-left: 3px solid #f57f17; padding: 5px 7px; border-radius: 3px; color: #e65100;">
+            <strong>Advance Credit on Account: TSh {{ number_format($advanceBalance, 2) }}</strong><br>
+            This credit will be applied to your next fee assignment.
+        </div>
+        @endif
     @endif
 </div>
 
