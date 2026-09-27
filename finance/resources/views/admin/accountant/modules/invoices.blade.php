@@ -72,7 +72,15 @@
         <!-- Quarter label editor -->
         <div class="rounded-xl border border-indigo-200 bg-white p-6 shadow-sm">
             <h3 class="mb-1 text-base font-semibold text-slate-900">Quarter column headings</h3>
-            <p class="mb-4 text-sm text-slate-500">These labels appear as column headers in every student’s fee statement. Edit the month span to match your school’s term calendar.</p>
+            <p class="mb-4 text-sm text-slate-500">These labels appear as column headers in every student’s fee statement.</p>
+
+            <!-- Show months toggle -->
+            <label class="inline-flex items-center gap-2 cursor-pointer mb-4 select-none">
+                <input type="checkbox" id="showMonthSpan" class="h-4 w-4 rounded border-slate-300 accent-indigo-600" checked>
+                <span class="text-sm font-medium text-slate-700">Show month span in headers</span>
+                <span class="text-xs text-slate-400">(e.g. "QUARTER 1 (Jan–Mar)" vs just "QUARTER 1")</span>
+            </label>
+
             <div id="quarterLabelsForm" class="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <div class="text-center text-slate-400 text-sm col-span-4 py-2">Loading…</div>
             </div>
@@ -235,29 +243,50 @@
         loadInitialData();
 
         // ── Quarter label editor ────────────────────────────────────────────
+        const DEFAULT_MONTH_SPANS = { 1: 'Jan–Mar', 2: 'Apr–Jun', 3: 'Jul–Sep', 4: 'Oct–Dec' };
+
         async function loadQuarterLabels() {
             try {
                 const res = await axios.get(`${API_BASE}/quarter-labels`);
-                const labels = res.data; // {1: 'Q1 (Jan–Mar)', ...}
+                const labels = res.data; // {1: 'QUARTER 1 (Jan–Mar)', ...}
+
+                // Detect if any label has a month span in parentheses
+                let showMonths = false;
+                const monthSpans = { ...DEFAULT_MONTH_SPANS };
+                Object.entries(labels).forEach(([q, label]) => {
+                    const match = label.match(/\(([^)]+)\)/);
+                    if (match) { showMonths = true; monthSpans[q] = match[1]; }
+                });
+
+                const toggle = document.getElementById('showMonthSpan');
+                if (toggle) toggle.checked = showMonths;
+
                 const form = document.getElementById('quarterLabelsForm');
-                form.innerHTML = Object.entries(labels).map(([q, label]) => `
+                form.innerHTML = [1, 2, 3, 4].map(q => `
                     <div class="flex flex-col gap-1">
-                        <label class="text-xs font-semibold text-slate-600">Quarter ${q}</label>
-                        <input type="text" id="qlabel_${q}" value="${label}"
+                        <label class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Quarter ${q}</label>
+                        <input type="text" id="qlabel_${q}" value="${monthSpans[q] || DEFAULT_MONTH_SPANS[q]}"
                             class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm focus:border-indigo-400 focus:outline-none"
-                            placeholder="e.g. Q${q} (Apr–Jun)" maxlength="30">
+                            placeholder="e.g. Jan–Mar" maxlength="20">
+                        <span class="text-[11px] text-slate-400">month span only</span>
                     </div>
                 `).join('');
             } catch (e) {
-                document.getElementById('quarterLabelsForm').innerHTML = '<p class="text-red-500 text-sm col-span-4">Failed to load labels.</p>';
+                document.getElementById('quarterLabelsForm').innerHTML =
+                    '<p class="text-red-500 text-sm col-span-4">Failed to load labels — please refresh.</p>';
             }
         }
 
         async function saveQuarterLabels() {
+            const showMonths = document.getElementById('showMonthSpan')?.checked ?? true;
             const updates = [];
             for (let q = 1; q <= 4; q++) {
                 const el = document.getElementById(`qlabel_${q}`);
-                if (el) updates.push({ q, label: el.value.trim() });
+                const span = el ? el.value.trim() : DEFAULT_MONTH_SPANS[q];
+                const label = (showMonths && span)
+                    ? `QUARTER ${q} (${span})`
+                    : `QUARTER ${q}`;
+                updates.push({ q, label });
             }
             try {
                 await Promise.all(updates.map(u =>

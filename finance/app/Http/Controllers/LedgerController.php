@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LedgerController extends Controller
 {
@@ -1360,21 +1361,47 @@ class LedgerController extends Controller
 
     // ── Quarter label CRUD ──────────────────────────────────────────────────
 
+    protected function ensureQuarterLabelsTable(): void
+    {
+        if (! Schema::connection('tenant')->hasTable('quarter_labels')) {
+            Schema::connection('tenant')->create('quarter_labels', function ($t) {
+                $t->id();
+                $t->unsignedTinyInteger('quarter_number');
+                $t->string('label', 60);
+                $t->timestamps();
+                $t->unique('quarter_number');
+            });
+            DB::connection('tenant')->table('quarter_labels')->insert([
+                ['quarter_number' => 1, 'label' => 'QUARTER 1 (Jan–Mar)', 'created_at' => now(), 'updated_at' => now()],
+                ['quarter_number' => 2, 'label' => 'QUARTER 2 (Apr–Jun)', 'created_at' => now(), 'updated_at' => now()],
+                ['quarter_number' => 3, 'label' => 'QUARTER 3 (Jul–Sep)', 'created_at' => now(), 'updated_at' => now()],
+                ['quarter_number' => 4, 'label' => 'QUARTER 4 (Oct–Dec)', 'created_at' => now(), 'updated_at' => now()],
+            ]);
+        }
+    }
+
     public function getQuarterLabels()
     {
-        $rows = DB::connection('tenant')->table('quarter_labels')
-            ->orderBy('quarter_number')
-            ->get(['quarter_number', 'label']);
-
-        // Fill in defaults for any missing quarters
-        $defaults = [1 => 'Q1 (Jan–Mar)', 2 => 'Q2 (Apr–Jun)', 3 => 'Q3 (Jul–Sep)', 4 => 'Q4 (Oct–Dec)'];
-        $map = $rows->pluck('label', 'quarter_number')->toArray();
-        foreach ($defaults as $q => $def) {
-            if (!isset($map[$q])) $map[$q] = $def;
+        $defaults = [
+            1 => 'QUARTER 1 (Jan–Mar)',
+            2 => 'QUARTER 2 (Apr–Jun)',
+            3 => 'QUARTER 3 (Jul–Sep)',
+            4 => 'QUARTER 4 (Oct–Dec)',
+        ];
+        try {
+            $rows = DB::connection('tenant')->table('quarter_labels')
+                ->orderBy('quarter_number')
+                ->get(['quarter_number', 'label']);
+            $map = $rows->pluck('label', 'quarter_number')->toArray();
+            foreach ($defaults as $q => $def) {
+                if (! isset($map[$q])) $map[$q] = $def;
+            }
+            ksort($map);
+            return response()->json($map);
+        } catch (\Exception $e) {
+            $this->ensureQuarterLabelsTable();
+            return response()->json($defaults);
         }
-        ksort($map);
-
-        return response()->json($map);
     }
 
     public function updateQuarterLabel(Request $request, int $quarter)
@@ -1382,15 +1409,25 @@ class LedgerController extends Controller
         if ($quarter < 1 || $quarter > 4) {
             return response()->json(['error' => 'Quarter must be 1–4.'], 422);
         }
-        $validated = $request->validate(['label' => 'required|string|max:30']);
+        $validated = $request->validate(['label' => 'required|string|max:40']);
+        $label = trim($validated['label']);
 
-        DB::connection('tenant')->table('quarter_labels')
-            ->updateOrInsert(
-                ['quarter_number' => $quarter],
-                ['label' => trim($validated['label']), 'updated_at' => now(), 'created_at' => now()]
-            );
+        try {
+            DB::connection('tenant')->table('quarter_labels')
+                ->updateOrInsert(
+                    ['quarter_number' => $quarter],
+                    ['label' => $label, 'updated_at' => now(), 'created_at' => now()]
+                );
+        } catch (\Exception $e) {
+            $this->ensureQuarterLabelsTable();
+            DB::connection('tenant')->table('quarter_labels')
+                ->updateOrInsert(
+                    ['quarter_number' => $quarter],
+                    ['label' => $label, 'updated_at' => now(), 'created_at' => now()]
+                );
+        }
 
-        return response()->json(['quarter_number' => $quarter, 'label' => trim($validated['label'])]);
+        return response()->json(['quarter_number' => $quarter, 'label' => $label]);
     }
 
     // Invoice pages
@@ -1432,12 +1469,17 @@ class LedgerController extends Controller
         }
 
         // Quarter labels from DB; fall back to defaults
-        $quarterLabels = DB::connection('tenant')->table('quarter_labels')
-            ->orderBy('quarter_number')
-            ->pluck('label', 'quarter_number')
-            ->toArray();
+        try {
+            $quarterLabels = DB::connection('tenant')->table('quarter_labels')
+                ->orderBy('quarter_number')
+                ->pluck('label', 'quarter_number')
+                ->toArray();
+        } catch (\Exception $e) {
+            $this->ensureQuarterLabelsTable();
+            $quarterLabels = [];
+        }
         if (empty($quarterLabels)) {
-            $quarterLabels = [1 => 'Q1', 2 => 'Q2', 3 => 'Q3', 4 => 'Q4'];
+            $quarterLabels = [1 => 'QUARTER 1', 2 => 'QUARTER 2', 3 => 'QUARTER 3', 4 => 'QUARTER 4'];
         }
 
         // Scholarship map
