@@ -244,10 +244,11 @@
 
         // ── Quarter label editor ────────────────────────────────────────────
         const DEFAULT_MONTH_SPANS = { 1: 'Jan–Mar', 2: 'Apr–Jun', 3: 'Jul–Sep', 4: 'Oct–Dec' };
+        const QUARTER_LABELS_BASE = '/accountant/api/quarter-labels';
 
         async function loadQuarterLabels() {
             try {
-                const res = await axios.get(`${API_BASE}/quarter-labels`);
+                const res = await axios.get(QUARTER_LABELS_BASE);
                 const labels = res.data; // {1: 'QUARTER 1 (Jan–Mar)', ...}
 
                 // Detect if any label has a month span in parentheses
@@ -290,7 +291,7 @@
             }
             try {
                 await Promise.all(updates.map(u =>
-                    axios.put(`${API_BASE}/quarter-labels/${u.q}`, { label: u.label })
+                    axios.put(`${QUARTER_LABELS_BASE}/${u.q}`, { label: u.label })
                 ));
                 showDarasaToast({ type: 'success', title: 'Quarter labels', message: 'Labels saved. They will appear on all new invoices.' });
             } catch (e) {
