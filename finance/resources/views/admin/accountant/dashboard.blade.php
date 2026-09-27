@@ -107,16 +107,16 @@
                     All Quarters
                 </button>
                 <button type="button" onclick="setQuarter(1)" id="qbtn-1" class="quarter-filter-btn rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                    Q1 (Apr)
+                    Q1 (Jan)
                 </button>
                 <button type="button" onclick="setQuarter(2)" id="qbtn-2" class="quarter-filter-btn rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                    Q2 (Jul)
+                    Q2 (Apr)
                 </button>
                 <button type="button" onclick="setQuarter(3)" id="qbtn-3" class="quarter-filter-btn rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                    Q3 (Sep)
+                    Q3 (Jul)
                 </button>
                 <button type="button" onclick="setQuarter(4)" id="qbtn-4" class="quarter-filter-btn rounded-lg border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                    Q4 (Dec)
+                    Q4 (Sep)
                 </button>
             </div>
 
@@ -580,7 +580,7 @@
         }
 
         function quarterLabel(q) {
-            const map = { 0: '', 1: ' · Q1 (Apr)', 2: ' · Q2 (Jul)', 3: ' · Q3 (Sep)', 4: ' · Q4 (Dec)' };
+            const map = { 0: '', 1: ' · Q1 (Jan)', 2: ' · Q2 (Apr)', 3: ' · Q3 (Jul)', 4: ' · Q4 (Sep)' };
             return map[q] || '';
         }
 
@@ -816,7 +816,7 @@
             // Update particular statistics
             const partTitle = document.getElementById('particulars-chart-title');
             if (partTitle) {
-                const qSuffix = selectedQuarter ? ` — ${['','Q1 (Apr)','Q2 (Jul)','Q3 (Sep)','Q4 (Dec)'][selectedQuarter]}` : '';
+                const qSuffix = selectedQuarter ? ` — ${['','Q1 (Jan)','Q2 (Apr)','Q3 (Jul)','Q4 (Sep)'][selectedQuarter]}` : '';
                 partTitle.textContent = `Fees by particular (expected vs collected)${qSuffix}`;
             }
             if (data.particulars_data && data.particulars_data.length > 0) {
