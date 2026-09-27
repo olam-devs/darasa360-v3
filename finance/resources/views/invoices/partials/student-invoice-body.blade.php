@@ -1,4 +1,4 @@
-<div class="invoice-title">{{ $invoiceHeading ?? 'FEE STATEMENT' }}</div>
+<div class="invoice-title">{{ strtoupper($invoiceHeading ?? 'INVOICE:') }}</div>
 
 <div class="student-info">
     <strong>Student Name:</strong> {{ $student->name }}<br>

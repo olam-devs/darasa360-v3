@@ -24,8 +24,9 @@
 
             <div class="mb-5">
                 <label class="block text-sm font-medium text-slate-700 mb-1">Invoice heading <span class="text-slate-400 font-normal">(editable — appears on every page)</span></label>
-                <input type="text" id="invoiceHeadingInput" value="FEE STATEMENT" maxlength="80"
-                    class="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold uppercase tracking-wide focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200">
+                <input type="text" id="invoiceHeadingInput" value="INVOICE:" maxlength="80"
+                    class="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold uppercase tracking-wide focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200"
+                    style="text-transform: uppercase;">
             </div>
 
             <div class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -121,7 +122,7 @@
         }
 
         function getInvoiceHeading() {
-            return encodeURIComponent(document.getElementById('invoiceHeadingInput').value.trim() || 'FEE STATEMENT');
+            return encodeURIComponent((document.getElementById('invoiceHeadingInput').value.trim() || 'INVOICE:').toUpperCase());
         }
 
         function showAllStudentsInvoices() {
