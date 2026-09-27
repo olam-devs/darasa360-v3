@@ -352,7 +352,11 @@
             document.getElementById('voucherFormContainer').innerHTML = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-2">
                     <div class="bg-white rounded-lg p-4 max-w-4xl w-full shadow-2xl my-2 max-h-[95vh] overflow-y-auto">
-                        <h3 class="text-xl font-bold mb-3 text-purple-600">Record Fee Receipt</h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xl font-bold text-purple-600">Record Fee Receipt</h3>
+                            <button type="button" onclick="closeVoucherForm()"
+                                class="text-slate-400 hover:text-slate-700 text-3xl leading-none font-light">&times;</button>
+                        </div>
 
                         <!-- Date / Book / Total Received -->
                         <div class="grid grid-cols-3 gap-3 mb-3">
