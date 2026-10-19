@@ -123,11 +123,20 @@ class SmsGateway
         }
         // Match returned message IDs to numbers (a number may repeat; take them in order).
         $ids = [];
-        foreach ($j['Data'] ?? [] as $row) $ids[(string)($row['MobileNumber'] ?? '')][] = $row['MessageId'] ?? null;
-        return array_values(array_map(function ($v) use (&$ids, $j) {
+        // Onfon answers ErrorCode 0 for the request but can still reject single messages (MessageErrorCode,
+        // empty MessageId), e.g. a sender ID that is not approved: those are failures, not sent.
+        foreach ($j['Data'] ?? [] as $row) $ids[(string)($row['MobileNumber'] ?? '')][] = $row;
+        return array_values(array_map(function ($v) use (&$ids, $j, $r) {
             if ($v instanceof SmsSendResult) return $v;
-            $id = isset($ids[$v]) ? array_shift($ids[$v]) : null;
-            return SmsSendResult::sent($id, 'Submitted', $j, true);
+            $row = isset($ids[$v]) ? array_shift($ids[$v]) : null;
+            if (!$row) return SmsSendResult::failed('No answer from the SMS gateway for this number', true, $r->status(), $j);
+            $code = (int)($row['MessageErrorCode'] ?? 0);
+            if ($code !== 0 || empty($row['MessageId'])) {
+                $why = str_contains((string)($row['MessageErrorDescription'] ?? ''), 'source_address') ? 'Sender ID not approved for this SMS account'
+                    : trim('Rejected by the SMS gateway ('.$code.') '.($row['MessageErrorDescription'] ?? ''));
+                return SmsSendResult::failed($why, true, $r->status(), $j);
+            }
+            return SmsSendResult::sent($row['MessageId'], 'Submitted', $j, true);
         }, $index));
     }
 

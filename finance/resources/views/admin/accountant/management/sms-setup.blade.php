@@ -42,7 +42,7 @@
             <label>Provider<input type="text" value="Onfon Media" disabled></label>
             <label>Client ID<input type="text" name="client_id" value="{{ old('client_id', $first->client_id ?? '') }}" required maxlength="120"></label>
             <label>API key<input type="password" name="api_key" placeholder="{{ $first ? 'Saved — leave empty to keep' : 'Paste the API key' }}" maxlength="255" autocomplete="new-password"></label>
-            <label>Sender ID<input type="text" name="sender_id" value="{{ old('sender_id', $first->sender_id ?? '') }}" required maxlength="11" placeholder="Approved by Onfon, e.g. LITTLEDOVES"></label>
+            <label>Sender ID (capitals and spaces must match)<input type="text" name="sender_id" value="{{ old('sender_id', $first->sender_id ?? '') }}" required maxlength="20" placeholder="Exactly as approved, e.g. Little Doves"></label>
         </div>
         <label style="display:flex;gap:6px;align-items:center;margin-top:12px;font-weight:600;"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $first->is_active ?? true))> Send through this account</label>
         <button class="management-primary" type="submit" style="margin-top:14px;">Save SMS account</button>

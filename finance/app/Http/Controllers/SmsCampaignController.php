@@ -54,8 +54,8 @@ class SmsCampaignController extends SchoolManagementController
         $v = $request->validate([
             'schools' => 'required|array|min:1', 'schools.*' => 'integer',
             'client_id' => 'required|string|max:120', 'api_key' => 'nullable|string|max:255',
-            'sender_id' => 'required|string|max:11|regex:/^[A-Za-z0-9 .\-]+$/', 'is_active' => 'nullable|boolean',
-        ], ['schools.required' => 'Tick at least one school.', 'sender_id.max' => 'A sender ID is at most 11 characters.', 'sender_id.regex' => 'A sender ID uses letters, numbers, spaces, dots or dashes only.']);
+            'sender_id' => 'required|string|max:20|regex:/^[A-Za-z0-9 .\-]+$/', 'is_active' => 'nullable|boolean',
+        ], ['schools.required' => 'Tick at least one school.', 'sender_id.max' => 'A sender ID is at most 20 characters.', 'sender_id.regex' => 'A sender ID uses letters, numbers, spaces, dots or dashes only.']);
         $managerId = $this->managerId($request);
         $names = [];
         foreach ($v['schools'] as $schoolId) {
