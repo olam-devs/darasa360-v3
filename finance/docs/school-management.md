@@ -8,6 +8,24 @@ the explicitly authorized Ritha management account. Regular accountants have no
 KPI page or menu entry. The old `/accountant/my-targets` address rejects regular
 accountants and redirects authorized management sessions to the private scorecard.
 
+The management area has its own layout (`layouts/management.blade.php`) with a
+sidebar: Overview, Quarter analytics, Expense approvals, Invoices, Accountant
+targets, and one entry per granted school. `?school=<id>` narrows every page to
+that school; without it the pages compare all granted schools.
+
+Expenses are reviewed inside the portal (`/accountant/school-management/expenses/{school}/{submission}`)
+without switching accounts. The decision runs through `ExpenseReviewService`,
+the same code the school's own review screen uses (balance check, payment and
+transaction-fee vouchers), and is recorded under the manager's own main
+accountant account in that school (`school_management_access.school_accountant_id`),
+plus a `management_expense_*` entry in the central activity log. "Deny whole
+request" denies every item and ignores any quantity/price edits.
+
+Invoices (fee statements) are generated per school from the portal
+(`/accountant/school-management/invoices?school=<id>`): whole school, one class
+or one student, parent or accountant format, custom heading. Fee assignment
+itself still happens inside the school ("Work inside this school's accounts").
+
 Apply only the central migration
 `database/migrations/central/2026_10_17_000001_create_school_management_and_kpi_tables.php`.
 The feature does not migrate or modify tenant financial tables.
