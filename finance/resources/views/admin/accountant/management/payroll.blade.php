@@ -38,6 +38,30 @@
         <div class="management-card"><p class="management-muted">Paid for {{ $period }} (net)</p><div class="value">TSh {{ $money($paid->sum('net_salary')) }}</div><p class="management-muted">Gross TSh {{ $money($paid->sum('gross_salary')) }} · deductions TSh {{ $money($paid->sum('total_deductions')) }}</p></div>
     </div>
 
+    @php $budgetSchools = collect($salaryBudgets)->filter(fn($b) => $b['category']); @endphp
+    @if($budgetSchools->isNotEmpty())
+    <section class="management-panel" id="salary-budget">
+        <h3>Salary budget · {{ $year }}</h3>
+        <p class="management-muted" style="margin:6px 0 12px;">Salaries paid here count against each school's salary budget (gross pay). Each payment counts against its budget term: the quarter of the salary month (August → Q3, September–December → Q4), unless you choose a term when paying.</p>
+        <div class="management-scroll"><table class="management-table" style="min-width:760px;">
+            <thead><tr><th>School · category</th>@foreach([1, 2, 3, 4] as $q)<th class="number">Q{{ $q }} used / budget</th>@endforeach</tr></thead>
+            <tbody>@foreach($budgetSchools as $b)
+                <tr><td><strong>{{ $b['school'] }}</strong><div class="management-muted">{{ $b['category'] }}</div></td>
+                @foreach([1, 2, 3, 4] as $q)
+                    @php $t = $b['terms'][$q] ?? null; $pct = $t && $t['budget'] > 0 ? 100 * $t['used'] / $t['budget'] : null; @endphp
+                    <td class="number" data-term="{{ $q }}">
+                        @if($t)
+                            <strong @if($pct !== null && $pct > 100) style="color:#b91c1c;" @endif>{{ $money($t['used']) }}</strong> / {{ $money($t['budget']) }}
+                            <div class="management-muted">{{ $pct !== null ? number_format($pct, 0).'% used · ' : '' }}left {{ $money($t['budget'] - $t['used']) }}</div>
+                            <div class="management-muted" style="font-size:11px;">{{ $t['window'] }}</div>
+                        @else<span class="management-muted">No budget</span>@endif
+                    </td>
+                @endforeach</tr>
+            @endforeach</tbody>
+        </table></div>
+    </section>
+    @endif
+
     @if($staff->isEmpty())
         <section class="management-panel"><h3>No active staff</h3><p class="management-muted"><a href="{{ route('accountant.management.staff', array_filter(['school' => $selected?->id])) }}" style="color:#047857;font-weight:700;">Register staff</a> to pay them here.</p></section>
     @else
@@ -75,6 +99,13 @@
             <label>Payment date<input type="date" name="payment_date" value="{{ now('Africa/Dar_es_Salaam')->toDateString() }}" required style="border:1px solid #cbd5e1;border-radius:7px;padding:7px 10px;"></label>
             <label>Method<select name="payment_method">@foreach($methods as $k => $v)<option value="{{ $k }}">{{ $v }}</option>@endforeach</select></label>
             <label>Reference<input type="text" name="reference_number" maxlength="255" placeholder="optional" style="border:1px solid #cbd5e1;border-radius:7px;padding:7px 10px;width:130px;"></label>
+            @php [, $nowQ] = \App\Services\ManagementQuarterAnalytics::quarterOf(now('Africa/Dar_es_Salaam')); @endphp
+            <label title="Which salary budget this payment counts against">Budget term
+                <select name="budget_term" id="payroll-term">
+                    <option value="auto" selected>Follow salary month</option>
+                    @foreach([1, 2, 3, 4] as $q)<option value="{{ $q }}">Q{{ $q }} {{ $year }}{{ $q === $nowQ ? ' (current)' : '' }}</option>@endforeach
+                </select>
+            </label>
             <button type="submit" class="management-primary" id="payroll-pay" disabled>Pay selected</button>
         </div>
         @unless($selected)<p class="management-muted" style="margin:-4px 0 10px;">All schools: each person is paid from their own school's book for the chosen account. Each school's balance is checked separately; transaction fees are chosen on a single school's page.</p>@endunless
@@ -211,7 +242,9 @@
     form.addEventListener('submit', e => {
         const {count, net, months} = update();
         const names = months.map(m => new Date(2000, m - 1, 1).toLocaleString('en', {month: 'short'})).join(', ');
-        if (!form.reportValidity() || !window.confirm(`Make ${count} salary payment(s) for ${names} {{ $year }}, total net TSh ${fmt(net)}, from ${book.selectedOptions[0].text.split(' · ')[0]}?\n\nMonths already paid are skipped.`)) { e.preventDefault(); return; }
+        const term = document.getElementById('payroll-term');
+        const termText = term.value === 'auto' ? 'the quarter of each salary month' : term.selectedOptions[0].text.replace(' (current)', '');
+        if (!form.reportValidity() || !window.confirm(`Make ${count} salary payment(s) for ${names} {{ $year }}, total net TSh ${fmt(net)}, from ${book.selectedOptions[0].text.split(' · ')[0]}?\n\nCounts against the salary budget for ${termText}. Months already paid are skipped.`)) { e.preventDefault(); return; }
         document.getElementById('payroll-pay').disabled = true;
     });
     fillFees(); update();

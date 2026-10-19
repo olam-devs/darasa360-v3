@@ -5,7 +5,7 @@
     $unbudgeted = collect($budgetRows)->filter(fn($r) => $r['budget'] <= 0 && $r['spent'] > 0);
 @endphp
 <h3 style="margin-bottom:8px;">Budget vs actual · {{ $periodLabel }} {{ $selectedSchool ? '· '.\App\Http\Controllers\SchoolManagementController::shortName($selectedSchool->name) : '· all schools' }}</h3>
-<p class="management-muted" style="margin-bottom:18px;">Each expense category's budget against approved spending. Budgets have their own date windows, so every budget that overlaps {{ $from }} – {{ $to }} is compared with the approved spending inside that budget's own dates. @unless($selectedSchool)Categories with the same name in different schools are combined.@endunless</p>
+<p class="management-muted" style="margin-bottom:18px;">Each expense category's budget against approved spending. Budgets have their own date windows, so every budget that overlaps {{ $from }} – {{ $to }} is compared with the approved spending inside that budget's own dates. Salaries paid through Payroll (gross) count against the salary category by each payment's budget term. @unless($selectedSchool)Categories with the same name in different schools are combined.@endunless</p>
 <div class="management-grid">
     <div class="management-card"><p class="management-muted">Budget</p><div class="value">TSh {{ $money($totalBudget) }}</div><p class="management-muted">{{ collect($budgetRows)->where('budget', '>', 0)->count() }} budgeted categories</p></div>
     <div class="management-card"><p class="management-muted">Approved spending</p><div class="value">TSh {{ $money($totalSpent) }}</div><p class="management-muted">{{ $totalBudget > 0 ? number_format(100 * $totalSpent / $totalBudget, 1).'% of budget' : 'No budget set' }}</p></div>
@@ -25,7 +25,7 @@
             <tr>
                 <td><strong>{{ $r['category'] }}</strong></td>
                 <td class="number">{{ $r['budget'] > 0 ? $money($r['budget']) : '—' }}</td>
-                <td class="number">{{ $money($r['spent']) }}</td>
+                <td class="number">{{ $money($r['spent']) }}@if(($r['payroll'] ?? 0) > 0)<div class="management-muted">incl. payroll {{ $money($r['payroll']) }}</div>@endif</td>
                 <td class="number" @if($isOver) style="color:#b91c1c;font-weight:700;" @endif>{{ $r['budget'] > 0 ? $money($r['budget'] - $r['spent']) : '—' }}</td>
                 <td>
                     @if($pct === null)<span class="management-badge" style="background:#fef3c7;color:#92400e;">⚠ No budget</span>

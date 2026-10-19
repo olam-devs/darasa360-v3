@@ -194,21 +194,94 @@ class SchoolManagementController extends Controller
         $approved = fn () => $db->table('expense_submissions')->whereIn('status', ['approved', 'partially_approved']);
         $plans = $db->table('expense_category_plans as p')->join('expense_categories as c', 'c.id', '=', 'p.expense_category_id')
             ->where('p.from_date', '<=', $to)->where('p.to_date', '>=', $from)->orderBy('c.name')
-            ->get(['p.expense_category_id', 'c.name', 'p.expected_amount', 'p.from_date', 'p.to_date']);
+            ->get(['p.id', 'p.expense_category_id', 'c.name', 'p.expected_amount', 'p.from_date', 'p.to_date']);
+        // Salaries paid through Payroll count against the salary category's budget, by each payment's budget term.
+        $salaryCat = $this->salaryCategoryId($db);
+        $payrollUsed = $salaryCat ? $this->payrollUsageByPlan($db, $db->table('expense_category_plans')->where('expense_category_id', $salaryCat)->get(['id', 'from_date', 'to_date'])) : [];
+        // Salary spending recorded as expenses under any salary-type category (e.g. "Payroll") also uses the salary budget.
+        $salaryLike = $salaryCat ? $db->table('expense_categories')->whereRaw("name REGEXP 'salar|wage|mshahara|payroll'")->pluck('id')->push($salaryCat)->unique()->all() : [];
         $rows = [];
         foreach ($plans as $p) {
-            $rows[$p->expense_category_id] ??= ['category' => $p->name, 'budget' => 0.0, 'spent' => 0.0, 'windows' => []];
+            $rows[$p->expense_category_id] ??= ['category' => $p->name, 'budget' => 0.0, 'spent' => 0.0, 'payroll' => 0.0, 'windows' => []];
             $rows[$p->expense_category_id]['budget'] += (float)$p->expected_amount;
-            $rows[$p->expense_category_id]['spent'] += (float)$approved()->where('expense_category_id', $p->expense_category_id)
+            $cats = (int)$p->expense_category_id === $salaryCat ? $salaryLike : [$p->expense_category_id];
+            $rows[$p->expense_category_id]['spent'] += (float)$approved()->whereIn('expense_category_id', $cats)
                 ->whereBetween('transaction_date', [$p->from_date, $p->to_date])->sum('total_amount');
+            if ((int)$p->expense_category_id === $salaryCat && isset($payrollUsed[$p->id])) {
+                $rows[$p->expense_category_id]['spent'] += $payrollUsed[$p->id];
+                $rows[$p->expense_category_id]['payroll'] += $payrollUsed[$p->id];
+            }
             $rows[$p->expense_category_id]['windows'][] = $p->from_date.' – '.$p->to_date;
         }
         $unbudgeted = $db->table('expense_submissions as e')->join('expense_categories as c', 'c.id', '=', 'e.expense_category_id')
             ->whereIn('e.status', ['approved', 'partially_approved'])->whereBetween('e.transaction_date', [$from, $to])
-            ->whereNotIn('e.expense_category_id', array_keys($rows))
+            ->whereNotIn('e.expense_category_id', array_merge(array_keys($rows), isset($rows[$salaryCat]) ? $salaryLike : []))
             ->groupBy('c.name')->selectRaw('c.name, SUM(e.total_amount) as t')->pluck('t', 'name');
-        foreach ($unbudgeted as $name => $t) $rows['u:'.$name] = ['category' => $name, 'budget' => 0.0, 'spent' => (float)$t, 'windows' => []];
+        foreach ($unbudgeted as $name => $t) $rows['u:'.$name] = ['category' => $name, 'budget' => 0.0, 'spent' => (float)$t, 'payroll' => 0.0, 'windows' => []];
+        // Salary expenses dated outside every salary budget window would otherwise be missed: list them as unbudgeted.
+        if (isset($rows[$salaryCat])) {
+            $windows = $db->table('expense_category_plans')->where('expense_category_id', $salaryCat)->get(['from_date', 'to_date']);
+            $outside = (float)$approved()->whereIn('expense_category_id', $salaryLike)->whereBetween('transaction_date', [$from, $to])
+                ->where(function ($q) use ($windows) { foreach ($windows as $w) $q->whereNotBetween('transaction_date', [$w->from_date, $w->to_date]); })
+                ->sum('total_amount');
+            if ($outside > 0) $rows['u:salaries'] = ['category' => 'Salaries outside a salary budget', 'budget' => 0.0, 'spent' => $outside, 'payroll' => 0.0, 'windows' => []];
+        }
         return array_values($rows);
+    }
+
+    /** The expense category salary payments count against: a salary-type category with budgets, else any salary-type one. */
+    private function salaryCategoryId($db): ?int
+    {
+        $cats = $db->table('expense_categories as c')->whereRaw("c.name REGEXP 'salar|wage|mshahara|payroll'")
+            ->selectRaw('c.id, c.name, (SELECT COUNT(*) FROM expense_category_plans p WHERE p.expense_category_id = c.id) as plans')->get();
+        return ($cats->first(fn ($c) => $c->plans > 0 && preg_match('/salar|wage|mshahara/i', $c->name))
+            ?? $cats->first(fn ($c) => $c->plans > 0) ?? $cats->first())?->id;
+    }
+
+    /** Budget term (year, quarter) of a payroll entry: the one written in its note, else the quarter of the salary month. */
+    public static function payrollTerm(object $entry): array
+    {
+        if (preg_match('/Budget term Q([1-4]) (\d{4})/', (string)($entry->notes ?? ''), $m)) return [(int)$m[2], (int)$m[1]];
+        return [(int)$entry->year, ManagementQuarterAnalytics::quarterOf(CarbonImmutable::create((int)$entry->year, (int)$entry->month, 1))[1]];
+    }
+
+    /** The salary budget plan that covers a term best (budgets have their own date windows). */
+    private function planForTerm($plans, int $year, int $quarter): ?object
+    {
+        [$qs, $qe] = ManagementQuarterAnalytics::range($year, $quarter);
+        $best = null; $bestDays = 0;
+        foreach ($plans as $p) {
+            $s = max($qs->toDateString(), $p->from_date); $e = min($qe->toDateString(), $p->to_date);
+            $days = $s <= $e ? CarbonImmutable::parse($s)->diffInDays(CarbonImmutable::parse($e)) + 1 : 0;
+            if ($days > $bestDays) { $best = $p; $bestDays = $days; }
+        }
+        return $best;
+    }
+
+    /** Gross payroll per salary budget plan id (current tenant), each payment assigned by its budget term. */
+    private function payrollUsageByPlan($db, $plans): array
+    {
+        $used = [];
+        foreach ($db->table('payroll_entries')->get(['year', 'month', 'notes', 'gross_salary']) as $e) {
+            [$y, $q] = self::payrollTerm($e);
+            if ($plan = $this->planForTerm($plans, $y, $q)) $used[$plan->id] = ($used[$plan->id] ?? 0) + (float)$e->gross_salary;
+        }
+        return $used;
+    }
+
+    /** Salary budget of the current tenant for each quarter of a year: plan dates, budget, used, left. */
+    private function salaryBudget($db, int $year): array
+    {
+        $catId = $this->salaryCategoryId($db);
+        if (!$catId) return ['category' => null, 'terms' => []];
+        $plans = $db->table('expense_category_plans')->where('expense_category_id', $catId)->get(['id', 'expected_amount', 'from_date', 'to_date']);
+        $used = $this->payrollUsageByPlan($db, $plans);
+        $terms = [];
+        foreach (range(1, 4) as $q) {
+            $plan = $this->planForTerm($plans, $year, $q);
+            $terms[$q] = $plan ? ['window' => $plan->from_date.' – '.$plan->to_date, 'budget' => (float)$plan->expected_amount, 'used' => $used[$plan->id] ?? 0.0] : null;
+        }
+        return ['category' => $db->table('expense_categories')->where('id', $catId)->value('name'), 'terms' => $terms];
     }
 
     /** Budget rows of all schools combined by category name (the schools name categories slightly differently). */
@@ -219,9 +292,10 @@ class SchoolManagementController extends Controller
             if ($s['error']) continue;
             foreach ($s['budget'] as $r) {
                 $key = preg_replace('/[^a-z0-9]+/', '', strtolower($r['category']));
-                $groups[$key] ??= ['category' => $r['category'], 'budget' => 0.0, 'spent' => 0.0, 'schools' => []];
+                $groups[$key] ??= ['category' => $r['category'], 'budget' => 0.0, 'spent' => 0.0, 'payroll' => 0.0, 'schools' => []];
                 $groups[$key]['budget'] += $r['budget'];
                 $groups[$key]['spent'] += $r['spent'];
+                $groups[$key]['payroll'] += $r['payroll'];
                 $groups[$key]['schools'][$s['id']] = $r;
             }
         }
@@ -401,7 +475,7 @@ class SchoolManagementController extends Controller
         $month = (int)($request->input('month') ?: $today->month);
         $year = (int)($request->input('year') ?: $today->year);
         $nav = $this->nav($request, $selected?->id);
-        $staff = collect(); $deductions = []; $paidMonths = []; $paid = collect(); $booksBySchool = [];
+        $staff = collect(); $deductions = []; $paidMonths = []; $paid = collect(); $booksBySchool = []; $salaryBudgets = [];
         foreach ($schools as $school) {
             $d = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($month, $year) {
                 $db = DB::connection('tenant');
@@ -415,6 +489,7 @@ class SchoolManagementController extends Controller
                     'paid' => $db->table('payroll_entries as p')->leftJoin('books as b', 'b.id', '=', 'p.book_id')->leftJoin('staff as s', 's.id', '=', 'p.staff_id')
                         ->where('p.month', $month)->where('p.year', $year)->orderBy('s.name')
                         ->get(['p.staff_id', 's.name', 'p.gross_salary', 'p.total_deductions', 'p.net_salary', 'p.payment_date', 'p.payment_method', 'p.bank_fee_amount', 'b.name as book_name', 'p.created_by']),
+                    'salary' => $this->salaryBudget($db, $year),
                     'books' => Book::where('is_active', true)->orderBy('name')->get()
                         ->map(fn ($b) => ['id' => $b->id, 'name' => $b->name, 'account' => $b->bank_account_number ? preg_replace('/\s+/', '', $b->bank_account_number) : null,
                             'cash' => (bool)$b->is_cash_book, 'balance' => (float)$b->getCashViewBalance(),
@@ -430,13 +505,14 @@ class SchoolManagementController extends Controller
             }
             $paid = $paid->merge($d['paid']->map(fn ($p) => (object)((array)$p + ['school' => $short])));
             $booksBySchool[$school->id] = $d['books'];
+            $salaryBudgets[$school->id] = $d['salary'] + ['school' => $short];
         }
         // All-schools mode pays from a shared account: one option per bank account number, plus each school's cash book.
         $accountOptions = collect($booksBySchool)->flatten(1)->filter(fn ($b) => $b['account'])->groupBy('account')
             ->map(fn ($g, $acct) => ['value' => 'account:'.$acct, 'label' => $g->first()['name'].' · '.$acct, 'balance' => $g->sum('balance')])->values()->all();
         $payerNames = SchoolAccountant::whereIn('id', $paid->pluck('created_by')->filter()->unique())->pluck('name', 'id');
         $allSchools = $this->access->schools($request->user());
-        return view('admin.accountant.management.'.$page, compact('staff', 'deductions', 'paidMonths', 'paid', 'booksBySchool', 'accountOptions',
+        return view('admin.accountant.management.'.$page, compact('staff', 'deductions', 'paidMonths', 'paid', 'booksBySchool', 'accountOptions', 'salaryBudgets',
             'month', 'year', 'nav', 'payerNames', 'selected', 'allSchools') + ['activeSection' => 'payroll']);
     }
 
@@ -456,6 +532,7 @@ class SchoolManagementController extends Controller
             'pay_from' => ['required', 'regex:/^(book:\d+|cash|account:[0-9A-Za-z]+)$/'], 'payment_date' => 'required|date_format:Y-m-d',
             'payment_method' => 'required|in:cash,bank_transfer,cheque,mobile_money',
             'book_fee_category_id' => 'nullable|integer', 'reference_number' => 'nullable|string|max:255',
+            'budget_term' => 'nullable|in:auto,1,2,3,4',
             'selected' => 'required|array|min:1', 'selected.*' => ['required', 'regex:/^\d+_\d+$/'],
             'rows' => 'required|array', 'rows.*.gross' => 'required|numeric|min:0|max:999999999',
             'rows.*.deductions' => 'nullable|array', 'rows.*.deductions.*.name' => 'required|string|max:255',
@@ -494,7 +571,9 @@ class SchoolManagementController extends Controller
                             [$entry, $fee] = app(PayrollPaymentService::class)->pay([
                                 'staff_id' => $staffId, 'book_id' => $book->id, 'month' => $month, 'year' => $base['year'],
                                 'gross_salary' => $row['gross'], 'payment_date' => $base['payment_date'], 'payment_method' => $base['payment_method'],
-                                'reference_number' => $base['reference_number'] ?? null, 'notes' => 'Paid from the management portal',
+                                'reference_number' => $base['reference_number'] ?? null,
+                                // Budget term: chosen for the batch, or the quarter of the salary month.
+                                'notes' => 'Paid from the management portal · Budget term Q'.(in_array($base['budget_term'] ?? 'auto', ['1', '2', '3', '4'], true) ? $base['budget_term'] : ManagementQuarterAnalytics::quarterOf(CarbonImmutable::create($base['year'], $month, 1))[1]).' '.$base['year'],
                                 'deductions' => array_values($row['deductions'] ?? []),
                                 'book_fee_category_id' => str_starts_with($base['pay_from'], 'book:') ? ($base['book_fee_category_id'] ?? null) : null,
                             ], (int)$grant->school_accountant_id, true);
