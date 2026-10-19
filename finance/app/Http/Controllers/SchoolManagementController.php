@@ -104,6 +104,23 @@ class SchoolManagementController extends Controller
                     $trend = (clone $receipts)->selectRaw('DATE(date) as day, SUM(debit) as amount')->groupBy('day')->orderBy('day')->get();
                     $topDebtors = $db->table('particular_student as ps')->join('students as s','s.id','=','ps.student_id')
                         ->select('s.name')->selectRaw('SUM(GREATEST(0,ps.sales-ps.credit)) as balance')->groupBy('s.id','s.name')->having('balance','>',0)->orderByDesc('balance')->limit(5)->get();
+                    // Each active book with its all-time balance and the money in/out during the selected period.
+                    $bookRows = $db->table('books as b')->where('b.is_active',true)
+                        ->leftJoin('vouchers as v', fn($j) => $j->on('v.book_id','=','b.id')->whereNull('v.voided_at'))
+                        ->groupBy('b.id','b.name','b.bank_account_number','b.is_cash_book','b.opening_balance')
+                        ->selectRaw('b.id, b.name, b.bank_account_number, b.is_cash_book, b.opening_balance,
+                            COALESCE(SUM(v.debit-v.credit),0) as net,
+                            COALESCE(SUM(CASE WHEN v.date BETWEEN ? AND ? THEN v.debit ELSE 0 END),0) as period_in,
+                            COALESCE(SUM(CASE WHEN v.date BETWEEN ? AND ? THEN v.credit ELSE 0 END),0) as period_out', [$from,$to,$from,$to])
+                        ->orderBy('b.name')->get()
+                        ->map(fn($b) => ['name'=>$b->name, 'account'=>$b->bank_account_number ? preg_replace('/\s+/','',$b->bank_account_number) : null,
+                            'cash'=>(bool)$b->is_cash_book, 'balance'=>(float)$b->opening_balance+(float)$b->net,
+                            'in'=>(float)$b->period_in, 'out'=>(float)$b->period_out])->all();
+                    // Month-by-month figures for the selected calendar year (charts).
+                    $monthly = fn($rows) => collect(range(1,12))->mapWithKeys(fn($m) => [$m => (float)($rows[$m] ?? 0)])->all();
+                    $monthlyCollections = $monthly($this->kpis->receipts()->whereYear('date',$year)->selectRaw('MONTH(date) as m, SUM(debit) as t')->groupBy('m')->pluck('t','m'));
+                    $monthlyExpenses = $monthly($db->table('expense_submissions')->whereIn('status',['approved','partially_approved'])
+                        ->whereYear('transaction_date',$year)->selectRaw('MONTH(transaction_date) as m, SUM(total_amount) as t')->groupBy('m')->pluck('t','m'));
                     return ['id'=>$school->id,'name'=>$school->name,'error'=>false,
                         'collections'=>(float)(clone $receipts)->sum('debit'),'previous'=>$previous,'expenses'=>$expenses,
                         'students'=>$db->table('students')->where('status','active')->count(),
@@ -115,7 +132,8 @@ class SchoolManagementController extends Controller
                             ->get(['e.id','e.submission_number','e.title','e.total_amount','e.transaction_date','e.created_at','c.name as category_name']),
                         'book_balance'=>(float)$books->sum('opening_balance')+(float)$bookMovement,
                         'advance'=>(float)$db->table('students')->sum('advance_balance'),
-                        'trend'=>$trend,'debtors'=>$topDebtors,'quarter_report'=>$quarterReport];
+                        'trend'=>$trend,'debtors'=>$topDebtors,'quarter_report'=>$quarterReport,
+                        'books'=>$bookRows,'monthly_collections'=>$monthlyCollections,'monthly_expenses'=>$monthlyExpenses];
                 });
                 $kpiRows = array_merge($kpiRows, $this->kpis->rows($school, $from, $to));
             } catch (\Throwable $e) {
@@ -128,7 +146,29 @@ class SchoolManagementController extends Controller
         $yearOptions = $yearOptions->unique()->sortDesc()->values();
         $quarterLabels = ManagementQuarterAnalytics::LABELS;
         $metrics = AccountantKpiService::METRICS;
-        return view('admin.accountant.management.overview', compact('settings','schools','snapshots','kpiRows','from','to','metrics','year','quarter','periodMode','periodLabel','yearOptions','quarterLabels','nav','selectedSchool'));
+        $bookGroups = $this->groupBooks($snapshots);
+        return view('admin.accountant.management.overview', compact('settings','schools','snapshots','kpiRows','from','to','metrics','year','quarter','periodMode','periodLabel','yearOptions','quarterLabels','nav','selectedSchool','bookGroups'));
+    }
+
+    /**
+     * The schools share bank accounts, so books with the same account number are one account.
+     * Books without a number (cash books) stay per school.
+     */
+    private function groupBooks(array $snapshots): array
+    {
+        $groups = [];
+        foreach ($snapshots as $s) {
+            if ($s['error']) continue;
+            foreach ($s['books'] as $b) {
+                $key = $b['account'] ?: 'school-'.$s['id'].'-'.$b['name'];
+                $groups[$key] ??= ['name'=>$b['account'] ? $b['name'] : $b['name'].' · '.self::shortName($s['name']), 'account'=>$b['account'], 'cash'=>$b['cash'], 'schools'=>[], 'balance'=>0.0, 'in'=>0.0, 'out'=>0.0];
+                $groups[$key]['schools'][$s['id']] = ['balance'=>$b['balance'], 'in'=>$b['in'], 'out'=>$b['out']];
+                foreach (['balance','in','out'] as $f) $groups[$key][$f] += $b[$f];
+            }
+        }
+        // Bank accounts first (largest balance first), then cash books.
+        uasort($groups, fn($a, $b) => [$a['cash'], -$a['balance']] <=> [$b['cash'], -$b['balance']]);
+        return array_values($groups);
     }
 
     /** One pending submission, reviewed inside the portal without switching accounts. */

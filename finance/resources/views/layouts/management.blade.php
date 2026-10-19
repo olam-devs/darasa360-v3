@@ -35,6 +35,8 @@
         </div>
         <nav class="mgmt-nav mt-3" aria-label="School management">
             <a href="{{ route('accountant.management', $schoolQuery) }}#overview" data-section="overview" @if($active==='overview') aria-current="page" @endif><i class="fa-solid fa-chart-pie w-4"></i> Overview</a>
+            <a href="{{ route('accountant.management', $schoolQuery) }}#analytics" data-section="analytics" @if($active==='analytics') aria-current="page" @endif><i class="fa-solid fa-chart-column w-4"></i> Analytics</a>
+            <a href="{{ route('accountant.management', $schoolQuery) }}#books" data-section="books" @if($active==='books') aria-current="page" @endif><i class="fa-solid fa-building-columns w-4"></i> Books</a>
             <a href="{{ route('accountant.management', $schoolQuery) }}#quarters" data-section="quarters" @if($active==='quarters') aria-current="page" @endif><i class="fa-solid fa-calendar-days w-4"></i> Quarter analytics</a>
             <a href="{{ route('accountant.management', $schoolQuery) }}#approvals" data-section="approvals" @if($active==='approvals') aria-current="page" @endif><i class="fa-solid fa-file-circle-check w-4"></i> Expense approvals
                 @php $navPending = $selected ? (collect($nav['schools'])->firstWhere('id', $selected)['pending'] ?? 0) : $nav['pending']; @endphp

@@ -1,6 +1,9 @@
 @extends('layouts.management')
 @section('title','School management — Darasa Finance')
 @section('page_title', $selectedSchool ? \App\Http\Controllers\SchoolManagementController::shortName($selectedSchool->name) : 'All schools')
+@push('head')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+@endpush
 @section('content')
 @include('admin.accountant.management.styles')
 @php
@@ -27,6 +30,8 @@
     @endif
     <nav class="management-tabs" role="tablist" aria-label="School management sections">
         <button type="button" role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-management-tab="overview">Overview</button>
+        <button type="button" role="tab" id="tab-analytics" aria-controls="panel-analytics" aria-selected="false" data-management-tab="analytics">Analytics</button>
+        <button type="button" role="tab" id="tab-books" aria-controls="panel-books" aria-selected="false" data-management-tab="books">Books</button>
         <button type="button" role="tab" id="tab-quarters" aria-controls="panel-quarters" aria-selected="false" data-management-tab="quarters">Quarter analytics</button>
         <button type="button" role="tab" id="tab-approvals" aria-controls="panel-approvals" aria-selected="false" data-management-tab="approvals">Expense approvals ({{ $available->sum('pending') }})</button>
         <button type="button" role="tab" id="tab-targets" aria-controls="panel-targets" aria-selected="false" data-management-tab="targets">Accountant targets</button>
@@ -107,6 +112,12 @@
     </div>
 
     </div>
+    <div id="panel-analytics" role="tabpanel" aria-labelledby="tab-analytics" data-management-panel="analytics" hidden>
+        @include('admin.accountant.management.analytics')
+    </div>
+    <div id="panel-books" role="tabpanel" aria-labelledby="tab-books" data-management-panel="books" hidden>
+        @include('admin.accountant.management.books')
+    </div>
     <div id="panel-quarters" role="tabpanel" aria-labelledby="tab-quarters" data-management-panel="quarters" hidden>
         @include('admin.accountant.management.quarters')
     </div>
@@ -161,11 +172,12 @@
 <script>
 (() => {
     function showManagementTab(name) {
-        if(!['overview','quarters','approvals','targets'].includes(name)) name='overview';
+        if(!['overview','analytics','books','quarters','approvals','targets'].includes(name)) name='overview';
         document.querySelectorAll('[data-management-panel]').forEach(p=>p.hidden=p.dataset.managementPanel!==name);
         document.querySelectorAll('[data-management-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.managementTab===name)));
         document.querySelectorAll('.mgmt-nav a[data-section]').forEach(a=>{ if(a.dataset.section===name) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
         history.replaceState(null,'','#'+name);
+        window.managementChartInit?.(name);
     }
     document.querySelectorAll('[data-management-tab]').forEach(b=>b.addEventListener('click',()=>showManagementTab(b.dataset.managementTab)));
     window.addEventListener('hashchange',()=>showManagementTab(location.hash.slice(1)));
