@@ -313,6 +313,18 @@ class SchoolManagementController extends Controller
      */
     public function payroll(Request $request)
     {
+        return $this->staffPage($request, 'payroll');
+    }
+
+    /** Staff list for one school or all schools: register, edit and move staff. */
+    public function staff(Request $request)
+    {
+        return $this->staffPage($request, 'staff');
+    }
+
+    /** Shared loader for the Payroll and Staff pages (same staff, deductions and paid months). */
+    private function staffPage(Request $request, string $page)
+    {
         abort_if($this->access->grants($request->user())->isEmpty(), 403);
         $request->validate(['month' => 'nullable|integer|between:1,12', 'year' => 'nullable|integer|between:2000,2100']);
         $selected = $this->selectedSchool($request);
@@ -356,7 +368,7 @@ class SchoolManagementController extends Controller
             ->map(fn ($g, $acct) => ['value' => 'account:'.$acct, 'label' => $g->first()['name'].' · '.$acct, 'balance' => $g->sum('balance')])->values()->all();
         $payerNames = SchoolAccountant::whereIn('id', $paid->pluck('created_by')->filter()->unique())->pluck('name', 'id');
         $allSchools = $this->access->schools($request->user());
-        return view('admin.accountant.management.payroll', compact('staff', 'deductions', 'paidMonths', 'paid', 'booksBySchool', 'accountOptions',
+        return view('admin.accountant.management.'.$page, compact('staff', 'deductions', 'paidMonths', 'paid', 'booksBySchool', 'accountOptions',
             'month', 'year', 'nav', 'payerNames', 'selected', 'allSchools') + ['activeSection' => 'payroll']);
     }
 
@@ -479,7 +491,7 @@ class SchoolManagementController extends Controller
                 'ip_address' => $request->ip()]);
             foreach ($rows as $r) $done[] = $r['name'].' ('.self::shortName($school->name).')';
         }
-        return redirect()->to(route('accountant.management.payroll', array_filter(['school' => $data['return_school'] ?? null])).'#staff')
+        return redirect()->to(route('accountant.management.staff', array_filter(['school' => $data['return_school'] ?? null])))
             ->with('success', count($done).' staff registered: '.implode(', ', $done).'.');
     }
 
@@ -523,7 +535,7 @@ class SchoolManagementController extends Controller
         ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
             'action' => 'management_staff_updated', 'description' => "Updated {$data['name']} from the management portal".($changes ? ': '.implode('; ', $changes) : '').'.',
             'ip_address' => $request->ip()]);
-        return redirect()->to(route('accountant.management.payroll', array_filter(['school' => $data['return_school'] ?? null])).'#staff')
+        return redirect()->to(route('accountant.management.staff', array_filter(['school' => $data['return_school'] ?? null])))
             ->with('success', "{$data['name']} updated".($changes ? ': '.implode('; ', $changes) : '').'.');
     }
 
@@ -556,7 +568,7 @@ class SchoolManagementController extends Controller
         ActivityLog::create(['school_id' => $to->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
             'action' => 'management_staff_moved', 'description' => "Moved {$person['name']} from ".self::shortName($from->name).' to '.self::shortName($to->name).'.',
             'ip_address' => $request->ip()]);
-        return redirect()->to(route('accountant.management.payroll', array_filter(['school' => $data['return_school'] ?? null])).'#staff')
+        return redirect()->to(route('accountant.management.staff', array_filter(['school' => $data['return_school'] ?? null])))
             ->with('success', "{$person['name']} moved from ".self::shortName($from->name).' to '.self::shortName($to->name).'. Earlier payments stay in '.self::shortName($from->name).'.');
     }
 
