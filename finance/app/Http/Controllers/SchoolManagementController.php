@@ -329,7 +329,7 @@ class SchoolManagementController extends Controller
                 return [
                     'staff' => $staff,
                     'deductions' => $db->table('staff_deductions')->where('is_active', true)->whereIn('staff_id', $staff->pluck('id'))->orderBy('id')
-                        ->get(['staff_id', 'deduction_type_id', 'name', 'type', 'default_amount'])->groupBy('staff_id'),
+                        ->get(['id', 'staff_id', 'deduction_type_id', 'name', 'type', 'default_amount'])->groupBy('staff_id'),
                     'paidMonths' => $db->table('payroll_entries')->where('year', $year)->get(['staff_id', 'month'])
                         ->groupBy('staff_id')->map(fn ($r) => $r->pluck('month')->map(fn ($m) => (int)$m)->unique()->values()->all()),
                     'paid' => $db->table('payroll_entries as p')->leftJoin('books as b', 'b.id', '=', 'p.book_id')->leftJoin('staff as s', 's.id', '=', 'p.staff_id')
@@ -446,28 +446,85 @@ class SchoolManagementController extends Controller
         return $failed ? $redirect->with('error', 'Not paid: '.implode('; ', array_map(fn ($r) => "{$r[1]} ({$r[3]}): {$r[2]}", $failed))) : $redirect;
     }
 
-    /** Register a staff member in one of the granted schools, with optional NSSF (10%) and PAYE deductions. */
+    /**
+     * Register one or more staff members (rows staff[i]), each in one of the granted schools, with optional
+     * NSSF (10%) and PAYE standing deductions. Rows left without a name are ignored.
+     */
     public function registerStaff(Request $request)
     {
-        $data = $request->validate(['school_id' => 'required|integer', 'name' => 'required|string|max:255', 'position' => 'required|string|max:255',
-            'monthly_salary' => 'required|numeric|min:0|max:999999999', 'phone' => 'nullable|string|max:255', 'bank_name' => 'nullable|string|max:255',
-            'bank_account' => 'nullable|string|max:255', 'nssf' => 'nullable|boolean', 'paye' => 'nullable|numeric|min:0|max:999999999',
-            'return_school' => 'nullable|integer']);
-        $school = $this->access->school($request->user(), (int)$data['school_id']);
-        $grant = $this->access->grants($request->user())->firstWhere('school_id', $school->id);
+        $request->merge(['staff' => array_values(array_filter((array)$request->input('staff', []), fn ($r) => trim((string)($r['name'] ?? '')) !== ''))]);
+        $data = $request->validate(['return_school' => 'nullable|integer', 'staff' => 'required|array|min:1|max:50',
+            'staff.*.school_id' => 'required|integer', 'staff.*.name' => 'required|string|max:255', 'staff.*.position' => 'required|string|max:255',
+            'staff.*.monthly_salary' => 'required|numeric|min:0|max:999999999', 'staff.*.phone' => 'nullable|string|max:255',
+            'staff.*.bank_name' => 'nullable|string|max:255', 'staff.*.bank_account' => 'nullable|string|max:255',
+            'staff.*.nssf' => 'nullable|boolean', 'staff.*.paye' => 'nullable|numeric|min:0|max:999999999'],
+            ['staff.required' => 'Enter at least one staff member with a name.']);
         $manager = $this->access->manager($request->user());
-        app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($data, $grant) {
-            DB::connection('tenant')->transaction(function () use ($data, $grant) {
-                $id = $this->createStaffRow($data, (int)$grant->school_accountant_id);
-                if (!empty($data['nssf'])) StaffDeduction::create(['staff_id' => $id, 'name' => 'NSSF', 'type' => 'percentage', 'default_amount' => 10, 'is_active' => true]);
-                if (!empty($data['paye'])) StaffDeduction::create(['staff_id' => $id, 'name' => 'PAYEE', 'type' => 'fixed', 'default_amount' => $data['paye'], 'is_active' => true]);
+        $done = [];
+        foreach (collect($data['staff'])->groupBy('school_id') as $schoolId => $rows) {
+            $school = $this->access->school($request->user(), (int)$schoolId);
+            $grant = $this->access->grants($request->user())->firstWhere('school_id', $school->id);
+            app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($rows, $grant) {
+                DB::connection('tenant')->transaction(function () use ($rows, $grant) {
+                    foreach ($rows as $row) {
+                        $id = $this->createStaffRow($row, (int)$grant->school_accountant_id);
+                        if (!empty($row['nssf'])) StaffDeduction::create(['staff_id' => $id, 'name' => 'NSSF', 'type' => 'percentage', 'default_amount' => 10, 'is_active' => true]);
+                        if (!empty($row['paye'])) StaffDeduction::create(['staff_id' => $id, 'name' => 'PAYEE', 'type' => 'fixed', 'default_amount' => $row['paye'], 'is_active' => true]);
+                    }
+                });
+            });
+            ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
+                'action' => 'management_staff_registered', 'description' => 'Registered from the management portal: '
+                    .$rows->map(fn ($r) => "{$r['name']} ({$r['position']}, TSh ".number_format($r['monthly_salary'], 0).')')->implode(', ').'.',
+                'ip_address' => $request->ip()]);
+            foreach ($rows as $r) $done[] = $r['name'].' ('.self::shortName($school->name).')';
+        }
+        return redirect()->to(route('accountant.management.payroll', array_filter(['school' => $data['return_school'] ?? null])).'#staff')
+            ->with('success', count($done).' staff registered: '.implode(', ', $done).'.');
+    }
+
+    /**
+     * Edit a staff member's details and standing deductions: change amounts, remove (deactivate) or add.
+     * Payments already made keep the deductions they were made with.
+     */
+    public function updateStaff(Request $request)
+    {
+        $data = $request->validate(['key' => ['required', 'regex:/^\d+_\d+$/'], 'return_school' => 'nullable|integer',
+            'name' => 'required|string|max:255', 'position' => 'required|string|max:255', 'monthly_salary' => 'required|numeric|min:0|max:999999999',
+            'phone' => 'nullable|string|max:255', 'bank_name' => 'nullable|string|max:255', 'bank_account' => 'nullable|string|max:255',
+            'deductions' => 'nullable|array', 'deductions.*.amount' => 'required|numeric|min:0|max:999999999', 'deductions.*.remove' => 'nullable|boolean',
+            'new_deductions' => 'nullable|array', 'new_deductions.*.name' => 'nullable|string|max:255',
+            'new_deductions.*.type' => 'nullable|in:fixed,percentage', 'new_deductions.*.amount' => 'nullable|numeric|min:0|max:999999999']);
+        [$schoolId, $staffId] = array_map('intval', explode('_', $data['key']));
+        $school = $this->access->school($request->user(), $schoolId);
+        $manager = $this->access->manager($request->user());
+        $changes = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($data, $staffId) {
+            $db = DB::connection('tenant');
+            return $db->transaction(function () use ($db, $data, $staffId) {
+                $before = $db->table('staff')->where('id', $staffId)->where('status', 'active')->first() ?? abort(404);
+                $db->table('staff')->where('id', $staffId)->update(['name' => $data['name'], 'position' => $data['position'], 'monthly_salary' => $data['monthly_salary'],
+                    'phone' => $data['phone'] ?? null, 'bank_name' => $data['bank_name'] ?? null, 'bank_account' => $data['bank_account'] ?? null, 'updated_at' => now()]);
+                $changes = [];
+                if ((float)$before->monthly_salary !== (float)$data['monthly_salary']) $changes[] = 'salary '.number_format($before->monthly_salary, 0).' → '.number_format($data['monthly_salary'], 0);
+                foreach ($data['deductions'] ?? [] as $dedId => $d) {
+                    $row = StaffDeduction::where('staff_id', $staffId)->where('is_active', true)->find($dedId);
+                    if (!$row) continue;
+                    if (!empty($d['remove'])) { $row->update(['is_active' => false]); $changes[] = "removed {$row->name}"; }
+                    elseif ((float)$row->default_amount !== (float)$d['amount']) { $changes[] = "{$row->name} ".(float)$row->default_amount.' → '.(float)$d['amount']; $row->update(['default_amount' => $d['amount']]); }
+                }
+                foreach ($data['new_deductions'] ?? [] as $d) {
+                    if (trim((string)($d['name'] ?? '')) === '' || !isset($d['amount'])) continue;
+                    StaffDeduction::create(['staff_id' => $staffId, 'name' => trim($d['name']), 'type' => $d['type'] ?? 'fixed', 'default_amount' => $d['amount'], 'is_active' => true]);
+                    $changes[] = 'added '.trim($d['name']);
+                }
+                return $changes;
             });
         });
         ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
-            'action' => 'management_staff_registered', 'description' => "Registered {$data['name']} ({$data['position']}, TSh ".number_format($data['monthly_salary'], 0).') from the management portal.',
+            'action' => 'management_staff_updated', 'description' => "Updated {$data['name']} from the management portal".($changes ? ': '.implode('; ', $changes) : '').'.',
             'ip_address' => $request->ip()]);
         return redirect()->to(route('accountant.management.payroll', array_filter(['school' => $data['return_school'] ?? null])).'#staff')
-            ->with('success', "{$data['name']} registered in ".self::shortName($school->name).'.');
+            ->with('success', "{$data['name']} updated".($changes ? ': '.implode('; ', $changes) : '').'.');
     }
 
     /**
