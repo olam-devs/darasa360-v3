@@ -31,6 +31,14 @@
         .mgmt-dot { width:10px; height:10px; border-radius:50%; flex:none; margin:0 9px 0 9px; box-shadow: 0 0 0 3px rgba(255,255,255,.9); }
         .mgmt-nav .mgmt-count { margin-left:auto; background:#f59e0b; color:#fff; border-radius:999px; font-size:11px; font-weight:700; padding:1px 8px; box-shadow: 0 1px 3px rgba(180,83,9,.3); }
         .mgmt-nav h4 { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#059669; font-weight:700; margin:20px 12px 6px; }
+        .mgmt-group summary { list-style:none; display:flex; align-items:center; gap:10px; padding:7px 10px; margin:2px 0; border-radius:12px; font-size:14px; font-weight:600; color:#1e293b; cursor:pointer; }
+        .mgmt-group summary::-webkit-details-marker { display:none; }
+        .mgmt-group summary:hover { background:rgba(255,255,255,.85); }
+        .mgmt-group .mgmt-chev { margin-left:auto; font-size:11px; color:#94a3b8; transition:transform .15s; }
+        .mgmt-group summary .mgmt-count + .mgmt-chev { margin-left:8px; }
+        .mgmt-group[open] .mgmt-chev { transform:rotate(180deg); }
+        .mgmt-group[open] summary .mgmt-count { display:none; }
+        .mgmt-group > a { margin-left:14px; padding-left:8px; }
     </style>
     @stack('head')
 </head>
@@ -45,25 +53,53 @@
             </div>
         </div>
         @php $navPending = $selected ? (collect($nav['schools'])->firstWhere('id', $selected)['pending'] ?? 0) : $nav['pending']; @endphp
+        @php
+            // Grouped menu; a group opens when one of its pages is the current one. Add SMS as its own group later.
+            $link = fn($section) => route('accountant.management', $schoolQuery).'#'.$section;
+            $groups = [
+                'reports' => ['Reports', 'fa-chart-line', ['quarters', 'analytics', 'budget', 'books']],
+                'spending' => ['Spending', 'fa-wallet', ['approvals', 'payroll', 'staff']],
+                'fees' => ['Fees', 'fa-file-invoice-dollar', ['invoices', 'overdue', 'advance']],
+            ];
+            $openGroup = collect($groups)->search(fn($g) => in_array($active, $g[2]));
+            // School links keep the current page (and tab, added in the browser); only the school changes.
+            $onReview = request()->routeIs('accountant.management.expense');
+            $schoolUrl = fn($id) => $onReview ? route('accountant.management', array_filter(['school' => $id])).'#approvals'
+                : ($id ? request()->fullUrlWithQuery(['school' => $id]) : request()->fullUrlWithoutQuery(['school']));
+        @endphp
         <nav class="mgmt-nav mt-3" aria-label="School management">
-            <a href="{{ route('accountant.management', $schoolQuery) }}#overview" data-section="overview" @if($active==='overview') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-chart-pie"></i></span> Overview</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#analytics" data-section="analytics" @if($active==='analytics') aria-current="page" @endif><span class="mgmt-ico violet"><i class="fa-solid fa-chart-column"></i></span> Analytics</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#books" data-section="books" @if($active==='books') aria-current="page" @endif><span class="mgmt-ico teal"><i class="fa-solid fa-building-columns"></i></span> Books</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#budget" data-section="budget" @if($active==='budget') aria-current="page" @endif><span class="mgmt-ico violet"><i class="fa-solid fa-scale-balanced"></i></span> Budget</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#quarters" data-section="quarters" @if($active==='quarters') aria-current="page" @endif><span class="mgmt-ico orange"><i class="fa-solid fa-calendar-days"></i></span> Quarter analytics</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#approvals" data-section="approvals" @if($active==='approvals') aria-current="page" @endif><span class="mgmt-ico amber"><i class="fa-solid fa-file-circle-check"></i></span> Expense approvals
-                @if($navPending > 0)<span class="mgmt-count">{{ $navPending }}</span>@endif</a>
-            <a href="{{ route('accountant.management.payroll', $schoolQuery) }}" @if($active==='payroll') aria-current="page" @endif><span class="mgmt-ico teal"><i class="fa-solid fa-money-check-dollar"></i></span> Payroll</a>
-            <a href="{{ route('accountant.management.invoices', $schoolQuery) }}" @if($active==='invoices') aria-current="page" @endif><span class="mgmt-ico rose"><i class="fa-solid fa-file-invoice"></i></span> Invoices</a>
-            <a href="{{ route('accountant.management.overdue', $schoolQuery) }}" @if($active==='overdue') aria-current="page" @endif><span class="mgmt-ico rose"><i class="fa-solid fa-triangle-exclamation"></i></span> Overdue fees</a>
-            <a href="{{ route('accountant.management.advance', $schoolQuery) }}" @if($active==='advance') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-piggy-bank"></i></span> Advance credit</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#targets" data-section="targets" @if($active==='targets') aria-current="page" @endif><span class="mgmt-ico slate"><i class="fa-solid fa-bullseye"></i></span> Accountant targets</a>
+            <a href="{{ $link('overview') }}" data-section="overview" @if($active==='overview') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-chart-pie"></i></span> Overview</a>
+
+            <details class="mgmt-group" data-group="reports" @if($openGroup === 'reports') open @endif>
+                <summary><span class="mgmt-ico violet"><i class="fa-solid fa-chart-line"></i></span> Reports<i class="fa-solid fa-chevron-down mgmt-chev"></i></summary>
+                <a href="{{ $link('quarters') }}" data-section="quarters" @if($active==='quarters') aria-current="page" @endif><span class="mgmt-ico orange"><i class="fa-solid fa-calendar-days"></i></span> Quarter analytics</a>
+                <a href="{{ $link('analytics') }}" data-section="analytics" @if($active==='analytics') aria-current="page" @endif><span class="mgmt-ico violet"><i class="fa-solid fa-chart-column"></i></span> Analytics</a>
+                <a href="{{ $link('budget') }}" data-section="budget" @if($active==='budget') aria-current="page" @endif><span class="mgmt-ico violet"><i class="fa-solid fa-scale-balanced"></i></span> Budget</a>
+                <a href="{{ $link('books') }}" data-section="books" @if($active==='books') aria-current="page" @endif><span class="mgmt-ico teal"><i class="fa-solid fa-building-columns"></i></span> Books</a>
+            </details>
+
+            <details class="mgmt-group" data-group="spending" @if($openGroup === 'spending') open @endif>
+                <summary><span class="mgmt-ico amber"><i class="fa-solid fa-wallet"></i></span> Spending
+                    @if($navPending > 0)<span class="mgmt-count">{{ $navPending }}</span>@endif<i class="fa-solid fa-chevron-down mgmt-chev"></i></summary>
+                <a href="{{ $link('approvals') }}" data-section="approvals" @if($active==='approvals') aria-current="page" @endif><span class="mgmt-ico amber"><i class="fa-solid fa-file-circle-check"></i></span> Expense approvals
+                    @if($navPending > 0)<span class="mgmt-count">{{ $navPending }}</span>@endif</a>
+                <a href="{{ route('accountant.management.payroll', $schoolQuery) }}" @if(in_array($active, ['payroll', 'staff'])) aria-current="page" @endif><span class="mgmt-ico teal"><i class="fa-solid fa-money-check-dollar"></i></span> Payroll &amp; staff</a>
+            </details>
+
+            <details class="mgmt-group" data-group="fees" @if($openGroup === 'fees') open @endif>
+                <summary><span class="mgmt-ico rose"><i class="fa-solid fa-file-invoice-dollar"></i></span> Fees<i class="fa-solid fa-chevron-down mgmt-chev"></i></summary>
+                <a href="{{ route('accountant.management.invoices', $schoolQuery) }}" @if($active==='invoices') aria-current="page" @endif><span class="mgmt-ico rose"><i class="fa-solid fa-file-invoice"></i></span> Invoices</a>
+                <a href="{{ route('accountant.management.overdue', $schoolQuery) }}" @if($active==='overdue') aria-current="page" @endif><span class="mgmt-ico rose"><i class="fa-solid fa-triangle-exclamation"></i></span> Overdue fees</a>
+                <a href="{{ route('accountant.management.advance', $schoolQuery) }}" @if($active==='advance') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-piggy-bank"></i></span> Advance credit</a>
+            </details>
+
+            <a href="{{ $link('targets') }}" data-section="targets" @if($active==='targets') aria-current="page" @endif><span class="mgmt-ico slate"><i class="fa-solid fa-bullseye"></i></span> Accountant targets</a>
 
             <h4>Schools</h4>
-            <a href="{{ route('accountant.management') }}#overview" @if(!$selected && !in_array($active, ['invoices', 'payroll', 'overdue', 'advance'])) aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-layer-group"></i></span> All schools</a>
+            <a href="{{ $schoolUrl(null) }}" data-school-link @if(!$selected) aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-layer-group"></i></span> All schools</a>
             @php $schoolDots = ['#2a78d6', '#eb6834', '#1baf7a']; @endphp
             @foreach($nav['schools'] as $i => $s)
-                <a href="{{ route('accountant.management', ['school' => $s['id']]) }}#overview" @if($selected === $s['id']) aria-current="page" @endif title="{{ $s['name'] }}">
+                <a href="{{ $schoolUrl($s['id']) }}" data-school-link @if($selected === $s['id']) aria-current="page" @endif title="{{ $s['name'] }}">
                     <span class="mgmt-dot" style="background:{{ $schoolDots[$i % 3] }};"></span> {{ $s['short'] }}
                     @if($s['pending'] > 0)<span class="mgmt-count" title="Expenses waiting for approval">{{ $s['pending'] }}</span>@endif
                 </a>
@@ -113,6 +149,10 @@
             document.getElementById('mgmt-backdrop').classList.toggle('hidden');
         }
         (function () {
+            // Switching school keeps the current tab too (the #tab part of the address).
+            document.querySelectorAll('[data-school-link]').forEach(a => a.addEventListener('click', () => {
+                if (location.hash && !a.href.includes('#')) a.href = a.href + location.hash;
+            }));
             const sw = document.getElementById('mgmt-school-switch');
             if (sw) sw.addEventListener('change', function () {
                 const url = new URL(window.location.href);

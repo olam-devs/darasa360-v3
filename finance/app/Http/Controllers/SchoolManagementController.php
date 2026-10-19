@@ -165,7 +165,7 @@ class SchoolManagementController extends Controller
                         'advance'=>(float)$db->table('students')->sum('advance_balance'),
                         'trend'=>$trend,'debtors'=>$topDebtors,'quarter_report'=>$quarterReport,
                         'books'=>$bookRows,'monthly_collections'=>$monthlyCollections,'monthly_expenses'=>$monthlyExpenses,
-                        'budget'=>$this->budgetVsActual($db, $from, $to)];
+                        'budget'=>$this->budgetVsActual($db, $from, $to, $periodMode === 'quarter' ? [$year, $quarter, $quarterTo] : null)];
                 });
                 $kpiRows = array_merge($kpiRows, $this->kpis->rows($school, $from, $to));
             } catch (\Throwable $e) {
@@ -189,12 +189,21 @@ class SchoolManagementController extends Controller
      * overlaps the period is compared with approved spending inside the plan's own dates (budgets have their
      * own windows, not quarters). Spending in the period with no overlapping budget is listed as unbudgeted.
      */
-    private function budgetVsActual($db, string $from, string $to): array
+    private function budgetVsActual($db, string $from, string $to, ?array $quarterSpan = null): array
     {
         $approved = fn () => $db->table('expense_submissions')->whereIn('status', ['approved', 'partially_approved']);
         $plans = $db->table('expense_category_plans as p')->join('expense_categories as c', 'c.id', '=', 'p.expense_category_id')
             ->where('p.from_date', '<=', $to)->where('p.to_date', '>=', $from)->orderBy('c.name')
             ->get(['p.id', 'p.expense_category_id', 'c.name', 'p.expected_amount', 'p.from_date', 'p.to_date']);
+        // With quarters selected, keep only budgets whose home quarter (the quarter their dates mostly cover) is
+        // selected, so Q4 does not show a Q3 budget whose window ends a few days into Q4.
+        if ($quarterSpan) {
+            [$year, $q1, $q2] = $quarterSpan;
+            $plans = $plans->filter(function ($p) use ($year, $q1, $q2) {
+                [$homeYear, $homeQuarter] = $this->homeQuarter($p->from_date, $p->to_date);
+                return $homeYear === $year && $homeQuarter >= $q1 && $homeQuarter <= $q2;
+            })->values();
+        }
         // Salaries paid through Payroll count against the salary category's budget, by each payment's budget term.
         $salaryCat = $this->salaryCategoryId($db);
         $payrollUsed = $salaryCat ? $this->payrollUsageByPlan($db, $db->table('expense_category_plans')->where('expense_category_id', $salaryCat)->get(['id', 'from_date', 'to_date'])) : [];
@@ -216,6 +225,9 @@ class SchoolManagementController extends Controller
         $unbudgeted = $db->table('expense_submissions as e')->join('expense_categories as c', 'c.id', '=', 'e.expense_category_id')
             ->whereIn('e.status', ['approved', 'partially_approved'])->whereBetween('e.transaction_date', [$from, $to])
             ->whereNotIn('e.expense_category_id', array_merge(array_keys($rows), isset($rows[$salaryCat]) ? $salaryLike : []))
+            // Spending covered by the category's budget of another term is not "unbudgeted".
+            ->whereNotExists(fn ($q) => $q->from('expense_category_plans as pp')->whereColumn('pp.expense_category_id', 'e.expense_category_id')
+                ->whereColumn('pp.from_date', '<=', 'e.transaction_date')->whereColumn('pp.to_date', '>=', 'e.transaction_date'))
             ->groupBy('c.name')->selectRaw('c.name, SUM(e.total_amount) as t')->pluck('t', 'name');
         foreach ($unbudgeted as $name => $t) $rows['u:'.$name] = ['category' => $name, 'budget' => 0.0, 'spent' => (float)$t, 'payroll' => 0.0, 'windows' => []];
         // Salary expenses dated outside every salary budget window would otherwise be missed: list them as unbudgeted.
@@ -243,6 +255,21 @@ class SchoolManagementController extends Controller
     {
         if (preg_match('/Budget term Q([1-4]) (\d{4})/', (string)($entry->notes ?? ''), $m)) return [(int)$m[2], (int)$m[1]];
         return [(int)$entry->year, ManagementQuarterAnalytics::quarterOf(CarbonImmutable::create((int)$entry->year, (int)$entry->month, 1))[1]];
+    }
+
+    /** [year, quarter] that a date window mostly covers. */
+    private function homeQuarter(string $from, string $to): array
+    {
+        $best = [0, 0]; $bestDays = 0;
+        for ($y = (int)substr($from, 0, 4); $y <= (int)substr($to, 0, 4); $y++) {
+            foreach (range(1, 4) as $q) {
+                [$qs, $qe] = ManagementQuarterAnalytics::range($y, $q);
+                $s = max($qs->toDateString(), $from); $e = min($qe->toDateString(), $to);
+                $days = $s <= $e ? CarbonImmutable::parse($s)->diffInDays(CarbonImmutable::parse($e)) + 1 : 0;
+                if ($days > $bestDays) { $best = [$y, $q]; $bestDays = $days; }
+            }
+        }
+        return $best;
     }
 
     /** The salary budget plan that covers a term best (budgets have their own date windows). */
@@ -822,7 +849,7 @@ class SchoolManagementController extends Controller
             $db = DB::connection('tenant');
             return [
                 'classes' => SchoolClass::where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray(),
-                'students' => $db->table('students')->where('status', 'active')->orderBy('name')->get(['id', 'name', 'student_reg_no', 'class'])->toArray(),
+                'students' => $db->table('students')->where('status', 'active')->orderBy('name')->get(['id', 'name', 'student_reg_no', 'class', 'class_id'])->toArray(),
                 'balances' => $db->table('particular_student')->selectRaw('student_id, SUM(GREATEST(0, sales-credit)) as balance')->groupBy('student_id')->pluck('balance', 'student_id')->toArray(),
             ];
         });

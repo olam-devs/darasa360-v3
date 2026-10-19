@@ -32,6 +32,7 @@
             <h3>One class</h3>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;align-items:center;">
                 <select id="inv-class" style="border:1px solid #cbd5e1;border-radius:7px;padding:9px 12px;min-width:200px;">
+                    <option value="">All classes</option>
                     @forelse($classes as $c)<option value="{{ $c['id'] }}">{{ $c['name'] }}</option>@empty<option value="">No classes set up</option>@endforelse
                 </select>
                 <a class="management-primary" data-invoice-link data-scope="class" href="#" style="display:inline-block;"><i class="fa-solid fa-download"></i> Download class</a>
@@ -46,7 +47,7 @@
             <thead><tr><th>Student</th><th>Class</th><th class="number">Unpaid (TSh)</th><th>Invoice</th></tr></thead>
             <tbody>
             @forelse($students as $st)
-                <tr data-search="{{ strtolower($st->name.' '.$st->student_reg_no.' '.$st->class) }}">
+                <tr data-search="{{ strtolower($st->name.' '.$st->student_reg_no.' '.$st->class) }}" data-class="{{ $st->class_id }}">
                     <td><strong>{{ $st->name }}</strong><div class="management-muted">{{ $st->student_reg_no }}</div></td>
                     <td>{{ $st->class ?: '—' }}</td>
                     <td class="number">{{ number_format($balances[$st->id] ?? 0, 0) }}</td>
@@ -83,10 +84,14 @@
         a.href = url.toString();
     }));
     const search = document.getElementById('inv-search');
-    search.addEventListener('input', () => {
-        const q = search.value.trim().toLowerCase();
-        document.querySelectorAll('#inv-students tbody tr[data-search]').forEach(r => r.hidden = q && !r.dataset.search.includes(q));
-    });
+    // The class choice and the search box filter the student list together.
+    const classSel = document.getElementById('inv-class');
+    function filterStudents() {
+        const q = search.value.trim().toLowerCase(), cls = classSel.value;
+        document.querySelectorAll('#inv-students tbody tr[data-search]').forEach(r => r.hidden = (q && !r.dataset.search.includes(q)) || (cls && r.dataset.class !== cls));
+    }
+    search.addEventListener('input', filterStudents);
+    classSel.addEventListener('change', filterStudents);
 })();
 </script>
 @endpush
