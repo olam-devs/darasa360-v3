@@ -118,6 +118,7 @@
             });
         })();
     </script>
+    @include('components.flash-toast')
     @stack('scripts')
 </body>
 </html>

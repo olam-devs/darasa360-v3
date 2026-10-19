@@ -100,12 +100,24 @@ class SchoolManagementController extends Controller
                     $previous = (float)$this->kpis->receipts()->whereBetween('date', [$previousFrom->toDateString(), $previousTo->toDateString()])->sum('debit');
                     $expenses = (float)$db->table('expense_submissions')->whereIn('status',['approved','partially_approved'])
                         ->whereBetween('transaction_date',[$from,$to])->sum('total_amount');
-                    $owed = $db->table('particular_student')->selectRaw('COALESCE(SUM(GREATEST(0,sales-credit)),0) as outstanding, COALESCE(SUM(sales),0) as billed, COALESCE(SUM(credit),0) as paid')->first();
+                    // Fee figures follow the selected year and quarter (each fee's assigned quarter).
+                    $yearIds = $db->table('academic_years')->where('name', (string)$year)->pluck('id');
+                    $earlierYearIds = $db->table('academic_years')->get(['id', 'name'])->filter(fn ($y) => is_numeric($y->name) && (int)$y->name < $year)->pluck('id');
+                    $inQuarter = fn () => $db->table('particular_student as ps')->whereIn('ps.academic_year_id', $yearIds)->where('ps.quarter', $quarter);
+                    $owed = $inQuarter()->selectRaw('COALESCE(SUM(GREATEST(0,ps.sales-ps.credit)),0) as outstanding, COALESCE(SUM(ps.sales),0) as billed, COALESCE(SUM(ps.credit),0) as paid')->first();
+                    $todayDate = now('Africa/Dar_es_Salaam')->toDateString();
+                    $quarterOverdue = (float)$inQuarter()->whereNotNull('ps.deadline')->whereDate('ps.deadline', '<', $todayDate)->selectRaw('COALESCE(SUM(GREATEST(0,ps.sales-ps.credit)),0) as t')->value('t');
+                    // Older debt stays visible: unpaid fees of earlier quarters this year and of earlier years.
+                    $earlierUnpaid = (float)$db->table('particular_student as ps')->where(fn ($q) => $q->whereIn('ps.academic_year_id', $earlierYearIds)
+                            ->orWhere(fn ($q) => $q->whereIn('ps.academic_year_id', $yearIds)->where('ps.quarter', '<', $quarter)))
+                        ->selectRaw('COALESCE(SUM(GREATEST(0,ps.sales-ps.credit)),0) as t')->value('t');
                     $pending = $db->table('expense_submissions')->where('status','pending');
+                    // Book balance at the end of the period, or today while the period is still running.
+                    $balanceDate = min($to, $todayDate);
                     $books = $db->table('books')->where('is_active',true)->get(['id','opening_balance']);
-                    $bookMovement = $db->table('vouchers')->whereIn('book_id',$books->pluck('id'))->whereNull('voided_at')->selectRaw('COALESCE(SUM(debit-credit),0) as net')->value('net');
+                    $bookMovement = $db->table('vouchers')->whereIn('book_id',$books->pluck('id'))->whereNull('voided_at')->whereDate('date', '<=', $balanceDate)->selectRaw('COALESCE(SUM(debit-credit),0) as net')->value('net');
                     $trend = (clone $receipts)->selectRaw('DATE(date) as day, SUM(debit) as amount')->groupBy('day')->orderBy('day')->get();
-                    $topDebtors = $db->table('particular_student as ps')->join('students as s','s.id','=','ps.student_id')
+                    $topDebtors = $inQuarter()->join('students as s','s.id','=','ps.student_id')
                         ->select('s.name')->selectRaw('SUM(GREATEST(0,ps.sales-ps.credit)) as balance')->groupBy('s.id','s.name')->having('balance','>',0)->orderByDesc('balance')->limit(5)->get();
                     // Each active book with its all-time balance and the money in/out during the selected period.
                     $bookRows = $db->table('books as b')->where('b.is_active',true)
@@ -128,7 +140,7 @@ class SchoolManagementController extends Controller
                         'collections'=>(float)(clone $receipts)->sum('debit'),'previous'=>$previous,'expenses'=>$expenses,
                         'students'=>$db->table('students')->where('status','active')->count(),
                         'outstanding'=>(float)$owed->outstanding, 'billed'=>(float)$owed->billed,'paid'=>(float)$owed->paid,
-                        'overdue'=>(float)$db->table('particular_student')->whereNotNull('deadline')->whereDate('deadline','<',now('Africa/Dar_es_Salaam')->toDateString())->selectRaw('COALESCE(SUM(GREATEST(0,sales-credit)),0) as total')->value('total'),
+                        'overdue'=>$quarterOverdue, 'earlier_unpaid'=>$earlierUnpaid, 'balance_date'=>$balanceDate,
                         'pending'=>(clone $pending)->count(), 'oldest_pending'=>(clone $pending)->min('created_at'),
                         'pending_items'=>$db->table('expense_submissions as e')->leftJoin('expense_categories as c','c.id','=','e.expense_category_id')
                             ->leftJoin('books as bk','bk.id','=','e.book_id')

@@ -83,7 +83,7 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // No self-service account deletion: accounts are removed by the school or the super admin.
 
     Route::middleware(['check.role:superadmin,accountant'])->prefix('accountant')->name('accountant.')->group(function () {
         Route::get('/school-management', [\App\Http\Controllers\SchoolManagementController::class, 'index'])->name('management');

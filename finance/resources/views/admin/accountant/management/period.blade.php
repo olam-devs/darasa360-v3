@@ -10,5 +10,3 @@
     <a href="{{ route('accountant.management',array_filter(['year'=>$nowYear,'quarter'=>$nowQuarter,'school'=>$selectedSchool?->id ?? null])) }}">Current quarter</a>
 </form>
 <p class="management-muted">Cash flow and accountant targets: <strong>{{ $periodLabel }}</strong> ({{ $from }} – {{ $to }}). Fee analytics: <strong>Q{{ $quarter }} {{ $year }}</strong>, by assigned quarter.</p>
-@if($errors->any())<div class="management-notice">{{ $errors->first() }}</div>@endif
-@if(session('success'))<div class="management-notice">{{ session('success') }}</div>@endif

@@ -17,9 +17,6 @@
         Show: <a href="{{ route('accountant.management.staff') }}" style="color:#047857;font-weight:{{ $selected ? 600 : 800 }};margin-left:4px;">All schools</a>
         @foreach($nav['schools'] as $s)<a href="{{ route('accountant.management.staff', ['school' => $s['id']]) }}" style="color:#047857;font-weight:{{ $selected?->id === $s['id'] ? 800 : 600 }};margin-left:8px;">{{ $s['short'] }}</a>@endforeach
     </p>
-    @if(session('success'))<div class="management-notice" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0;">{{ session('success') }}</div>@endif
-    @if(session('error'))<div class="management-notice">{{ session('error') }}</div>@endif
-    @if($errors->any())<div class="management-notice">{{ $errors->first() }}</div>@endif
     <div style="margin-top:18px;">
         @include('admin.accountant.management.staff-section')
     </div>

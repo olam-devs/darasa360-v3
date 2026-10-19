@@ -31,9 +31,6 @@
         <button class="management-primary" type="submit">Show</button>
         <a href="{{ route('accountant.management.staff', array_filter(['school' => $selected?->id])) }}" class="management-chip-button" style="margin-left:auto;padding:9px 16px;font-size:13px;"><i class="fa-solid fa-users"></i> Staff · register, edit or move</a>
     </form>
-    @if(session('success'))<div class="management-notice" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0;">{{ session('success') }}</div>@endif
-    @if(session('error'))<div class="management-notice">{{ session('error') }}</div>@endif
-    @if($errors->any())<div class="management-notice">{{ $errors->first() }}</div>@endif
 
     <div class="management-grid">
         <div class="management-card"><p class="management-muted">Active staff</p><div class="value">{{ $staff->count() }}</div><p class="management-muted">{{ $paidThisMonth }} paid for {{ $period }} · {{ $staff->count() - $paidThisMonth }} not yet</p></div>

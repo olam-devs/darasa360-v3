@@ -12,8 +12,6 @@
     <h2 style="margin-top:6px;">{{ $submission->title ?: $submission->submission_number }}</h2>
     <p class="management-muted">{{ $school->name }} · {{ $submission->submission_number }} · submitted by {{ $submitter }} on {{ $submission->created_at?->format('d M Y H:i') }}</p>
 
-    @if(session('error'))<div class="management-notice" id="review-error">{{ session('error') }}</div>@endif
-    @if($errors->any())<div class="management-notice">{{ $errors->first() }}</div>@endif
 
     <div class="management-grid" style="margin-top:18px;">
         <div class="management-card"><p class="management-muted">Requested</p><div class="value">TSh {{ number_format($submission->total_amount, 0) }}</div><p class="management-muted">Spending date {{ $submission->transaction_date?->format('d M Y') }}</p></div>
