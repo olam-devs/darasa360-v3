@@ -128,8 +128,15 @@ class SchoolManagementController extends Controller
                         'overdue'=>(float)$db->table('particular_student')->whereNotNull('deadline')->whereDate('deadline','<',now('Africa/Dar_es_Salaam')->toDateString())->selectRaw('COALESCE(SUM(GREATEST(0,sales-credit)),0) as total')->value('total'),
                         'pending'=>(clone $pending)->count(), 'oldest_pending'=>(clone $pending)->min('created_at'),
                         'pending_items'=>$db->table('expense_submissions as e')->leftJoin('expense_categories as c','c.id','=','e.expense_category_id')
+                            ->leftJoin('books as bk','bk.id','=','e.book_id')
                             ->where('e.status','pending')->orderBy('e.created_at')->limit(100)
-                            ->get(['e.id','e.submission_number','e.title','e.total_amount','e.transaction_date','e.created_at','c.name as category_name']),
+                            ->get(['e.id','e.submission_number','e.title','e.total_amount','e.transaction_date','e.created_at','c.name as category_name','bk.name as book_name']),
+                        // Decisions made in the selected period (by decision date), newest first.
+                        'decided_items'=>$db->table('expense_submissions as e')->leftJoin('expense_categories as c','c.id','=','e.expense_category_id')
+                            ->leftJoin('books as bk','bk.id','=','e.book_id')
+                            ->whereIn('e.status',['approved','partially_approved','denied','cancelled'])
+                            ->whereBetween('e.decided_at',[$from.' 00:00:00',$to.' 23:59:59'])->orderByDesc('e.decided_at')->limit(300)
+                            ->get(['e.id','e.submission_number','e.title','e.total_amount','e.status','e.decided_at','e.decided_by','e.transaction_date','c.name as category_name','bk.name as book_name']),
                         'book_balance'=>(float)$books->sum('opening_balance')+(float)$bookMovement,
                         'advance'=>(float)$db->table('students')->sum('advance_balance'),
                         'trend'=>$trend,'debtors'=>$topDebtors,'quarter_report'=>$quarterReport,
@@ -147,7 +154,8 @@ class SchoolManagementController extends Controller
         $quarterLabels = ManagementQuarterAnalytics::LABELS;
         $metrics = AccountantKpiService::METRICS;
         $bookGroups = $this->groupBooks($snapshots);
-        return view('admin.accountant.management.overview', compact('settings','schools','snapshots','kpiRows','from','to','metrics','year','quarter','periodMode','periodLabel','yearOptions','quarterLabels','nav','selectedSchool','bookGroups'));
+        $deciderNames = SchoolAccountant::whereIn('id', collect($snapshots)->where('error', false)->flatMap(fn ($s) => collect($s['decided_items'])->pluck('decided_by'))->filter()->unique())->pluck('name', 'id');
+        return view('admin.accountant.management.overview', compact('settings','schools','snapshots','kpiRows','from','to','metrics','year','quarter','periodMode','periodLabel','yearOptions','quarterLabels','nav','selectedSchool','bookGroups','deciderNames'));
     }
 
     /**
@@ -204,7 +212,7 @@ class SchoolManagementController extends Controller
             $decision = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($request, $submissionId, $grant) {
                 // Validation runs against this school's database (exists rules use the tenant connection).
                 $validated = $request->validate([
-                    'decision_note' => 'required|string|max:2000',
+                    'decision_note' => 'nullable|string|max:2000',
                     'overall_decision' => 'required|in:approve,deny',
                     'expense_category_id' => 'nullable|exists:expense_categories,id',
                     'book_id' => 'nullable|exists:books,id',
@@ -219,8 +227,9 @@ class SchoolManagementController extends Controller
                 if ($validated['overall_decision'] === 'deny') {
                     // Denying the whole request keeps the submitted amounts and denies every item.
                     $validated['line_items'] = array_map(fn ($line) => ['id' => $line['id'], 'status' => 'denied',
-                        'denial_reason' => ($line['denial_reason'] ?? null) ?: $validated['decision_note']], $validated['line_items']);
+                        'denial_reason' => ($line['denial_reason'] ?? null) ?: ($validated['decision_note'] ?? null)], $validated['line_items']);
                 }
+                $validated['decision_note'] ??= null;
                 // Decisions are recorded under Ritha's own account in that school, as before.
                 app(ExpenseReviewService::class)->decide($submissionId, $validated, (int)$grant->school_accountant_id);
                 $s = ExpenseSubmission::findOrFail($submissionId);
@@ -236,6 +245,63 @@ class SchoolManagementController extends Controller
         $label = ['approved' => 'approved', 'partially_approved' => 'partly approved', 'denied' => 'denied'][$decision['status']] ?? $decision['status'];
         return redirect()->to(route('accountant.management', ['school' => $school->id]).'#approvals')
             ->with('success', "{$decision['number']} {$label} for ".self::shortName($school->name).'.');
+    }
+
+    /**
+     * Approve several pending expenses at once, in full, as submitted. Each one is decided on its own
+     * (same service as a single review), so a refusal such as an insufficient balance skips only that one.
+     * pay_from: "submitted" keeps each expense's chosen book; "account:<number>" or "cash" picks the
+     * matching book in each expense's school (the schools share bank accounts).
+     */
+    public function bulkApprove(Request $request)
+    {
+        abort_if($this->access->grants($request->user())->isEmpty(), 403);
+        $data = $request->validate(['items' => 'required|array|min:1|max:200', 'items.*' => ['required', 'regex:/^\d+:\d+$/'],
+            'pay_from' => ['required', 'regex:/^(submitted|cash|account:[0-9A-Za-z]+)$/']]);
+        $manager = $this->access->manager($request->user());
+        $bySchool = collect($data['items'])->map(fn ($i) => array_map('intval', explode(':', $i)))->groupBy(0);
+        $done = []; $failed = [];
+        foreach ($bySchool as $schoolId => $items) {
+            $school = $this->access->school($request->user(), (int)$schoolId);
+            $grant = $this->access->grants($request->user())->firstWhere('school_id', $school->id);
+            $short = self::shortName($school->name);
+            $results = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($items, $data, $grant) {
+                $books = Book::where('is_active', true)->get();
+                $target = match (true) {
+                    $data['pay_from'] === 'submitted' => null,
+                    $data['pay_from'] === 'cash' => $books->firstWhere('is_cash_book', true),
+                    default => $books->first(fn ($b) => preg_replace('/\s+/', '', (string)$b->bank_account_number) === substr($data['pay_from'], 8)),
+                };
+                $out = [];
+                foreach ($items as [, $submissionId]) {
+                    $s = ExpenseSubmission::with('lineItems')->find($submissionId);
+                    if (!$s || $s->status !== 'pending') { $out[] = [false, $s?->submission_number ?? "#$submissionId", 'already decided or not found']; continue; }
+                    $bookId = $data['pay_from'] === 'submitted' ? $s->book_id : $target?->id;
+                    if (!$bookId) { $out[] = [false, $s->submission_number, $data['pay_from'] === 'submitted' ? 'no book chosen' : 'this school has no such account']; continue; }
+                    try {
+                        app(ExpenseReviewService::class)->decide($s->id, ['overall_decision' => 'approve', 'decision_note' => null, 'book_id' => $bookId,
+                            'line_items' => $s->lineItems->map(fn ($l) => ['id' => $l->id, 'status' => 'approved'])->all()], (int)$grant->school_accountant_id);
+                        $out[] = [true, $s->submission_number, (float)$s->fresh()->total_amount];
+                    } catch (\RuntimeException $e) {
+                        $out[] = [false, $s->submission_number, $e->getMessage()];
+                    }
+                }
+                return $out;
+            });
+            foreach ($results as [$ok, $number, $detail]) {
+                if ($ok) {
+                    $done[] = ['school' => $short, 'number' => $number, 'total' => $detail];
+                    ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
+                        'action' => 'management_expense_approved', 'description' => "$number approved (bulk) from the management portal (TSh ".number_format($detail, 2).').',
+                        'ip_address' => $request->ip()]);
+                } else {
+                    $failed[] = "$short $number: $detail";
+                }
+            }
+        }
+        $message = count($done).' expense(s) approved, total TSh '.number_format(array_sum(array_column($done, 'total')), 0).'.';
+        $redirect = redirect()->to(route('accountant.management', $request->only('school')).'#approvals')->with('success', $message);
+        return $failed ? $redirect->with('error', 'Not approved: '.implode('; ', $failed)) : $redirect;
     }
 
     /** Fee statements (invoices) for one school, generated without switching accounts. */

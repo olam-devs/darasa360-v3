@@ -8,7 +8,7 @@
     $remaining = $budget > 0 ? $budget - $spent : null;
 @endphp
 <div class="management-page" style="max-width:1100px;">
-    <p class="management-muted"><a href="{{ route('accountant.management', ['school' => $school->id]) }}#approvals" style="color:#1d4ed8;font-weight:600;">← Back to approvals</a></p>
+    <p class="management-muted"><a href="{{ url()->previous() !== url()->current() && str_contains(url()->previous(), 'school-management') ? url()->previous().'#approvals' : route('accountant.management', ['school' => $school->id]).'#approvals' }}" style="color:#1d4ed8;font-weight:600;">← Back to approvals</a></p>
     <h2 style="margin-top:6px;">{{ $submission->title ?: $submission->submission_number }}</h2>
     <p class="management-muted">{{ $school->name }} · {{ $submission->submission_number }} · submitted by {{ $submitter }} on {{ $submission->created_at?->format('d M Y H:i') }}</p>
 
@@ -30,6 +30,18 @@
             <h3>Already decided</h3>
             <p class="management-muted">Status: <strong>{{ str_replace('_', ' ', $submission->status) }}</strong>@if($decider) by {{ $decider }}@endif @if($submission->decided_at) on {{ $submission->decided_at->format('d M Y H:i') }}@endif.</p>
             @if($submission->decision_note)<p class="management-muted">Note: {{ $submission->decision_note }}</p>@endif
+            @if($submission->voucher_id)<p class="management-muted">Paid from {{ $submission->book?->name ?? 'book #'.$submission->book_id }}@if($submission->bank_fee_amount) · transaction fee TSh {{ number_format($submission->bank_fee_amount, 0) }}@endif.</p>@endif
+            <div class="management-scroll" style="margin-top:14px;"><table class="management-table" style="min-width:640px;">
+                <thead><tr><th>Item</th><th class="number">Quantity</th><th class="number">Unit price (TSh)</th><th class="number">Line total</th><th>Decision</th></tr></thead>
+                <tbody>@foreach($submission->lineItems as $line)
+                    <tr><td><strong>{{ $line->item_name_snapshot }}</strong><div class="management-muted">{{ $line->unit_type_snapshot }}</div></td>
+                        <td class="number">{{ rtrim(rtrim(number_format($line->quantity, 3, '.', ','), '0'), '.') }}</td>
+                        <td class="number">{{ number_format($line->unit_price, 0) }}</td>
+                        <td class="number">{{ number_format($line->line_total, 0) }}</td>
+                        <td>{{ ucfirst($line->status) }}@if($line->denial_reason)<div class="management-muted">{{ $line->denial_reason }}</div>@endif</td></tr>
+                @endforeach</tbody>
+                <tfoot><tr><td colspan="3" style="text-align:right;font-weight:700;">{{ in_array($submission->status, ['approved', 'partially_approved']) ? 'Amount paid' : 'Amount' }}</td><td class="number" style="font-weight:750;">{{ number_format($submission->total_amount, 0) }}</td><td></td></tr></tfoot>
+            </table></div>
         </div>
     @else
     <form method="post" action="{{ route('accountant.management.expense.decide', [$school->id, $submission->id]) }}" id="review-form" class="management-panel">
@@ -74,8 +86,8 @@
             </label>
         </div>
         <p class="management-notice" id="balance-warning" hidden>The amount to pay is more than this book's balance. Approval will be refused until the book has enough money or you choose another book.</p>
-        <label style="display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;margin-top:16px;">Decision note (required, visible to the school)
-            <textarea name="decision_note" required rows="3" maxlength="2000" style="border:1px solid #cbd5e1;border-radius:7px;padding:9px 12px;">{{ old('decision_note') }}</textarea>
+        <label style="display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;margin-top:16px;">Decision note (optional, visible to the school)
+            <textarea name="decision_note" rows="3" maxlength="2000" style="border:1px solid #cbd5e1;border-radius:7px;padding:9px 12px;">{{ old('decision_note') }}</textarea>
         </label>
         <input type="hidden" name="overall_decision" id="overall-decision" value="approve">
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">

@@ -90,7 +90,8 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::post('/school-management/targets', [\App\Http\Controllers\SchoolManagementController::class, 'saveTarget'])->name('management.targets');
         Route::post('/school-management/enter/{schoolId}', [\App\Http\Controllers\SchoolManagementController::class, 'enter'])->name('management.enter');
         Route::post('/school-management/account-settings', [\App\Http\Controllers\SchoolManagementController::class, 'accountSettings'])->name('management.account-settings');
-        Route::get('/school-management/expenses/{schoolId}/{submissionId}', [\App\Http\Controllers\SchoolManagementController::class, 'reviewExpense'])->whereNumber(['schoolId', 'submissionId'])->name('management.expense');
+        Route::post('/school-management/expenses/bulk-approve', [\App\Http\Controllers\SchoolManagementController::class, 'bulkApprove'])->name('management.expenses.bulk-approve');
+        Route::get('/school-management/expenses/{schoolId}/{submissionId}',[\App\Http\Controllers\SchoolManagementController::class, 'reviewExpense'])->whereNumber(['schoolId', 'submissionId'])->name('management.expense');
         Route::post('/school-management/expenses/{schoolId}/{submissionId}', [\App\Http\Controllers\SchoolManagementController::class, 'decideExpense'])->whereNumber(['schoolId', 'submissionId'])->name('management.expense.decide');
         Route::get('/school-management/invoices', [\App\Http\Controllers\SchoolManagementController::class, 'invoices'])->name('management.invoices');
         Route::get('/school-management/invoices/{schoolId}/download', [\App\Http\Controllers\SchoolManagementController::class, 'downloadInvoices'])->whereNumber('schoolId')->name('management.invoices.download');

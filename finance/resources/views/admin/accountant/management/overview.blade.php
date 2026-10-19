@@ -122,27 +122,7 @@
         @include('admin.accountant.management.quarters')
     </div>
     <div id="panel-approvals" role="tabpanel" aria-labelledby="tab-approvals" data-management-panel="approvals" hidden>
-        <section class="management-panel">
-            <h3>Expenses waiting for your approval</h3>
-            <p class="management-muted" style="margin:8px 0 18px;">{{ $selectedSchool ? 'Pending expenses for this school.' : 'All schools in one list, grouped by school.' }} Review opens the expense here, where you check the items and the book before approving or denying. This queue shows current pending submissions, regardless of the analytics period.</p>
-            <div class="management-scroll"><table class="management-table" id="management-approval-table">
-                <thead><tr><th>School / submitted</th><th>Expense</th><th class="number">Requested (TSh)</th><th>Action</th></tr></thead>
-                <tbody>
-                @foreach($available as $school)
-                    @foreach($school['pending_items'] as $expense)
-                    <tr>
-                        <td>{{ \Illuminate\Support\Str::title(\Illuminate\Support\Str::afterLast($school['name'],' - ')) }}<div class="management-muted">{{ \Carbon\Carbon::parse($expense->created_at)->format('d M Y') }}</div></td>
-                        <td><strong>{{ $expense->title ?: $expense->submission_number }}</strong><div class="management-muted">{{ $expense->category_name }} · {{ $expense->submission_number }}</div></td>
-                        <td class="number">{{ number_format($expense->total_amount,2) }}</td>
-                        <td><a class="management-primary" style="display:inline-block;" href="{{ route('accountant.management.expense',[$school['id'],$expense->id]) }}">Review</a></td>
-                    </tr>
-                    @endforeach
-                    @if($school['pending']>100)<tr><td colspan="4">{{ $school['name'] }}: showing the oldest 100. Open the school's Expenses page for the full queue.</td></tr>@endif
-                @endforeach
-                @if($available->sum('pending')===0)<tr><td colspan="4">Nothing is waiting for your approval.</td></tr>@endif
-                </tbody>
-            </table></div>
-        </section>
+        @include('admin.accountant.management.approvals')
     </div>
     <div id="panel-targets" role="tabpanel" aria-labelledby="tab-targets" data-management-panel="targets" hidden>
     <section class="management-panel">
