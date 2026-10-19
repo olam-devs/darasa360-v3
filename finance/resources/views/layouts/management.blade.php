@@ -52,11 +52,12 @@
             <a href="{{ route('accountant.management', $schoolQuery) }}#quarters" data-section="quarters" @if($active==='quarters') aria-current="page" @endif><span class="mgmt-ico orange"><i class="fa-solid fa-calendar-days"></i></span> Quarter analytics</a>
             <a href="{{ route('accountant.management', $schoolQuery) }}#approvals" data-section="approvals" @if($active==='approvals') aria-current="page" @endif><span class="mgmt-ico amber"><i class="fa-solid fa-file-circle-check"></i></span> Expense approvals
                 @if($navPending > 0)<span class="mgmt-count">{{ $navPending }}</span>@endif</a>
+            <a href="{{ route('accountant.management.payroll', $schoolQuery) }}" @if($active==='payroll') aria-current="page" @endif><span class="mgmt-ico teal"><i class="fa-solid fa-money-check-dollar"></i></span> Payroll</a>
             <a href="{{ route('accountant.management.invoices', $schoolQuery) }}" @if($active==='invoices') aria-current="page" @endif><span class="mgmt-ico rose"><i class="fa-solid fa-file-invoice"></i></span> Invoices</a>
             <a href="{{ route('accountant.management', $schoolQuery) }}#targets" data-section="targets" @if($active==='targets') aria-current="page" @endif><span class="mgmt-ico slate"><i class="fa-solid fa-bullseye"></i></span> Accountant targets</a>
 
             <h4>Schools</h4>
-            <a href="{{ route('accountant.management') }}#overview" @if(!$selected && $active!=='invoices') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-layer-group"></i></span> All schools</a>
+            <a href="{{ route('accountant.management') }}#overview" @if(!$selected && !in_array($active, ['invoices', 'payroll'])) aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-layer-group"></i></span> All schools</a>
             @php $schoolDots = ['#2a78d6', '#eb6834', '#1baf7a']; @endphp
             @foreach($nav['schools'] as $i => $s)
                 <a href="{{ route('accountant.management', ['school' => $s['id']]) }}#overview" @if($selected === $s['id']) aria-current="page" @endif title="{{ $s['name'] }}">

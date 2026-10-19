@@ -278,118 +278,9 @@ class PayrollController extends Controller
             'book_fee_category_id' => 'nullable|exists:book_fee_categories,id',
         ]);
 
-        DB::beginTransaction();
         try {
-            $gross     = (float) $validated['gross_salary'];
-            $deductions = $validated['deductions'] ?? [];
-
-            // Calculate total deductions
-            $totalDeductions = 0.0;
-            foreach ($deductions as &$ded) {
-                if (($ded['type'] ?? 'fixed') === 'percentage') {
-                    // Percentage deductions are % of gross
-                    $ded['amount'] = round($gross * ((float) $ded['amount'] / 100), 2);
-                }
-                $totalDeductions += (float) $ded['amount'];
-            }
-            unset($ded);
-
-            $netSalary = max(0.0, $gross - $totalDeductions);
-            $period    = date('F Y', mktime(0, 0, 0, $validated['month'], 1, $validated['year']));
-
-            $staff = Staff::findOrFail($validated['staff_id']);
-
-            // Create voucher — net salary paid from book
-            $voucher = Voucher::create([
-                'voucher_type'          => 'Payment',
-                'date'                  => $validated['payment_date'],
-                'book_id'               => $validated['book_id'],
-                'debit'                 => 0,
-                'credit'                => $netSalary,
-                'payment_by_receipt_to' => $staff->name,
-                'notes'                 => 'Salary — ' . $staff->name . ' (' . $period . ')'
-                    . (! empty($validated['reference_number']) ? ' — Ref: ' . $validated['reference_number'] : ''),
-                'created_by'            => auth()->id(),
-            ]);
-
-            // Optional transaction fee — the accountant explicitly picks one
-            // of the book's configured BookFeeCategory options (same
-            // mechanism Withdrawals and Expenses use); leaving it unset cuts
-            // no fee at all. Fee is based on net_salary, the amount actually
-            // leaving the book, matching how Withdrawals base it on the
-            // withdrawal amount.
-            $feeVoucher = null;
-            $feeAmount = null;
-            $feeCategoryId = null;
-
-            if (!empty($validated['book_fee_category_id'])) {
-                $feeCategory = BookFeeCategory::where('book_id', $validated['book_id'])
-                    ->where('is_active', true)
-                    ->find($validated['book_fee_category_id']);
-
-                if ($feeCategory) {
-                    $fee = $feeCategory->resolveFeeForAmount($netSalary);
-                    if ($fee > 0) {
-                        $feeVoucher = Voucher::create([
-                            'date'                  => $validated['payment_date'],
-                            'student_id'             => null,
-                            'particular_id'          => $feeCategory->particular_id,
-                            'book_id'                => $validated['book_id'],
-                            'voucher_type'           => 'Payment',
-                            'debit'                  => 0,
-                            'credit'                 => $fee,
-                            'payment_by_receipt_to'  => 'Bank Transaction Fee',
-                            'notes'                  => sprintf(
-                                'Transaction fee (%s) for payroll — %s (%s), net TSh %s. Linked voucher #%s.',
-                                $feeCategory->name,
-                                $staff->name,
-                                $period,
-                                number_format($netSalary, 2),
-                                $voucher->voucher_number
-                            ),
-                            'created_by' => auth()->id(),
-                        ]);
-                        $feeAmount = $fee;
-                        $feeCategoryId = $feeCategory->id;
-                    }
-                }
-            }
-
-            // Create payroll entry
-            $payroll = PayrollEntry::create([
-                'staff_id'         => $validated['staff_id'],
-                'book_id'          => $validated['book_id'],
-                'voucher_id'       => $voucher->id,
-                'period'           => $period,
-                'month'            => $validated['month'],
-                'year'             => $validated['year'],
-                'gross_salary'     => $gross,
-                'total_deductions' => $totalDeductions,
-                'net_salary'       => $netSalary,
-                'status'           => 'paid',
-                'payment_date'     => $validated['payment_date'],
-                'payment_method'   => $validated['payment_method'],
-                'reference_number' => $validated['reference_number'] ?? null,
-                'notes'            => $validated['notes'] ?? null,
-                'created_by'       => auth()->id(),
-                'bank_fee_voucher_id'  => $feeVoucher?->id,
-                'bank_fee_amount'      => $feeAmount,
-                'bank_fee_category_id' => $feeCategoryId,
-            ]);
-
-            // Save individual deductions
-            foreach ($deductions as $ded) {
-                PayrollEntryDeduction::create([
-                    'payroll_entry_id'  => $payroll->id,
-                    'deduction_type_id' => $ded['deduction_type_id'] ?? null,
-                    'name'              => $ded['name'],
-                    'type'              => $ded['type'],
-                    'amount'            => $ded['amount'],
-                    'note'              => $ded['note'] ?? null,
-                ]);
-            }
-
-            DB::commit();
+            [$payroll, $feeAmount] = app(\App\Services\PayrollPaymentService::class)->pay($validated, (int) auth()->id());
+            $netSalary = (float) $payroll->net_salary;
 
             return response()->json([
                 'payroll'   => $payroll->load(['staff', 'deductions', 'book', 'bankFeeCategory']),
@@ -399,7 +290,6 @@ class PayrollController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
