@@ -44,8 +44,9 @@ use submission transaction dates. Balances and the pending approval queue are
 current positions. A receipt must be unvoided and linked to a book to count as
 fresh collections; applications of existing advance credit are excluded.
 
-The period selector defaults to the current calendar quarter (Q1 Jan–Mar,
-Q2 Apr–Jun, Q3 Jul–Sep, Q4 Oct–Dec). Year/quarter selection also sets the cash-flow
+The period selector defaults to the current school-year quarter. Quarters follow
+the school calendar, not calendar quarters: Q1 Jan–Mar, Q2 Apr–Jun, Q3 Jul–Aug,
+Q4 Sep–Dec (`ManagementQuarterAnalytics::START_MONTHS`). Labels show only Q1–Q4. Year/quarter selection also sets the cash-flow
 and KPI date range. Custom dates remain available for monthly or other targets;
 fee analytics keep the separately displayed year/quarter selection. Previous
 cash-flow comparisons use the full previous quarter in quarter mode. An ongoing

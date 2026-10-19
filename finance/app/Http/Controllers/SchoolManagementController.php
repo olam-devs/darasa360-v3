@@ -34,12 +34,13 @@ class SchoolManagementController extends Controller
             'year'=>'nullable|integer|between:2000,2100','quarter'=>'nullable|integer|between:1,4',
             'period_mode'=>'nullable|in:quarter,custom']);
         $today = CarbonImmutable::now('Africa/Dar_es_Salaam');
-        $year = (int)($request->input('year') ?: $today->year);
-        $quarter = (int)($request->input('quarter') ?: $today->quarter);
+        [$currentYear, $currentQuarter] = ManagementQuarterAnalytics::quarterOf($today);
+        $year = (int)($request->input('year') ?: $currentYear);
+        $quarter = (int)($request->input('quarter') ?: $currentQuarter);
         $periodMode = $request->input('period_mode') ?: ($request->filled('from') || $request->filled('to') ? 'custom' : 'quarter');
-        $start = CarbonImmutable::create($year,($quarter-1)*3+1,1,0,0,0,'Africa/Dar_es_Salaam');
+        [$start, $end] = ManagementQuarterAnalytics::range($year, $quarter);
         $from = $periodMode === 'quarter' ? $start->toDateString() : ($request->input('from') ?: $start->toDateString());
-        $to = $periodMode === 'quarter' ? $start->endOfQuarter()->toDateString() : ($request->input('to') ?: $start->endOfQuarter()->toDateString());
+        $to = $periodMode === 'quarter' ? $end->toDateString() : ($request->input('to') ?: $end->toDateString());
         validator(['from'=>$from,'to'=>$to], ['from'=>'required|date','to'=>'required|date|after_or_equal:from'])->validate();
         abort_if(CarbonImmutable::parse($from)->diffInDays(CarbonImmutable::parse($to)) > 730, 422, 'Choose a period of two years or less.');
         $periodLabel = $periodMode === 'quarter' ? "Q{$quarter} {$year}" : "{$from} to {$to}";
@@ -92,7 +93,7 @@ class SchoolManagementController extends Controller
                     $receipts = $this->kpis->receipts()->whereBetween('date', [$from, $to]);
                     $days = (int)CarbonImmutable::parse($from)->diffInDays(CarbonImmutable::parse($to)) + 1;
                     $previousTo = CarbonImmutable::parse($from)->subDay();
-                    $previousFrom = $periodMode === 'quarter' ? $previousTo->startOfQuarter() : $previousTo->subDays($days-1);
+                    $previousFrom = $periodMode === 'quarter' ? ManagementQuarterAnalytics::range(...ManagementQuarterAnalytics::quarterOf($previousTo))[0] : $previousTo->subDays($days-1);
                     $previous = (float)$this->kpis->receipts()->whereBetween('date', [$previousFrom->toDateString(), $previousTo->toDateString()])->sum('debit');
                     $expenses = (float)$db->table('expense_submissions')->whereIn('status',['approved','partially_approved'])
                         ->whereBetween('transaction_date',[$from,$to])->sum('total_amount');

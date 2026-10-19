@@ -6,7 +6,28 @@ use Illuminate\Support\Facades\DB;
 
 class ManagementQuarterAnalytics
 {
-    public const LABELS = [1=>'Q1 · Jan–Mar', 2=>'Q2 · Apr–Jun', 3=>'Q3 · Jul–Sep', 4=>'Q4 · Oct–Dec'];
+    public const LABELS = [1=>'Q1', 2=>'Q2', 3=>'Q3', 4=>'Q4'];
+
+    /** School-year quarters start in these months (Q3 is July–August; Q4 runs September–December). */
+    public const START_MONTHS = [1=>1, 2=>4, 3=>7, 4=>9];
+
+    /** @return array{0: \Carbon\CarbonImmutable, 1: \Carbon\CarbonImmutable} first and last day of a school quarter */
+    public static function range(int $year, int $quarter): array
+    {
+        $start = \Carbon\CarbonImmutable::create($year, self::START_MONTHS[$quarter], 1, 0, 0, 0, 'Africa/Dar_es_Salaam');
+        $end = $quarter === 4 ? $start->setDate($year, 12, 31) : $start->setDate($year, self::START_MONTHS[$quarter + 1], 1)->subDay();
+        return [$start, $end];
+    }
+
+    /** @return array{0: int, 1: int} [year, quarter] of the school quarter containing $date */
+    public static function quarterOf(\Carbon\CarbonInterface $date): array
+    {
+        $quarter = 1;
+        foreach (self::START_MONTHS as $q => $month) {
+            if ($date->month >= $month) $quarter = $q;
+        }
+        return [$date->year, $quarter];
+    }
 
     /** Read the current tenant only; academic-year IDs differ between schools. */
     public function report(int $year, int $quarter): array

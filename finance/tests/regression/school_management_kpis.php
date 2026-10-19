@@ -21,7 +21,8 @@ use App\Services\AccountantKpiService;
 function verifyManagement($ok,$message) {if(!$ok)throw new RuntimeException($message);}
 $controller=app(App\Http\Controllers\SchoolManagementController::class);
 $periodMethod=new ReflectionMethod($controller,'period');
-foreach([1=>['2024-01-01','2024-03-31'],2=>['2024-04-01','2024-06-30'],3=>['2024-07-01','2024-09-30'],4=>['2024-10-01','2024-12-31']] as $quarter=>$dates) {
+// School-year quarters: Q3 is July–August, Q4 runs September–December.
+foreach([1=>['2024-01-01','2024-03-31'],2=>['2024-04-01','2024-06-30'],3=>['2024-07-01','2024-08-31'],4=>['2024-09-01','2024-12-31']] as $quarter=>$dates) {
  $period=$periodMethod->invoke($controller,new Illuminate\Http\Request(['year'=>2024,'quarter'=>$quarter]));
  verifyManagement([$period['from'],$period['to']]===$dates && $period['periodMode']==='quarter','Quarter date boundaries failed');
 }
