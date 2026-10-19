@@ -1716,15 +1716,19 @@ class LedgerController extends Controller
     /**
      * @return \Illuminate\Database\Eloquent\Collection<int, Student>
      */
-    protected function studentsForInvoiceExport(Request $request)
+    public function studentsForInvoiceExport(Request $request)
     {
         $query = Student::with(['schoolClass', 'particulars', 'scholarships'])
             ->where('status', 'active');
 
         $classId = $request->query('class');
         $classIds = $request->query('classes', []);
+        // An explicit list of students (e.g. everyone overdue) takes precedence over class filters.
+        $studentIds = array_filter(array_map('intval', (array) $request->input('students', [])));
 
-        if ($classId !== null && $classId !== '') {
+        if (! empty($studentIds)) {
+            $query->whereIn('id', $studentIds);
+        } elseif ($classId !== null && $classId !== '') {
             $query->where('class_id', $classId);
         } elseif (! empty($classIds)) {
             $query->whereIn('class_id', (array) $classIds);
@@ -1734,6 +1738,18 @@ class LedgerController extends Controller
     }
 
     public function exportAllStudentsInvoicesPdf(Request $request)
+    {
+        [$bytes, $filename] = $this->allStudentsInvoicesPdf($request);
+
+        return response($bytes, 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'attachment; filename="'.$filename.'"']);
+    }
+
+    /**
+     * One PDF with an invoice page per student (current tenant), and its file name.
+     *
+     * @return array{0: string, 1: string}
+     */
+    public function allStudentsInvoicesPdf(Request $request, ?string $filenamePrefix = null): array
     {
         $request->validate(['format' => 'sometimes|in:accountant,parent']);
         $invoiceFormat = $request->get('format', 'accountant');
@@ -1759,14 +1775,68 @@ class LedgerController extends Controller
         }
 
         if ($students->count() === 1) {
-            $safeName = trim(preg_replace('/[^a-zA-Z0-9_-]+/', '-', $students->first()->name), '-') ?: 'student-'.$students->first()->id;
-            $filename = "{$safeName}-{$invoiceFormat}-invoice.pdf";
+            $filename = $this->safeFileName($students->first()->name, 'student-'.$students->first()->id)."-{$invoiceFormat}-invoice.pdf";
+        }
+        if ($filenamePrefix !== null) {
+            $filename = $this->safeFileName($filenamePrefix, 'invoices')."-{$invoiceFormat}-invoices.pdf";
         }
 
         $invoiceHeading = trim($request->get('heading', 'FEE STATEMENT')) ?: 'FEE STATEMENT';
         $pdf = Pdf::loadView('invoices.all-students-pdf', compact('allInvoices', 'school', 'bankAccounts', 'invoiceHeading', 'invoiceFormat'));
 
-        return $pdf->download($filename);
+        return [$pdf->output(), $filename];
+    }
+
+    /** Separate PDF per student, zipped; each file is named after the student. */
+    public function exportAllStudentsInvoicesZip(Request $request)
+    {
+        $request->validate(['format' => 'sometimes|in:accountant,parent']);
+        $students = $this->studentsForInvoiceExport($request);
+        abort_if($students->isEmpty(), 404, 'No students to export.');
+        $files = $this->studentInvoiceFiles($students, $request);
+        $zip = $this->zipFiles($files);
+
+        return response()->download($zip, 'invoices-'.$request->get('format', 'accountant').'-'.now()->format('Y-m-d').'.zip', ['Content-Type' => 'application/zip'])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Render one PDF per student for the current tenant.
+     *
+     * @return array<string, string> file name => PDF bytes (names made unique)
+     */
+    public function studentInvoiceFiles($students, Request $request, string $folder = ''): array
+    {
+        $invoiceFormat = $request->get('format', 'accountant');
+        $invoiceHeading = trim($request->get('heading', 'FEE STATEMENT')) ?: 'FEE STATEMENT';
+        $school = SchoolSetting::getSettings();
+        $bankAccounts = BankAccount::all();
+        $files = [];
+        foreach ($students as $student) {
+            $invoiceData = $this->buildStudentInvoiceData($student);
+            $base = $folder.$this->safeFileName($student->name, 'student-'.$student->id);
+            $name = "{$base}.pdf";
+            for ($n = 2; isset($files[$name]); $n++) $name = "{$base}-{$n}.pdf";
+            $files[$name] = Pdf::loadView('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading', 'invoiceFormat'))->output();
+        }
+
+        return $files;
+    }
+
+    /** @param array<string, string> $files name => contents; returns the path of a temporary zip file. */
+    public function zipFiles(array $files): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'inv').'.zip';
+        $zip = new \ZipArchive();
+        abort_unless($zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true, 500, 'Could not create the zip file.');
+        foreach ($files as $name => $contents) $zip->addFromString($name, $contents);
+        $zip->close();
+
+        return $path;
+    }
+
+    protected function safeFileName(string $name, string $fallback): string
+    {
+        return trim(preg_replace('/[^a-zA-Z0-9_-]+/', '-', $name), '-') ?: $fallback;
     }
 
     public function exportClassInvoicesPdf($className, Request $request)

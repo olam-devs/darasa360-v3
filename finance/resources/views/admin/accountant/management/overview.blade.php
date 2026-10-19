@@ -31,6 +31,7 @@
         <button type="button" role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-management-tab="overview">Overview</button>
         <button type="button" role="tab" id="tab-analytics" aria-controls="panel-analytics" aria-selected="false" data-management-tab="analytics">Analytics</button>
         <button type="button" role="tab" id="tab-books" aria-controls="panel-books" aria-selected="false" data-management-tab="books">Books</button>
+        <button type="button" role="tab" id="tab-budget" aria-controls="panel-budget" aria-selected="false" data-management-tab="budget">Budget</button>
         <button type="button" role="tab" id="tab-quarters" aria-controls="panel-quarters" aria-selected="false" data-management-tab="quarters">Quarter analytics</button>
         <button type="button" role="tab" id="tab-approvals" aria-controls="panel-approvals" aria-selected="false" data-management-tab="approvals">Expense approvals ({{ $available->sum('pending') }})</button>
         <button type="button" role="tab" id="tab-targets" aria-controls="panel-targets" aria-selected="false" data-management-tab="targets">Accountant targets</button>
@@ -43,8 +44,8 @@
         <div class="management-card"><p class="management-muted">Collections · selected payment dates</p><div class="value">TSh {{ number_format($collections,0) }}</div><p class="management-muted">Fresh receipts into school books</p></div>
         <div class="management-card"><p class="management-muted">Approved expenses · selected dates</p><div class="value">TSh {{ number_format($expenses,0) }}</div><p class="management-muted">Approved and partially approved submissions</p></div>
         <div class="management-card"><p class="management-muted">Collections less approved expenses</p><div class="value">TSh {{ number_format($collections-$expenses,0) }}</div><p class="management-muted">A comparison of these two measures, before other book movements</p></div>
-        <div class="management-card"><p class="management-muted">Q{{ $quarter }} fees outstanding</p><div class="value">TSh {{ number_format($available->sum('outstanding'),0) }}</div><p class="management-muted">{{ $available->sum('billed')>0 ? number_format(100*$available->sum('paid')/$available->sum('billed'),1).'% collected' : 'No fees assigned' }} · TSh {{ number_format($available->sum('overdue'),0) }} overdue</p></div>
-        <div class="management-card"><p class="management-muted">Earlier quarters still unpaid</p><div class="value" @if($available->sum('earlier_unpaid')>0) style="color:#b45309;" @endif>TSh {{ number_format($available->sum('earlier_unpaid'),0) }}</div><p class="management-muted">Older debt carried into Q{{ $quarter }} {{ $year }}</p></div>
+        <div class="management-card"><p class="management-muted">{{ $qLabel }} fees outstanding</p><div class="value">TSh {{ number_format($available->sum('outstanding'),0) }}</div><p class="management-muted">{{ $available->sum('billed')>0 ? number_format(100*$available->sum('paid')/$available->sum('billed'),1).'% collected' : 'No fees assigned' }} · TSh {{ number_format($available->sum('overdue'),0) }} overdue</p></div>
+        <div class="management-card"><p class="management-muted">Earlier quarters still unpaid</p><div class="value" @if($available->sum('earlier_unpaid')>0) style="color:#b45309;" @endif>TSh {{ number_format($available->sum('earlier_unpaid'),0) }}</div><p class="management-muted">Older debt carried into {{ $qLabel }} {{ $year }}</p></div>
         <div class="management-card"><p class="management-muted">Accountant targets missed</p><div class="value">{{ $missed->count() }}</div><p class="management-muted">{{ collect($kpiRows)->where('status','In progress')->count() }} in progress · {{ collect($kpiRows)->where('status','Not set')->count() }} not set</p></div>
     </div>
 
@@ -63,12 +64,12 @@
                 </p>
                 <div class="management-school-line"><span>Approved expenses in period</span><strong>{{ number_format($school['expenses'],0) }}</strong></div>
                 @if($school['billed']>0)
-                <div class="management-school-line"><span>Q{{ $quarter }} fees required / paid</span><strong>{{ number_format($school['billed'],0) }} / {{ number_format($school['paid'],0) }}</strong></div>
-                <div class="management-school-line"><span>Q{{ $quarter }} fees outstanding</span><strong>{{ number_format($school['outstanding'],0) }}</strong></div>
-                <div class="management-school-line"><span>Q{{ $quarter }} overdue (deadline passed)</span><strong>{{ number_format($school['overdue'],0) }}</strong></div>
-                <div class="management-school-line"><span>Q{{ $quarter }} collection rate</span><strong>{{ number_format(100*$school['paid']/$school['billed'],1) }}%</strong></div>
+                <div class="management-school-line"><span>{{ $qLabel }} fees required / paid</span><strong>{{ number_format($school['billed'],0) }} / {{ number_format($school['paid'],0) }}</strong></div>
+                <div class="management-school-line"><span>{{ $qLabel }} fees outstanding</span><strong>{{ number_format($school['outstanding'],0) }}</strong></div>
+                <div class="management-school-line"><span>{{ $qLabel }} overdue (deadline passed)</span><strong>{{ number_format($school['overdue'],0) }}</strong></div>
+                <div class="management-school-line"><span>{{ $qLabel }} collection rate</span><strong>{{ number_format(100*$school['paid']/$school['billed'],1) }}%</strong></div>
                 @else
-                <p class="management-muted" style="margin-top:10px;">Q{{ $quarter }} {{ $year }}: no fee assignments recorded.</p>
+                <p class="management-muted" style="margin-top:10px;">{{ $qLabel }} {{ $year }}: no fee assignments recorded.</p>
                 @endif
                 <div class="management-school-line"><span>Earlier quarters still unpaid</span><strong @if($school['earlier_unpaid']>0) style="color:#b45309;" @endif>{{ number_format($school['earlier_unpaid'],0) }}</strong></div>
                 <div class="management-school-line"><span>Book balances · {{ $school['balance_date'] === $to ? 'end of '.$periodLabel : 'today' }}</span><strong>{{ number_format($school['book_balance'],0) }}</strong></div>
@@ -90,21 +91,21 @@
         </section>
     @endforeach
     </div>
-    <p class="management-muted" style="margin-bottom:20px;">Everything follows the selected period: collections and expenses by their dates; Q{{ $quarter }} fees by each fee's assigned quarter; book balances as at the end of the period (or today while it is running). "Earlier quarters still unpaid" keeps older debt visible. Lines marked "today" are current positions that cannot be split by period. Book balances show money recorded in the system since each book was opened; they match the bank only after the books are reconciled. "Work inside this school's accounts" switches your active school in this browser; return through School management to choose another.</p>
+    <p class="management-muted" style="margin-bottom:20px;">Everything follows the selected period: collections and expenses by their dates; {{ $qLabel }} fees by each fee's assigned quarter; book balances as at the end of the period (or today while it is running). "Earlier quarters still unpaid" keeps older debt visible. Lines marked "today" are current positions that cannot be split by period. Book balances show money recorded in the system since each book was opened; they match the bank only after the books are reconciled. "Work inside this school's accounts" switches your active school in this browser; return through School management to choose another.</p>
 
     <div class="management-pair">
         <section class="management-panel">
             <h3>Needs attention now</h3>
             @foreach($available as $school)
                 @if($school['pending']>0)<div class="management-attention"><strong>{{ $school['pending'] }} pending expense(s)</strong><br>{{ $school['name'] }}<div class="management-muted">Oldest submitted: {{ $school['oldest_pending'] ? \Carbon\Carbon::parse($school['oldest_pending'])->format('d M Y') : 'Unknown' }}</div></div>@endif
-                @if($school['overdue']>0)<div class="management-attention"><strong>TSh {{ number_format($school['overdue'],0) }} overdue for Q{{ $quarter }}</strong><br>{{ $school['name'] }}<div class="management-muted">Deadline passed. Open Overdue fees to follow up with parents.</div></div>@endif
-                @if($school['earlier_unpaid']>0)<div class="management-attention"><strong>TSh {{ number_format($school['earlier_unpaid'],0) }} unpaid from earlier quarters</strong><br>{{ $school['name'] }}<div class="management-muted">Older debt carried into Q{{ $quarter }} {{ $year }}.</div></div>@endif
+                @if($school['overdue']>0)<div class="management-attention"><strong>TSh {{ number_format($school['overdue'],0) }} overdue for {{ $qLabel }}</strong><br>{{ $school['name'] }}<div class="management-muted">Deadline passed. Open Overdue fees to follow up with parents.</div></div>@endif
+                @if($school['earlier_unpaid']>0)<div class="management-attention"><strong>TSh {{ number_format($school['earlier_unpaid'],0) }} unpaid from earlier quarters</strong><br>{{ $school['name'] }}<div class="management-muted">Older debt carried into {{ $qLabel }} {{ $year }}.</div></div>@endif
             @endforeach
             @foreach($missed as $row)<div class="management-attention management-error"><strong>{{ $row['accountant'] }} · {{ $row['label'] }}</strong><br>Target missed for {{ $from }} to {{ $to }}. Shortfall: {{ number_format($row['shortfall'],2) }}.</div>@endforeach
             @if($available->sum('pending')===0 && $available->sum('overdue')<=0 && $available->sum('earlier_unpaid')<=0 && $missed->isEmpty())<p class="management-muted" style="margin-top:12px;">No pending reviews, overdue balances, older debt or missed targets in the available data.</p>@endif
         </section>
         <section class="management-panel">
-            <h3>Largest unpaid balances · Q{{ $quarter }} {{ $year }}</h3>
+            <h3>Largest unpaid balances · {{ $qLabel }} {{ $year }}</h3>
             <p class="management-muted">Top five students in each school for this quarter's fees. Open Overdue fees for deadlines and follow-up.</p>
             @foreach($available as $school)
                 <p style="font-size:12px;font-weight:700;margin-top:14px;">{{ $school['name'] }}</p>
@@ -116,6 +117,9 @@
     </div>
     <div id="panel-analytics" role="tabpanel" aria-labelledby="tab-analytics" data-management-panel="analytics" hidden>
         @include('admin.accountant.management.analytics')
+    </div>
+    <div id="panel-budget" role="tabpanel" aria-labelledby="tab-budget" data-management-panel="budget" hidden>
+        @include('admin.accountant.management.budget')
     </div>
     <div id="panel-books" role="tabpanel" aria-labelledby="tab-books" data-management-panel="books" hidden>
         @include('admin.accountant.management.books')
@@ -154,7 +158,7 @@
 <script>
 (() => {
     function showManagementTab(name) {
-        if(!['overview','analytics','books','quarters','approvals','targets'].includes(name)) name='overview';
+        if(!['overview','analytics','books','budget','quarters','approvals','targets'].includes(name)) name='overview';
         document.querySelectorAll('[data-management-panel]').forEach(p=>p.hidden=p.dataset.managementPanel!==name);
         document.querySelectorAll('[data-management-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.managementTab===name)));
         document.querySelectorAll('.mgmt-nav a[data-section]').forEach(a=>{ if(a.dataset.section===name) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });

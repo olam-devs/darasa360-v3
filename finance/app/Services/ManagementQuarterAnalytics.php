@@ -29,9 +29,19 @@ class ManagementQuarterAnalytics
         return [$date->year, $quarter];
     }
 
-    /** Read the current tenant only; academic-year IDs differ between schools. */
-    public function report(int $year, int $quarter): array
+    /** "Q4", "Q1–Q3", or "All quarters" for a span of quarters. */
+    public static function spanLabel(int $from, int $to): string
     {
+        return $from === 1 && $to === 4 ? 'All quarters' : ($from === $to ? "Q{$from}" : "Q{$from}–Q{$to}");
+    }
+
+    /**
+     * Read the current tenant only; academic-year IDs differ between schools.
+     * "selected" covers the quarters $quarter..$quarterTo (one quarter when $quarterTo is null).
+     */
+    public function report(int $year, int $quarter, ?int $quarterTo = null): array
+    {
+        $quarterTo ??= $quarter;
         $db = DB::connection('tenant');
         $yearIds = $db->table('academic_years')->where('name', (string)$year)->pluck('id');
         $assignments = $db->table('particular_student')->whereIn('academic_year_id', $yearIds);
@@ -47,10 +57,17 @@ class ManagementQuarterAnalytics
                 'rate'=>($row->required_amount ?? 0) > 0 ? 100 * (float)$row->paid / (float)$row->required_amount : null];
         }
         $particulars = $db->table('particular_student as ps')->leftJoin('particulars as p','p.id','=','ps.particular_id')
-            ->whereIn('ps.academic_year_id',$yearIds)->where('ps.quarter',$quarter)
+            ->whereIn('ps.academic_year_id',$yearIds)->whereBetween('ps.quarter',[$quarter,$quarterTo])
             ->select('ps.particular_id','p.name')->selectRaw('COUNT(*) as assignments, SUM(ps.sales) as required_amount, SUM(ps.credit) as paid, SUM(CASE WHEN ps.sales > ps.credit THEN ps.sales-ps.credit ELSE 0 END) as outstanding')
             ->groupBy('ps.particular_id','p.name')->orderBy('p.name')->get();
-        return ['year_exists'=>$yearIds->isNotEmpty(),'quarters'=>$quarters,'selected'=>$quarters[$quarter],
+        // Totals for the selected span; students are counted once even if they have fees in several quarters.
+        $span = collect(range($quarter, $quarterTo))->map(fn ($q) => $quarters[$q]);
+        $required = $span->sum('required'); $paid = $span->sum('paid');
+        $selected = ['quarter'=>$quarter,'label'=>self::spanLabel($quarter, $quarterTo),'assignments'=>$span->sum('assignments'),
+            'students'=>$quarter === $quarterTo ? $quarters[$quarter]['students']
+                : (int)(clone $assignments)->whereBetween('quarter', [$quarter, $quarterTo])->distinct()->count('student_id'),
+            'required'=>$required,'paid'=>$paid,'outstanding'=>$span->sum('outstanding'),'rate'=>$required > 0 ? 100 * $paid / $required : null];
+        return ['year_exists'=>$yearIds->isNotEmpty(),'quarters'=>$quarters,'selected'=>$selected,
             'particulars'=>$particulars,'unassigned'=>(clone $assignments)->where(function($q){$q->whereNull('quarter')->orWhereNotBetween('quarter',[1,4]);})->count()];
     }
 }

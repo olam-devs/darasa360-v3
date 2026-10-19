@@ -35,19 +35,25 @@ class SchoolManagementController extends Controller
     {
         $request->validate(['from'=>'nullable|date_format:Y-m-d', 'to'=>'nullable|date_format:Y-m-d',
             'year'=>'nullable|integer|between:2000,2100','quarter'=>'nullable|integer|between:1,4',
+            'quarters'=>'nullable|array|max:4','quarters.*'=>'integer|between:1,4',
             'period_mode'=>'nullable|in:quarter,custom']);
         $today = CarbonImmutable::now('Africa/Dar_es_Salaam');
         [$currentYear, $currentQuarter] = ManagementQuarterAnalytics::quarterOf($today);
         $year = (int)($request->input('year') ?: $currentYear);
-        $quarter = (int)($request->input('quarter') ?: $currentQuarter);
+        // Ticked quarters form one continuous span (ticking Q1 and Q3 includes Q2); "quarter" alone still works.
+        $ticked = collect($request->input('quarters', []))->map(fn ($q) => (int)$q)->filter();
+        $quarter = $ticked->isNotEmpty() ? $ticked->min() : (int)($request->input('quarter') ?: $currentQuarter);
+        $quarterTo = $ticked->isNotEmpty() ? $ticked->max() : $quarter;
         $periodMode = $request->input('period_mode') ?: ($request->filled('from') || $request->filled('to') ? 'custom' : 'quarter');
-        [$start, $end] = ManagementQuarterAnalytics::range($year, $quarter);
+        $start = ManagementQuarterAnalytics::range($year, $quarter)[0];
+        $end = ManagementQuarterAnalytics::range($year, $quarterTo)[1];
         $from = $periodMode === 'quarter' ? $start->toDateString() : ($request->input('from') ?: $start->toDateString());
         $to = $periodMode === 'quarter' ? $end->toDateString() : ($request->input('to') ?: $end->toDateString());
         validator(['from'=>$from,'to'=>$to], ['from'=>'required|date','to'=>'required|date|after_or_equal:from'])->validate();
         abort_if(CarbonImmutable::parse($from)->diffInDays(CarbonImmutable::parse($to)) > 730, 422, 'Choose a period of two years or less.');
-        $periodLabel = $periodMode === 'quarter' ? "Q{$quarter} {$year}" : "{$from} to {$to}";
-        return compact('from','to','year','quarter','periodMode','periodLabel');
+        $qLabel = ManagementQuarterAnalytics::spanLabel($quarter, $quarterTo);
+        $periodLabel = $periodMode === 'quarter' ? "{$qLabel} {$year}" : "{$from} to {$to}";
+        return compact('from','to','year','quarter','quarterTo','qLabel','periodMode','periodLabel');
     }
 
     public static function shortName(string $name): string
@@ -81,7 +87,7 @@ class SchoolManagementController extends Controller
     {
         abort_if($this->access->grants($request->user())->isEmpty(), 403);
         $settings = (object)['school_name'=>'School management · all schools','logo_path'=>null];
-        ['from'=>$from,'to'=>$to,'year'=>$year,'quarter'=>$quarter,'periodMode'=>$periodMode,'periodLabel'=>$periodLabel] = $this->period($request);
+        ['from'=>$from,'to'=>$to,'year'=>$year,'quarter'=>$quarter,'quarterTo'=>$quarterTo,'qLabel'=>$qLabel,'periodMode'=>$periodMode,'periodLabel'=>$periodLabel] = $this->period($request);
         $selectedSchool = $this->selectedSchool($request);
         $schools = $selectedSchool ? collect([$selectedSchool]) : $this->access->schools($request->user());
         $nav = $this->nav($request, $selectedSchool?->id);
@@ -89,21 +95,22 @@ class SchoolManagementController extends Controller
         $snapshots = []; $kpiRows = [];
         foreach ($schools as $school) {
             try {
-                $snapshots[] = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($school, $from, $to, $year, $quarter, $periodMode, &$yearOptions) {
+                $snapshots[] = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($school, $from, $to, $year, $quarter, $quarterTo, $periodMode, &$yearOptions) {
                     $db = DB::connection('tenant');
                     $yearOptions = $yearOptions->merge($db->table('academic_years')->pluck('name')->filter(fn($name)=>preg_match('/^20\d{2}$|^2100$/',(string)$name))->map(fn($name)=>(int)$name));
-                    $quarterReport = app(ManagementQuarterAnalytics::class)->report($year,$quarter);
+                    $quarterReport = app(ManagementQuarterAnalytics::class)->report($year,$quarter,$quarterTo);
                     $receipts = $this->kpis->receipts()->whereBetween('date', [$from, $to]);
                     $days = (int)CarbonImmutable::parse($from)->diffInDays(CarbonImmutable::parse($to)) + 1;
                     $previousTo = CarbonImmutable::parse($from)->subDay();
-                    $previousFrom = $periodMode === 'quarter' ? ManagementQuarterAnalytics::range(...ManagementQuarterAnalytics::quarterOf($previousTo))[0] : $previousTo->subDays($days-1);
+                    // One quarter compares with the quarter before; a span or custom dates with the same number of days before.
+                    $previousFrom = $periodMode === 'quarter' && $quarter === $quarterTo ? ManagementQuarterAnalytics::range(...ManagementQuarterAnalytics::quarterOf($previousTo))[0] : $previousTo->subDays($days-1);
                     $previous = (float)$this->kpis->receipts()->whereBetween('date', [$previousFrom->toDateString(), $previousTo->toDateString()])->sum('debit');
                     $expenses = (float)$db->table('expense_submissions')->whereIn('status',['approved','partially_approved'])
                         ->whereBetween('transaction_date',[$from,$to])->sum('total_amount');
                     // Fee figures follow the selected year and quarter (each fee's assigned quarter).
                     $yearIds = $db->table('academic_years')->where('name', (string)$year)->pluck('id');
                     $earlierYearIds = $db->table('academic_years')->get(['id', 'name'])->filter(fn ($y) => is_numeric($y->name) && (int)$y->name < $year)->pluck('id');
-                    $inQuarter = fn () => $db->table('particular_student as ps')->whereIn('ps.academic_year_id', $yearIds)->where('ps.quarter', $quarter);
+                    $inQuarter = fn () => $db->table('particular_student as ps')->whereIn('ps.academic_year_id', $yearIds)->whereBetween('ps.quarter', [$quarter, $quarterTo]);
                     $owed = $inQuarter()->selectRaw('COALESCE(SUM(GREATEST(0,ps.sales-ps.credit)),0) as outstanding, COALESCE(SUM(ps.sales),0) as billed, COALESCE(SUM(ps.credit),0) as paid')->first();
                     $todayDate = now('Africa/Dar_es_Salaam')->toDateString();
                     $quarterOverdue = (float)$inQuarter()->whereNotNull('ps.deadline')->whereDate('ps.deadline', '<', $todayDate)->selectRaw('COALESCE(SUM(GREATEST(0,ps.sales-ps.credit)),0) as t')->value('t');
@@ -124,12 +131,14 @@ class SchoolManagementController extends Controller
                         ->leftJoin('vouchers as v', fn($j) => $j->on('v.book_id','=','b.id')->whereNull('v.voided_at'))
                         ->groupBy('b.id','b.name','b.bank_account_number','b.is_cash_book','b.opening_balance')
                         ->selectRaw('b.id, b.name, b.bank_account_number, b.is_cash_book, b.opening_balance,
-                            COALESCE(SUM(v.debit-v.credit),0) as net,
+                            COALESCE(SUM(CASE WHEN v.date <= ? THEN v.debit-v.credit ELSE 0 END),0) as net,
+                            COALESCE(SUM(CASE WHEN v.date < ? THEN v.debit-v.credit ELSE 0 END),0) as net_before,
                             COALESCE(SUM(CASE WHEN v.date BETWEEN ? AND ? THEN v.debit ELSE 0 END),0) as period_in,
-                            COALESCE(SUM(CASE WHEN v.date BETWEEN ? AND ? THEN v.credit ELSE 0 END),0) as period_out', [$from,$to,$from,$to])
+                            COALESCE(SUM(CASE WHEN v.date BETWEEN ? AND ? THEN v.credit ELSE 0 END),0) as period_out', [$balanceDate,$from,$from,$to,$from,$to])
                         ->orderBy('b.name')->get()
+                        // Balances follow the period: at its start, and at its end (or today while it is running).
                         ->map(fn($b) => ['name'=>$b->name, 'account'=>$b->bank_account_number ? preg_replace('/\s+/','',$b->bank_account_number) : null,
-                            'cash'=>(bool)$b->is_cash_book, 'balance'=>(float)$b->opening_balance+(float)$b->net,
+                            'cash'=>(bool)$b->is_cash_book, 'balance'=>(float)$b->opening_balance+(float)$b->net, 'start'=>(float)$b->opening_balance+(float)$b->net_before,
                             'in'=>(float)$b->period_in, 'out'=>(float)$b->period_out])->all();
                     // Month-by-month figures for the selected calendar year (charts).
                     $monthly = fn($rows) => collect(range(1,12))->mapWithKeys(fn($m) => [$m => (float)($rows[$m] ?? 0)])->all();
@@ -155,7 +164,8 @@ class SchoolManagementController extends Controller
                         'book_balance'=>(float)$books->sum('opening_balance')+(float)$bookMovement,
                         'advance'=>(float)$db->table('students')->sum('advance_balance'),
                         'trend'=>$trend,'debtors'=>$topDebtors,'quarter_report'=>$quarterReport,
-                        'books'=>$bookRows,'monthly_collections'=>$monthlyCollections,'monthly_expenses'=>$monthlyExpenses];
+                        'books'=>$bookRows,'monthly_collections'=>$monthlyCollections,'monthly_expenses'=>$monthlyExpenses,
+                        'budget'=>$this->budgetVsActual($db, $from, $to)];
                 });
                 $kpiRows = array_merge($kpiRows, $this->kpis->rows($school, $from, $to));
             } catch (\Throwable $e) {
@@ -170,7 +180,53 @@ class SchoolManagementController extends Controller
         $metrics = AccountantKpiService::METRICS;
         $bookGroups = $this->groupBooks($snapshots);
         $deciderNames = SchoolAccountant::whereIn('id', collect($snapshots)->where('error', false)->flatMap(fn ($s) => collect($s['decided_items'])->pluck('decided_by'))->filter()->unique())->pluck('name', 'id');
-        return view('admin.accountant.management.overview', compact('settings','schools','snapshots','kpiRows','from','to','metrics','year','quarter','periodMode','periodLabel','yearOptions','quarterLabels','nav','selectedSchool','bookGroups','deciderNames'));
+        $budgetRows = $this->groupBudgets($snapshots);
+        return view('admin.accountant.management.overview', compact('settings','schools','snapshots','kpiRows','from','to','metrics','year','quarter','quarterTo','qLabel','periodMode','periodLabel','yearOptions','quarterLabels','nav','selectedSchool','bookGroups','deciderNames','budgetRows'));
+    }
+
+    /**
+     * Budget against approved spending per expense category, for the current tenant. Each budget plan that
+     * overlaps the period is compared with approved spending inside the plan's own dates (budgets have their
+     * own windows, not quarters). Spending in the period with no overlapping budget is listed as unbudgeted.
+     */
+    private function budgetVsActual($db, string $from, string $to): array
+    {
+        $approved = fn () => $db->table('expense_submissions')->whereIn('status', ['approved', 'partially_approved']);
+        $plans = $db->table('expense_category_plans as p')->join('expense_categories as c', 'c.id', '=', 'p.expense_category_id')
+            ->where('p.from_date', '<=', $to)->where('p.to_date', '>=', $from)->orderBy('c.name')
+            ->get(['p.expense_category_id', 'c.name', 'p.expected_amount', 'p.from_date', 'p.to_date']);
+        $rows = [];
+        foreach ($plans as $p) {
+            $rows[$p->expense_category_id] ??= ['category' => $p->name, 'budget' => 0.0, 'spent' => 0.0, 'windows' => []];
+            $rows[$p->expense_category_id]['budget'] += (float)$p->expected_amount;
+            $rows[$p->expense_category_id]['spent'] += (float)$approved()->where('expense_category_id', $p->expense_category_id)
+                ->whereBetween('transaction_date', [$p->from_date, $p->to_date])->sum('total_amount');
+            $rows[$p->expense_category_id]['windows'][] = $p->from_date.' – '.$p->to_date;
+        }
+        $unbudgeted = $db->table('expense_submissions as e')->join('expense_categories as c', 'c.id', '=', 'e.expense_category_id')
+            ->whereIn('e.status', ['approved', 'partially_approved'])->whereBetween('e.transaction_date', [$from, $to])
+            ->whereNotIn('e.expense_category_id', array_keys($rows))
+            ->groupBy('c.name')->selectRaw('c.name, SUM(e.total_amount) as t')->pluck('t', 'name');
+        foreach ($unbudgeted as $name => $t) $rows['u:'.$name] = ['category' => $name, 'budget' => 0.0, 'spent' => (float)$t, 'windows' => []];
+        return array_values($rows);
+    }
+
+    /** Budget rows of all schools combined by category name (the schools name categories slightly differently). */
+    private function groupBudgets(array $snapshots): array
+    {
+        $groups = [];
+        foreach ($snapshots as $s) {
+            if ($s['error']) continue;
+            foreach ($s['budget'] as $r) {
+                $key = preg_replace('/[^a-z0-9]+/', '', strtolower($r['category']));
+                $groups[$key] ??= ['category' => $r['category'], 'budget' => 0.0, 'spent' => 0.0, 'schools' => []];
+                $groups[$key]['budget'] += $r['budget'];
+                $groups[$key]['spent'] += $r['spent'];
+                $groups[$key]['schools'][$s['id']] = $r;
+            }
+        }
+        uasort($groups, fn ($a, $b) => max($b['budget'], $b['spent']) <=> max($a['budget'], $a['spent']));
+        return array_values($groups);
     }
 
     /**
@@ -184,9 +240,9 @@ class SchoolManagementController extends Controller
             if ($s['error']) continue;
             foreach ($s['books'] as $b) {
                 $key = $b['account'] ?: 'school-'.$s['id'].'-'.$b['name'];
-                $groups[$key] ??= ['name'=>$b['account'] ? $b['name'] : $b['name'].' · '.self::shortName($s['name']), 'account'=>$b['account'], 'cash'=>$b['cash'], 'schools'=>[], 'balance'=>0.0, 'in'=>0.0, 'out'=>0.0];
-                $groups[$key]['schools'][$s['id']] = ['balance'=>$b['balance'], 'in'=>$b['in'], 'out'=>$b['out']];
-                foreach (['balance','in','out'] as $f) $groups[$key][$f] += $b[$f];
+                $groups[$key] ??= ['name'=>$b['account'] ? $b['name'] : $b['name'].' · '.self::shortName($s['name']), 'account'=>$b['account'], 'cash'=>$b['cash'], 'schools'=>[], 'balance'=>0.0, 'start'=>0.0, 'in'=>0.0, 'out'=>0.0];
+                $groups[$key]['schools'][$s['id']] = ['balance'=>$b['balance'], 'start'=>$b['start'], 'in'=>$b['in'], 'out'=>$b['out']];
+                foreach (['balance','start','in','out'] as $f) $groups[$key][$f] += $b[$f];
             }
         }
         // Bank accounts first (largest balance first), then cash books.
@@ -597,6 +653,84 @@ class SchoolManagementController extends Controller
             'status' => 'active', 'date_joined' => $data['date_joined'] ?? now('Africa/Dar_es_Salaam')->toDateString(),
             'notes' => $data['notes'] ?? null, 'created_by' => $createdBy, 'created_at' => now(), 'updated_at' => now(),
         ]);
+    }
+
+    /** Students with fees past their deadline (today), per school or all schools, with their invoices. */
+    public function overdue(Request $request)
+    {
+        return $this->studentListPage($request, 'overdue');
+    }
+
+    /** Students holding advance credit (prepaid money not yet applied to fees), with their invoices. */
+    public function advance(Request $request)
+    {
+        return $this->studentListPage($request, 'advance');
+    }
+
+    private function studentListPage(Request $request, string $kind)
+    {
+        abort_if($this->access->grants($request->user())->isEmpty(), 403);
+        $selected = $this->selectedSchool($request);
+        $schools = $selected ? collect([$selected]) : $this->access->schools($request->user());
+        $nav = $this->nav($request, $selected?->id);
+        $rows = collect();
+        foreach ($schools as $school) {
+            $short = self::shortName($school->name);
+            $list = app(TenantDatabaseManager::class)->executeForSchool($school, fn () => $this->studentsFor($kind));
+            foreach ($list as $r) $rows->push((object)((array)$r + ['key' => $school->id.'_'.$r->id, 'school_id' => $school->id, 'school' => $short]));
+        }
+        $rows = $rows->sortByDesc($kind === 'overdue' ? 'overdue' : 'advance_balance')->values();
+        return view('admin.accountant.management.student-list', compact('kind', 'rows', 'selected', 'nav') + ['activeSection' => $kind]);
+    }
+
+    /** Students of the current tenant for the overdue or advance list. */
+    private function studentsFor(string $kind)
+    {
+        $db = DB::connection('tenant');
+        $today = now('Africa/Dar_es_Salaam')->toDateString();
+        $unpaid = $db->table('particular_student')->selectRaw('student_id, SUM(GREATEST(0, sales-credit)) as unpaid')->groupBy('student_id');
+        $base = $db->table('students as s')->where('s.status', 'active')->leftJoinSub($unpaid, 'u', 'u.student_id', '=', 's.id')
+            ->select('s.id', 's.name', 's.student_reg_no', 's.class', 's.parent_name', 's.parent_phone_1', 's.advance_balance')->selectRaw('COALESCE(u.unpaid, 0) as unpaid');
+        if ($kind === 'advance') return $base->where('s.advance_balance', '>', 0)->get();
+        $overdue = $db->table('particular_student')->whereNotNull('deadline')->whereDate('deadline', '<', $today)->whereColumn('sales', '>', 'credit')
+            ->selectRaw('student_id, SUM(sales-credit) as overdue, MIN(deadline) as oldest_deadline')->groupBy('student_id');
+        return $base->joinSub($overdue, 'o', 'o.student_id', '=', 's.id')->addSelect('o.overdue', 'o.oldest_deadline')->get();
+    }
+
+    /**
+     * Download invoices for a list of students across one or more schools.
+     * mode=pdf: one PDF (one per school, zipped, when several schools); mode=zip: one PDF per student, zipped.
+     * Students are given as keys "<schoolId>_<studentId>", or kind=overdue|advance|all for that whole list.
+     */
+    public function downloadInvoiceBundle(Request $request)
+    {
+        abort_if($this->access->grants($request->user())->isEmpty(), 403);
+        $data = $request->validate(['mode' => 'required|in:pdf,zip', 'kind' => 'nullable|in:overdue,advance,all', 'school' => 'nullable|integer',
+            'students' => 'nullable|array|max:2000', 'students.*' => ['regex:/^\d+_\d+$/'], 'format' => 'nullable|in:accountant,parent', 'heading' => 'nullable|string|max:80']);
+        $schools = !empty($data['school']) ? collect([$this->access->school($request->user(), (int)$data['school'])]) : $this->access->schools($request->user());
+        $picked = collect($data['students'] ?? [])->groupBy(fn ($k) => (int)explode('_', $k)[0])->map(fn ($g) => $g->map(fn ($k) => (int)explode('_', $k)[1])->all());
+        $label = ['overdue' => 'overdue', 'advance' => 'advance', 'all' => 'all-students'][$data['kind'] ?? ''] ?? 'selected';
+        $files = []; $ledger = app(LedgerController::class);
+        foreach ($schools as $school) {
+            if ($picked->isNotEmpty() && !$picked->has($school->id)) continue;
+            $short = self::shortName($school->name);
+            $files += app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($request, $data, $picked, $school, $short, $ledger, $schools, $label) {
+                $ids = $picked->get($school->id) ?? (($data['kind'] ?? 'all') === 'all' ? null : $this->studentsFor($data['kind'])->pluck('id')->all());
+                if ($ids === []) return [];
+                $sub = Request::create('/', 'GET', array_filter(['format' => $data['format'] ?? 'parent', 'heading' => $data['heading'] ?? 'INVOICE:', 'students' => $ids]));
+                $students = $ledger->studentsForInvoiceExport($sub);
+                if ($students->isEmpty()) return [];
+                if ($data['mode'] === 'zip') return $ledger->studentInvoiceFiles($students, $sub, $schools->count() > 1 ? $short.'/' : '');
+                [$bytes, $name] = $ledger->allStudentsInvoicesPdf($sub, "$short $label");
+                return [$name => $bytes];
+            });
+        }
+        abort_if(empty($files), 404, 'No students to export.');
+        if (count($files) === 1 && $data['mode'] === 'pdf') {
+            return response(reset($files), 200, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'attachment; filename="'.array_key_first($files).'"']);
+        }
+        return response()->download($ledger->zipFiles($files), "invoices-$label-".now('Africa/Dar_es_Salaam')->format('Y-m-d').'.zip', ['Content-Type' => 'application/zip'])
+            ->deleteFileAfterSend(true);
     }
 
     /** Fee statements (invoices) for one school, generated without switching accounts. */

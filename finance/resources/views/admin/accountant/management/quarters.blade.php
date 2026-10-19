@@ -2,7 +2,7 @@
     $quarterFees=$available->map(fn($s)=>$s['quarter_report']['selected']);
     $required=$quarterFees->sum('required'); $paid=$quarterFees->sum('paid');
 @endphp
-<h3 style="margin-bottom:8px;">Q{{ $quarter }} {{ $year }} · fees at a glance</h3>
+<h3 style="margin-bottom:8px;">{{ $qLabel }} {{ $year }} · fees at a glance</h3>
 <p class="management-muted" style="margin-bottom:18px;">Required and paid amounts follow the student's academic year and assigned quarter. Paid includes payments applied to those assignments at any date, including advance credit. These are current fee balances; cash received during the quarter is shown in Overview.</p>
 <div class="management-grid" id="quarter-summary">
     <div class="management-card"><p class="management-muted">Required (TSh)</p><div class="value">{{ number_format($required,0) }}</div></div>
@@ -20,7 +20,7 @@
             $rows=$available->map(fn($s)=>$s['quarter_report']['quarters'][$number]);
             $charged=$rows->sum('required'); $settled=$rows->sum('paid'); $hasData=$rows->sum('assignments')>0;
         @endphp
-        <tr data-quarter="{{ $number }}" @if($number===$quarter) class="management-selected-quarter" @endif>
+        <tr data-quarter="{{ $number }}" @if($number>=$quarter && $number<=$quarterTo) class="management-selected-quarter" @endif>
             <td><a href="{{ route('accountant.management',array_filter(['year'=>$year,'quarter'=>$number,'school'=>$selectedSchool?->id ?? null])) }}#quarters" class="management-quarter-link">{{ $label }}</a></td>
             <td class="number">{{ $hasData?number_format($charged,0):'—' }}</td><td class="number">{{ $hasData?number_format($settled,0):'—' }}</td><td class="number">{{ $hasData?number_format($rows->sum('outstanding'),0):'—' }}</td>
             <td class="number">{{ $charged>0?number_format(100*$settled/$charged,1).'%':($hasData?'No amount due':'No assignments') }}</td><td>{{ $rows->where('assignments','>',0)->count() }} / {{ $available->count() }}</td>
@@ -29,7 +29,7 @@
     </table></div>
 </section>
 <section class="management-panel">
-    <h3>Q{{ $quarter }} {{ $year }} · school comparison</h3>
+    <h3>{{ $qLabel }} {{ $year }} · school comparison</h3>
     <div class="management-scroll"><table class="management-table" id="quarter-school-table">
         <thead><tr><th>School</th><th class="number">Students assigned</th><th class="number">Required (TSh)</th><th class="number">Paid (TSh)</th><th class="number">Unpaid (TSh)</th><th class="number">Collection rate</th></tr></thead>
         <tbody>@foreach($available as $school)
@@ -41,7 +41,7 @@
     </table></div>
 </section>
 <section class="management-panel">
-    <h3>Q{{ $quarter }} {{ $year }} · particulars</h3>
+    <h3>{{ $qLabel }} {{ $year }} · particulars</h3>
     <p class="management-muted" style="margin:8px 0 16px;">Fees, transport, admission and other charges, grouped by particular in each school.</p>
     <div class="management-scroll"><table class="management-table" id="quarter-particulars-table">
         <thead><tr><th>School</th><th>Particular</th><th class="number">Required (TSh)</th><th class="number">Paid (TSh)</th><th class="number">Unpaid (TSh)</th></tr></thead>

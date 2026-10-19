@@ -15,6 +15,7 @@
             'required' => $shown->sum(fn($s) => $s['quarter_report']['quarters'][$q]['required']),
             'paid' => $shown->sum(fn($s) => $s['quarter_report']['quarters'][$q]['paid'])])->values()->all(),
         'books' => collect($bookGroups)->map(fn($g) => ['label' => $g['name'].($g['cash'] ? '' : ' · '.substr((string)$g['account'], -4)), 'value' => $g['balance']])->all(),
+        'budget' => collect($budgetRows)->map(fn($r) => ['label' => \Illuminate\Support\Str::limit($r['category'], 38), 'budget' => $r['budget'], 'spent' => $r['spent']])->all(),
     ];
     $money = fn($v) => number_format($v, 0);
 @endphp
@@ -81,6 +82,16 @@ window.managementChartInit = (() => {
             new Chart(document.getElementById('chart-quarters'), {type: 'bar',
                 data: {labels: d.quarters.map(q => q.label), datasets: [bar('Required', d.quarters.map(q => q.required), '#a3a29d'), bar('Paid', d.quarters.map(q => q.paid), '#008300')]},
                 options: base(false, true)});
+        },
+        budget() {
+            const el = document.getElementById('chart-budget'); if (!el) return;
+            const o = base(false, true);
+            o.indexAxis = 'y'; o.interaction = {mode: 'index', axis: 'y', intersect: false};
+            o.scales = {x: {beginAtZero: true, grid: {color: grid}, border: {display: false}, ticks: {color: ink, callback: short}}, y: {grid: {display: false}, ticks: {color: ink}}};
+            o.plugins.tooltip.callbacks.label = c => `${c.dataset.label}: ${tsh(c.parsed.x)}`;
+            new Chart(el, {type: 'bar', data: {labels: d.budget.map(b => b.label), datasets: [
+                {...bar('Budget', d.budget.map(b => b.budget), '#a3a29d'), borderSkipped: 'left'},
+                {...bar('Approved spending', d.budget.map(b => b.spent), '#6250d6'), borderSkipped: 'left'}]}, options: o});
         },
         books() {
             const o = base(false, false);

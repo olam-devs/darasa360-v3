@@ -99,6 +99,9 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::post('/school-management/staff',[\App\Http\Controllers\SchoolManagementController::class, 'registerStaff'])->name('management.staff.register');
         Route::post('/school-management/staff/update', [\App\Http\Controllers\SchoolManagementController::class, 'updateStaff'])->name('management.staff.update');
         Route::post('/school-management/staff/move',[\App\Http\Controllers\SchoolManagementController::class, 'moveStaff'])->name('management.staff.move');
+        Route::get('/school-management/overdue', [\App\Http\Controllers\SchoolManagementController::class, 'overdue'])->name('management.overdue');
+        Route::get('/school-management/advance', [\App\Http\Controllers\SchoolManagementController::class, 'advance'])->name('management.advance');
+        Route::get('/school-management/invoices/bundle', [\App\Http\Controllers\SchoolManagementController::class, 'downloadInvoiceBundle'])->name('management.invoices.bundle');
         Route::get('/school-management/invoices',[\App\Http\Controllers\SchoolManagementController::class, 'invoices'])->name('management.invoices');
         Route::get('/school-management/invoices/{schoolId}/download', [\App\Http\Controllers\SchoolManagementController::class, 'downloadInvoices'])->whereNumber('schoolId')->name('management.invoices.download');
         Route::get('/my-targets', [\App\Http\Controllers\SchoolManagementController::class, 'mine'])->name('my-targets');
@@ -227,6 +230,7 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::put('api/quarter-labels/{quarter}', [LedgerController::class, 'updateQuarterLabel'])->name('api.quarter-labels.update');
 
         Route::get('/invoices/all-students/pdf', [LedgerController::class, 'exportAllStudentsInvoicesPdf'])->name('invoices.all-students.pdf');
+        Route::get('/invoices/all-students/zip', [LedgerController::class, 'exportAllStudentsInvoicesZip'])->name('invoices.all-students.zip');
         Route::get('/invoices/class/{className}/pdf', [LedgerController::class, 'exportClassInvoicesPdf'])->name('invoices.class.pdf');
         Route::get('/invoices/student/{studentId}/pdf', [LedgerController::class, 'exportStudentInvoicePdf'])->name('invoices.student.pdf');
 

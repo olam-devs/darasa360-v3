@@ -25,7 +25,8 @@
         <section class="management-panel">
             <h3>Whole school</h3>
             <p class="management-muted" style="margin:6px 0 14px;">One PDF with an invoice for every active student ({{ count($students) }}).</p>
-            <a class="management-primary" data-invoice-link data-scope="all" href="#" style="display:inline-block;"><i class="fa-solid fa-download"></i> Download all invoices</a>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;"><a class="management-primary" data-invoice-link data-scope="all" href="#" style="display:inline-block;"><i class="fa-solid fa-download"></i> Download all invoices</a>
+            <a class="management-chip-button" data-bundle-link href="{{ route('accountant.management.invoices.bundle', ['kind' => 'all', 'mode' => 'zip', 'school' => $school->id]) }}" style="display:inline-block;padding:10px 14px;"><i class="fa-solid fa-file-zipper"></i> Separate PDF per student (ZIP)</a></div>
         </section>
         <section class="management-panel">
             <h3>One class</h3>
@@ -74,6 +75,12 @@
         if (a.dataset.student) p.set('student', a.dataset.student);
         if (a.dataset.preview) p.set('preview', '1');
         a.href = base + '?' + p.toString();
+    }));
+    document.querySelectorAll('[data-bundle-link]').forEach(a => a.addEventListener('click', () => {
+        const url = new URL(a.href);
+        url.searchParams.set('format', document.getElementById('inv-format').value);
+        url.searchParams.set('heading', (document.getElementById('inv-heading').value.trim() || 'INVOICE:').toUpperCase());
+        a.href = url.toString();
     }));
     const search = document.getElementById('inv-search');
     search.addEventListener('input', () => {
