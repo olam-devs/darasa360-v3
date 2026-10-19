@@ -18,20 +18,23 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         html, body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-        .mgmt-nav a { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:9px; font-size:14px; font-weight:500; color:#cbd5e1; }
-        .mgmt-nav a:hover { background:rgba(255,255,255,.07); color:#fff; }
-        .mgmt-nav a[aria-current="page"] { background:#2563eb; color:#fff; }
-        .mgmt-nav .mgmt-count { margin-left:auto; background:#f59e0b; color:#111827; border-radius:999px; font-size:11px; font-weight:700; padding:1px 8px; }
-        .mgmt-nav h4 { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#64748b; font-weight:700; margin:18px 12px 6px; }
+        .mgmt-nav a { position:relative; display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:14px; font-weight:500; color:#44403c; }
+        .mgmt-nav a i { color:#a8a29e; }
+        .mgmt-nav a:hover { background:#f5f5f4; color:#1c1917; }
+        .mgmt-nav a[aria-current="page"] { background:#f5f5f4; color:#1c1917; font-weight:650; }
+        .mgmt-nav a[aria-current="page"]::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:3px; background:#1c1917; }
+        .mgmt-nav a[aria-current="page"] i { color:#1c1917; }
+        .mgmt-nav .mgmt-count { margin-left:auto; background:#e7e5e4; color:#1c1917; border-radius:999px; font-size:11px; font-weight:700; padding:1px 8px; }
+        .mgmt-nav h4 { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#a8a29e; font-weight:700; margin:18px 12px 6px; }
     </style>
     @stack('head')
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
-    <aside id="mgmt-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 -translate-x-full overflow-y-auto bg-slate-900 px-3 py-5 transition-transform lg:translate-x-0">
-        <div class="px-3 pb-4 border-b border-slate-700/60">
-            <p class="text-xs font-semibold uppercase tracking-widest text-blue-300">Darasa Finance</p>
-            <p class="mt-1 text-base font-bold text-white">School management</p>
-            <p class="text-xs text-slate-400">{{ auth()->user()->name }}</p>
+<body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
+    <aside id="mgmt-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 -translate-x-full overflow-y-auto border-r border-stone-200 bg-white px-3 py-5 transition-transform lg:translate-x-0">
+        <div class="px-3 pb-4 border-b border-stone-200">
+            <p class="text-xs font-semibold uppercase tracking-widest text-stone-400">Darasa Finance</p>
+            <p class="mt-1 text-base font-bold text-stone-900">School management</p>
+            <p class="text-xs text-stone-500">{{ auth()->user()->name }}</p>
         </div>
         <nav class="mgmt-nav mt-3" aria-label="School management">
             <a href="{{ route('accountant.management', $schoolQuery) }}#overview" data-section="overview" @if($active==='overview') aria-current="page" @endif><i class="fa-solid fa-chart-pie w-4"></i> Overview</a>
@@ -53,9 +56,9 @@
                 </a>
             @endforeach
         </nav>
-        <div class="mt-6 border-t border-slate-700/60 pt-4">
+        <div class="mt-6 border-t border-stone-200 pt-4">
             <form method="post" action="{{ route('accountant.management.account-settings') }}">@csrf
-                <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/5"><i class="fa-solid fa-user-gear w-4"></i> Account settings</button>
+                <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"><i class="fa-solid fa-user-gear w-4 text-stone-400"></i> Account settings</button>
             </form>
         </div>
     </aside>
@@ -69,7 +72,7 @@
                         <i class="fa-solid fa-bars"></i>
                     </button>
                     <div class="min-w-0">
-                        <p class="truncate text-xs font-medium text-blue-700">School management</p>
+                        <p class="truncate text-xs font-medium text-stone-500">School management</p>
                         <h1 class="truncate text-sm font-semibold">@yield('page_title', 'Overview')</h1>
                     </div>
                 </div>
@@ -82,7 +85,7 @@
                         </select>
                     </label>
                     <form method="POST" action="{{ route('logout') }}">@csrf
-                        <button type="submit" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Logout</button>
+                        <button type="submit" class="rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-700 hover:bg-stone-100">Logout</button>
                     </form>
                 </div>
             </div>
