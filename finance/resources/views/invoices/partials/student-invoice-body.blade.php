@@ -125,28 +125,33 @@
                 @endunless
                 @endforeach
 
-                {{-- Quarter totals section — pale colours, dark text --}}
-                <tr class="total-row" style="background-color:#bbdefb; color:#0d47a1;">
-                    <td colspan="{{ $parentInvoice ? 1 : 2 }}"><strong>Total Required</strong></td>
+                {{-- Quarter totals: dark text on a light band; red only marks an amount still owed --}}
+                @php
+                    $sumCell = 'background-color:#f3f4f6; color:#111827; font-weight:bold; border-top:1px solid #9ca3af;';
+                    $dueCell = 'background-color:#e5e7eb; color:#111827; font-weight:bold; border-top:2px solid #374151;';
+                    $owed = fn ($v) => $v > 0 ? 'color:#b91c1c;' : '';
+                @endphp
+                <tr>
+                    <td colspan="{{ $parentInvoice ? 1 : 2 }}" style="{{ $sumCell }}">Total Required</td>
                     @foreach($yq as $q)
-                        <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['charged'] ?? 0, 2) }}</td>
+                        <td class="amount" style="{{ $sumCell }}">TSh {{ number_format($yearData['quarter_totals'][$q]['charged'] ?? 0, 2) }}</td>
                     @endforeach
-                    @if($showTotal)<td class="amount">TSh {{ number_format($yearData['subtotal_fees'], 2) }}</td>@endif
+                    @if($showTotal)<td class="amount" style="{{ $sumCell }}">TSh {{ number_format($yearData['subtotal_fees'], 2) }}</td>@endif
                 </tr>
-                <tr class="total-row" style="background-color:#c8e6c9; color:#1b5e20;">
-                    <td colspan="{{ $parentInvoice ? 1 : 2 }}"><strong>Total Paid</strong></td>
+                <tr>
+                    <td colspan="{{ $parentInvoice ? 1 : 2 }}" style="{{ $sumCell }}">Total Paid</td>
                     @foreach($yq as $q)
-                        <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['paid'] ?? 0, 2) }}</td>
+                        <td class="amount" style="{{ $sumCell }}">TSh {{ number_format($yearData['quarter_totals'][$q]['paid'] ?? 0, 2) }}</td>
                     @endforeach
-                    @if($showTotal)<td class="amount">TSh {{ number_format($yearData['subtotal_paid'], 2) }}</td>@endif
+                    @if($showTotal)<td class="amount" style="{{ $sumCell }}">TSh {{ number_format($yearData['subtotal_paid'], 2) }}</td>@endif
                 </tr>
-                @php $balColor = $yearData['subtotal_balance'] > 0 ? '#ffcdd2' : '#c8e6c9'; $balText = $yearData['subtotal_balance'] > 0 ? '#b71c1c' : '#1b5e20'; @endphp
-                <tr class="total-row" style="background-color:{{ $balColor }}; color:{{ $balText }};">
-                    <td colspan="{{ $parentInvoice ? 1 : 2 }}"><strong>Invoice Amount</strong></td>
+                <tr>
+                    <td colspan="{{ $parentInvoice ? 1 : 2 }}" style="{{ $dueCell }}">Invoice Amount</td>
                     @foreach($yq as $q)
-                        <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['remaining'] ?? 0, 2) }}</td>
+                        @php $remaining = $yearData['quarter_totals'][$q]['remaining'] ?? 0; @endphp
+                        <td class="amount" style="{{ $dueCell }}{{ $owed($remaining) }}">TSh {{ number_format($remaining, 2) }}</td>
                     @endforeach
-                    @if($showTotal)<td class="amount">TSh {{ number_format($yearData['subtotal_balance'], 2) }}</td>@endif
+                    @if($showTotal)<td class="amount" style="{{ $dueCell }}{{ $owed($yearData['subtotal_balance']) }}">TSh {{ number_format($yearData['subtotal_balance'], 2) }}</td>@endif
                 </tr>
             </tbody>
         </table>

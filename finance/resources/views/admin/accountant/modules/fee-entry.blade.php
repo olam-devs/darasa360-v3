@@ -348,6 +348,7 @@
             receiptParticulars      = [];
             receiptSaveInFlight     = false;
             receiptAdvanceConfirmed = false;
+            receiptEarlierQuarterIgnored = false;
 
             document.getElementById('voucherFormContainer').innerHTML = `
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-2">
@@ -453,6 +454,9 @@
                                         <option value="">-- Select Particular --</option>
                                     </select>
                                 </div>
+
+                                <!-- Shown when a later-quarter particular is selected while earlier quarters still have balances -->
+                                <div id="receiptEarlierQuarterWarning" class="hidden bg-amber-50 border-2 border-amber-400 rounded p-2 mb-2 text-xs text-amber-900" role="alert"></div>
 
                                 <!-- Analytics (4 cards) -->
                                 <div id="receiptParticularInfo" class="hidden bg-green-50 border-2 border-green-300 rounded p-2 mb-2">
@@ -614,6 +618,7 @@
         // â"€â"€ Per-student particulars + analytics â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
         async function loadStudentReceiptParticulars(studentId) {
+            receiptEarlierQuarterIgnored = false;
             try {
                 const res = await axios.get(`${API_BASE}/students/${studentId}/particulars`);
                 receiptParticulars = res.data;
@@ -631,6 +636,7 @@
         function rebuildParticularDropdown() {
             const sel = document.getElementById('receiptParticular');
             if (!sel) return;
+            renderEarlierQuarterWarning(null);
             const quarterLabel = q => q ? ` (Q${q})` : '';
             const usedKeys = new Set(receiptItems.map(i => `${i.particularId}_${i.quarter || 0}`));
             sel.innerHTML = '<option value="">-- Select Particular --</option>' +
@@ -734,11 +740,65 @@
             return receiptParticulars.find(x => x.id === particularId && (x.quarter || 0) === (quarter || 0));
         }
 
+        // Earlier-quarter particulars that still have a balance after what is already on this receipt.
+        function earlierQuarterBalances(quarter) {
+            if (!quarter) return [];
+            return receiptParticulars
+                .filter(p => p.quarter && p.quarter < quarter)
+                .map(p => {
+                    const added = receiptItems
+                        .filter(i => i.particularId === p.id && (i.quarter || 0) === p.quarter)
+                        .reduce((s, i) => s + i.amount, 0);
+                    return { p, left: Math.max(0, (parseFloat(p.balance) || 0) - added) };
+                })
+                .filter(x => x.left > 0.005)
+                .sort((a, b) => a.p.quarter - b.p.quarter || String(a.p.name).localeCompare(String(b.p.name)));
+        }
+
+        // Set by "Ignore"; stays off for the rest of this receipt (all particulars added to it).
+        let receiptEarlierQuarterIgnored = false;
+
+        function ignoreEarlierQuarterWarning() {
+            receiptEarlierQuarterIgnored = true;
+            renderEarlierQuarterWarning(null);
+        }
+
+        function renderEarlierQuarterWarning(quarter) {
+            const box = document.getElementById('receiptEarlierQuarterWarning');
+            if (!box) return;
+            const earlier = receiptEarlierQuarterIgnored ? [] : earlierQuarterBalances(quarter);
+            if (earlier.length === 0) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+            const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+            const total = earlier.reduce((s, x) => s + x.left, 0);
+            box.innerHTML =
+                `<p class="font-bold mb-1">⚠ You selected a Q${quarter} fee, but earlier quarters are not fully paid (${formatTSh(total)} left):</p>` +
+                '<ul class="mb-1">' + earlier.map(x =>
+                    `<li class="flex items-center justify-between gap-2 py-0.5 border-b border-amber-200">` +
+                    `<span>${esc(x.p.name)} (Q${x.p.quarter}) — outstanding: <strong>${formatTSh(x.left)}</strong></span>` +
+                    (receiptItems.some(i => i.particularId === x.p.id && (i.quarter || 0) === x.p.quarter)
+                        ? '<em>already on this receipt</em>'
+                        : `<button type="button" class="underline font-bold text-amber-800" onclick="selectReceiptParticular('${x.p.id}_${x.p.quarter}')">Pay this instead</button>`) + '</li>'
+                ).join('') + '</ul>' +
+                `<div class="flex items-center justify-between gap-2 mt-1">` +
+                `<p>Pay the earlier quarter first unless the parent said this payment is for Q${quarter}.</p>` +
+                `<button type="button" onclick="ignoreEarlierQuarterWarning()" class="flex-shrink-0 rounded border border-amber-500 bg-white px-3 py-1 font-bold text-amber-800 hover:bg-amber-100" title="Hide this warning for the rest of this receipt">Ignore</button>` +
+                `</div>`;
+            box.classList.remove('hidden');
+        }
+
+        function selectReceiptParticular(value) {
+            const sel = document.getElementById('receiptParticular');
+            if (![...sel.options].some(o => o.value === value)) return;
+            sel.value = value;
+            onReceiptParticularChange();
+        }
+
         function onReceiptParticularChange() {
             const { particularId, quarter } = parseReceiptParticularValue(document.getElementById('receiptParticular').value);
             const p = findReceiptParticular(particularId, quarter);
             const student = allStudents.find(s => s.id == receiptStudentId);
             const advanceAvail = parseFloat(student?.advance_balance ?? 0) || 0;
+            renderEarlierQuarterWarning(p ? quarter : null);
 
             if (!p) {
                 document.getElementById('receiptParticularInfo').classList.add('hidden');
@@ -802,6 +862,7 @@
             document.getElementById('receiptParticularInfo').classList.add('hidden');
             document.getElementById('receiptApplyAdvRow').classList.add('hidden');
             document.getElementById('receiptAdvanceWarning')?.classList.add('hidden');
+            renderEarlierQuarterWarning(null);
             document.getElementById('receiptSubmitBtn') && (document.getElementById('receiptSubmitBtn').textContent = 'Save Receipt');
             renderReceiptItems();
         }
