@@ -14,6 +14,7 @@ use App\Models\ExpenseSubmission;
 use App\Models\PayrollEntry;
 use App\Models\SchoolClass;
 use App\Models\SchoolSetting;
+use App\Models\StaffDeduction;
 use App\Services\AccountantKpiService;
 use App\Services\ExpenseReviewService;
 use App\Services\PayrollPaymentService;
@@ -306,53 +307,76 @@ class SchoolManagementController extends Controller
         return $failed ? $redirect->with('error', 'Not approved: '.implode('; ', $failed)) : $redirect;
     }
 
-    /** Staff salaries for one school and month: who is paid, what is due, and the payments made. */
+    /**
+     * Staff salaries for one school (?school=) or all granted schools, for a month and year:
+     * who is paid, what is due, and the payments made. Rows are keyed "<schoolId>_<staffId>".
+     */
     public function payroll(Request $request)
     {
         abort_if($this->access->grants($request->user())->isEmpty(), 403);
         $request->validate(['month' => 'nullable|integer|between:1,12', 'year' => 'nullable|integer|between:2000,2100']);
-        $selected = $this->selectedSchool($request) ?? $this->access->schools($request->user())->first();
+        $selected = $this->selectedSchool($request);
+        $schools = $selected ? collect([$selected]) : $this->access->schools($request->user());
         $today = CarbonImmutable::now('Africa/Dar_es_Salaam');
         $month = (int)($request->input('month') ?: $today->month);
         $year = (int)($request->input('year') ?: $today->year);
-        $nav = $this->nav($request, $selected->id);
-        $data = app(TenantDatabaseManager::class)->executeForSchool($selected, function () use ($month, $year) {
-            $db = DB::connection('tenant');
-            $paid = $db->table('payroll_entries as p')->leftJoin('books as b', 'b.id', '=', 'p.book_id')->where('p.month', $month)->where('p.year', $year)
-                ->get(['p.id', 'p.staff_id', 'p.gross_salary', 'p.total_deductions', 'p.net_salary', 'p.payment_date', 'p.payment_method', 'p.bank_fee_amount', 'b.name as book_name', 'p.created_by'])->keyBy('staff_id');
-            $staff = $db->table('staff')->where('status', 'active')->orderBy('name')->get(['id', 'name', 'position', 'monthly_salary', 'bank_name', 'bank_account']);
-            $deductions = $db->table('staff_deductions')->where('is_active', true)->whereIn('staff_id', $staff->pluck('id'))->orderBy('id')
-                ->get(['staff_id', 'deduction_type_id', 'name', 'type', 'default_amount'])->groupBy('staff_id');
-            $books = Book::where('is_active', true)->orderBy('name')->get()
-                ->map(fn ($b) => ['id' => $b->id, 'name' => $b->name, 'balance' => (float)$b->getCashViewBalance(),
-                    'fees' => BookFeeCategory::where('book_id', $b->id)->where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()])->all();
-            // Staff paid this month who are no longer active still appear in the history.
-            $paidNames = $db->table('staff')->whereIn('id', $paid->keys())->pluck('name', 'id');
-            // Months of the year each staff member is already paid for (multi-month payments skip these).
-            $paidMonths = $db->table('payroll_entries')->where('year', $year)->get(['staff_id', 'month'])
-                ->groupBy('staff_id')->map(fn ($rows) => $rows->pluck('month')->map(fn ($m) => (int)$m)->unique()->values()->all())->all();
-            return compact('paid', 'staff', 'deductions', 'books', 'paidNames', 'paidMonths');
-        });
-        $payerNames = SchoolAccountant::whereIn('id', $data['paid']->pluck('created_by')->filter()->unique())->pluck('name', 'id');
-        return view('admin.accountant.management.payroll', $data + compact('month', 'year', 'nav', 'payerNames') + ['school' => $selected, 'activeSection' => 'payroll']);
+        $nav = $this->nav($request, $selected?->id);
+        $staff = collect(); $deductions = []; $paidMonths = []; $paid = collect(); $booksBySchool = [];
+        foreach ($schools as $school) {
+            $d = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($month, $year) {
+                $db = DB::connection('tenant');
+                $staff = $db->table('staff')->where('status', 'active')->orderBy('name')->get(['id', 'staff_id', 'name', 'position', 'monthly_salary', 'phone', 'bank_name', 'bank_account']);
+                return [
+                    'staff' => $staff,
+                    'deductions' => $db->table('staff_deductions')->where('is_active', true)->whereIn('staff_id', $staff->pluck('id'))->orderBy('id')
+                        ->get(['staff_id', 'deduction_type_id', 'name', 'type', 'default_amount'])->groupBy('staff_id'),
+                    'paidMonths' => $db->table('payroll_entries')->where('year', $year)->get(['staff_id', 'month'])
+                        ->groupBy('staff_id')->map(fn ($r) => $r->pluck('month')->map(fn ($m) => (int)$m)->unique()->values()->all()),
+                    'paid' => $db->table('payroll_entries as p')->leftJoin('books as b', 'b.id', '=', 'p.book_id')->leftJoin('staff as s', 's.id', '=', 'p.staff_id')
+                        ->where('p.month', $month)->where('p.year', $year)->orderBy('s.name')
+                        ->get(['p.staff_id', 's.name', 'p.gross_salary', 'p.total_deductions', 'p.net_salary', 'p.payment_date', 'p.payment_method', 'p.bank_fee_amount', 'b.name as book_name', 'p.created_by']),
+                    'books' => Book::where('is_active', true)->orderBy('name')->get()
+                        ->map(fn ($b) => ['id' => $b->id, 'name' => $b->name, 'account' => $b->bank_account_number ? preg_replace('/\s+/', '', $b->bank_account_number) : null,
+                            'cash' => (bool)$b->is_cash_book, 'balance' => (float)$b->getCashViewBalance(),
+                            'fees' => BookFeeCategory::where('book_id', $b->id)->where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()])->all(),
+                ];
+            });
+            $short = self::shortName($school->name);
+            foreach ($d['staff'] as $s) {
+                $key = $school->id.'_'.$s->id;
+                $staff->push((object)((array)$s + ['key' => $key, 'school_id' => $school->id, 'school' => $short]));
+                $deductions[$key] = $d['deductions']->get($s->id, collect());
+                $paidMonths[$key] = $d['paidMonths']->get($s->id, []);
+            }
+            $paid = $paid->merge($d['paid']->map(fn ($p) => (object)((array)$p + ['school' => $short])));
+            $booksBySchool[$school->id] = $d['books'];
+        }
+        // All-schools mode pays from a shared account: one option per bank account number, plus each school's cash book.
+        $accountOptions = collect($booksBySchool)->flatten(1)->filter(fn ($b) => $b['account'])->groupBy('account')
+            ->map(fn ($g, $acct) => ['value' => 'account:'.$acct, 'label' => $g->first()['name'].' · '.$acct, 'balance' => $g->sum('balance')])->values()->all();
+        $payerNames = SchoolAccountant::whereIn('id', $paid->pluck('created_by')->filter()->unique())->pluck('name', 'id');
+        $allSchools = $this->access->schools($request->user());
+        return view('admin.accountant.management.payroll', compact('staff', 'deductions', 'paidMonths', 'paid', 'booksBySchool', 'accountOptions',
+            'month', 'year', 'nav', 'payerNames', 'selected', 'allSchools') + ['activeSection' => 'payroll']);
     }
 
     /**
-     * Pay salaries for the ticked staff. Each payment goes through PayrollPaymentService (the school
-     * payroll screen's logic) with the balance check on; staff already paid for the month are skipped.
+     * Pay salaries for the ticked staff (keys "<schoolId>_<staffId>") for one or more months. Each payment
+     * goes through PayrollPaymentService (the school payroll screen's logic) with the balance check on;
+     * months a person is already paid for are skipped. pay_from: "book:<id>" (one school only),
+     * "account:<number>" or "cash" (each school's matching book).
      */
-    public function payPayroll(Request $request, int $schoolId)
+    public function payPayroll(Request $request)
     {
-        $school = $this->access->school($request->user(), $schoolId);
-        $grant = $this->access->grants($request->user())->firstWhere('school_id', $school->id);
+        abort_if($this->access->grants($request->user())->isEmpty(), 403);
         $manager = $this->access->manager($request->user());
         $base = $request->validate([
             'month' => 'required|integer|between:1,12', 'year' => 'required|integer|between:2000,2100',
-            'months' => 'nullable|array|max:12', 'months.*' => 'integer|between:1,12',
-            'book_id' => 'required|integer', 'payment_date' => 'required|date_format:Y-m-d',
+            'months' => 'nullable|array|max:12', 'months.*' => 'integer|between:1,12', 'school' => 'nullable|integer',
+            'pay_from' => ['required', 'regex:/^(book:\d+|cash|account:[0-9A-Za-z]+)$/'], 'payment_date' => 'required|date_format:Y-m-d',
             'payment_method' => 'required|in:cash,bank_transfer,cheque,mobile_money',
             'book_fee_category_id' => 'nullable|integer', 'reference_number' => 'nullable|string|max:255',
-            'selected' => 'required|array|min:1', 'selected.*' => 'integer',
+            'selected' => 'required|array|min:1', 'selected.*' => ['required', 'regex:/^\d+_\d+$/'],
             'rows' => 'required|array', 'rows.*.gross' => 'required|numeric|min:0|max:999999999',
             'rows.*.deductions' => 'nullable|array', 'rows.*.deductions.*.name' => 'required|string|max:255',
             'rows.*.deductions.*.type' => 'required|in:fixed,percentage,insurance,penalty,other',
@@ -360,48 +384,138 @@ class SchoolManagementController extends Controller
         ]);
         // Several months can be paid at once with the same amounts; months already paid are skipped per staff.
         $months = collect($base['months'] ?? [$base['month']])->map(fn ($m) => (int)$m)->unique()->sort()->values()->all();
-        $results = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($base, $grant, $months) {
-            abort_unless(Book::where('is_active', true)->whereKey($base['book_id'])->exists(), 422, 'Choose an active book of this school.');
-            $out = [];
-            foreach ($months as $month) {
-                $label = date('M', mktime(0, 0, 0, $month, 1));
-                foreach (array_unique($base['selected']) as $staffId) {
-                    $staff = DB::connection('tenant')->table('staff')->where('id', $staffId)->where('status', 'active')->first();
-                    $row = $base['rows'][$staffId] ?? null;
-                    if (!$staff || !$row) { $out[] = [false, "Staff #$staffId", 'not found or inactive', $label]; continue; }
-                    if (PayrollEntry::where('staff_id', $staffId)->where('month', $month)->where('year', $base['year'])->exists()) {
-                        $out[] = [null, $staff->name, 'already paid', $label]; continue;
-                    }
-                    try {
-                        [$entry, $fee] = app(PayrollPaymentService::class)->pay([
-                            'staff_id' => $staffId, 'book_id' => $base['book_id'], 'month' => $month, 'year' => $base['year'],
-                            'gross_salary' => $row['gross'], 'payment_date' => $base['payment_date'], 'payment_method' => $base['payment_method'],
-                            'reference_number' => $base['reference_number'] ?? null, 'notes' => 'Paid from the management portal',
-                            'deductions' => array_values($row['deductions'] ?? []), 'book_fee_category_id' => $base['book_fee_category_id'] ?? null,
-                        ], (int)$grant->school_accountant_id, true);
-                        $out[] = [true, $staff->name, (float)$entry->net_salary + (float)$fee, $label];
-                    } catch (\RuntimeException $e) {
-                        $out[] = [false, $staff->name, $e->getMessage(), $label];
+        $bySchool = collect(array_unique($base['selected']))->groupBy(fn ($k) => (int)explode('_', $k)[0]);
+        $results = [];
+        foreach ($bySchool as $schoolId => $keys) {
+            $school = $this->access->school($request->user(), (int)$schoolId);
+            $grant = $this->access->grants($request->user())->firstWhere('school_id', $school->id);
+            $short = self::shortName($school->name);
+            $out = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($base, $grant, $months, $keys, $short, $bySchool) {
+                $books = Book::where('is_active', true)->get();
+                $book = match (true) {
+                    str_starts_with($base['pay_from'], 'book:') => $bySchool->count() === 1 ? $books->firstWhere('id', (int)substr($base['pay_from'], 5)) : null,
+                    $base['pay_from'] === 'cash' => $books->firstWhere('is_cash_book', true),
+                    default => $books->first(fn ($b) => preg_replace('/\s+/', '', (string)$b->bank_account_number) === substr($base['pay_from'], 8)),
+                };
+                $out = [];
+                foreach ($months as $month) {
+                    $label = date('M', mktime(0, 0, 0, $month, 1));
+                    foreach ($keys as $key) {
+                        $staffId = (int)explode('_', $key)[1];
+                        $staff = DB::connection('tenant')->table('staff')->where('id', $staffId)->where('status', 'active')->first();
+                        $row = $base['rows'][$key] ?? null;
+                        $who = ($staff->name ?? "Staff #$staffId")." · $short";
+                        if (!$staff || !$row) { $out[] = [false, $who, 'not found or inactive', $label]; continue; }
+                        if (!$book) { $out[] = [false, $who, 'this school has no such account', $label]; continue; }
+                        if (PayrollEntry::where('staff_id', $staffId)->where('month', $month)->where('year', $base['year'])->exists()) {
+                            $out[] = [null, $who, 'already paid', $label]; continue;
+                        }
+                        try {
+                            [$entry, $fee] = app(PayrollPaymentService::class)->pay([
+                                'staff_id' => $staffId, 'book_id' => $book->id, 'month' => $month, 'year' => $base['year'],
+                                'gross_salary' => $row['gross'], 'payment_date' => $base['payment_date'], 'payment_method' => $base['payment_method'],
+                                'reference_number' => $base['reference_number'] ?? null, 'notes' => 'Paid from the management portal',
+                                'deductions' => array_values($row['deductions'] ?? []),
+                                'book_fee_category_id' => str_starts_with($base['pay_from'], 'book:') ? ($base['book_fee_category_id'] ?? null) : null,
+                            ], (int)$grant->school_accountant_id, true);
+                            $out[] = [true, $who, (float)$entry->net_salary + (float)$fee, $label];
+                        } catch (\RuntimeException $e) {
+                            $out[] = [false, $who, $e->getMessage(), $label];
+                        }
                     }
                 }
+                return $out;
+            });
+            $schoolPaid = array_filter($out, fn ($r) => $r[0] === true);
+            if ($schoolPaid) {
+                ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
+                    'action' => 'management_payroll_paid',
+                    'description' => count($schoolPaid).' salary payment(s) from the management portal (TSh '.number_format(array_sum(array_column($schoolPaid, 2)), 2).'): '
+                        .implode(', ', array_map(fn ($r) => "{$r[1]} ({$r[3]} {$base['year']})", $schoolPaid)).'.',
+                    'ip_address' => $request->ip()]);
             }
-            return $out;
-        });
+            $results = array_merge($results, $out);
+        }
         $paid = array_filter($results, fn ($r) => $r[0] === true);
         $skipped = array_filter($results, fn ($r) => $r[0] === null);
         $failed = array_filter($results, fn ($r) => $r[0] === false);
         $monthNames = implode(', ', array_map(fn ($m) => date('M', mktime(0, 0, 0, $m, 1)), $months)).' '.$base['year'];
-        if ($paid) {
-            ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
-                'action' => 'management_payroll_paid',
-                'description' => count($paid).' salary payment(s) for '.$monthNames.' from the management portal (TSh '
-                    .number_format(array_sum(array_column($paid, 2)), 2).'): '.implode(', ', array_map(fn ($r) => "{$r[1]} ({$r[3]})", $paid)).'.',
-                'ip_address' => $request->ip()]);
-        }
-        $redirect = redirect()->route('accountant.management.payroll', ['school' => $school->id, 'month' => $base['month'], 'year' => $base['year']])
+        $redirect = redirect()->route('accountant.management.payroll', array_filter(['school' => $base['school'] ?? null, 'month' => $base['month'], 'year' => $base['year']]))
             ->with('success', count($paid).' salary payment(s) recorded for '.$monthNames.', total TSh '.number_format(array_sum(array_column($paid, 2)), 0).' (net pay plus any transaction fees).'
                 .($skipped ? ' '.count($skipped).' skipped because already paid.' : ''));
         return $failed ? $redirect->with('error', 'Not paid: '.implode('; ', array_map(fn ($r) => "{$r[1]} ({$r[3]}): {$r[2]}", $failed))) : $redirect;
+    }
+
+    /** Register a staff member in one of the granted schools, with optional NSSF (10%) and PAYE deductions. */
+    public function registerStaff(Request $request)
+    {
+        $data = $request->validate(['school_id' => 'required|integer', 'name' => 'required|string|max:255', 'position' => 'required|string|max:255',
+            'monthly_salary' => 'required|numeric|min:0|max:999999999', 'phone' => 'nullable|string|max:255', 'bank_name' => 'nullable|string|max:255',
+            'bank_account' => 'nullable|string|max:255', 'nssf' => 'nullable|boolean', 'paye' => 'nullable|numeric|min:0|max:999999999',
+            'return_school' => 'nullable|integer']);
+        $school = $this->access->school($request->user(), (int)$data['school_id']);
+        $grant = $this->access->grants($request->user())->firstWhere('school_id', $school->id);
+        $manager = $this->access->manager($request->user());
+        app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($data, $grant) {
+            DB::connection('tenant')->transaction(function () use ($data, $grant) {
+                $id = $this->createStaffRow($data, (int)$grant->school_accountant_id);
+                if (!empty($data['nssf'])) StaffDeduction::create(['staff_id' => $id, 'name' => 'NSSF', 'type' => 'percentage', 'default_amount' => 10, 'is_active' => true]);
+                if (!empty($data['paye'])) StaffDeduction::create(['staff_id' => $id, 'name' => 'PAYEE', 'type' => 'fixed', 'default_amount' => $data['paye'], 'is_active' => true]);
+            });
+        });
+        ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
+            'action' => 'management_staff_registered', 'description' => "Registered {$data['name']} ({$data['position']}, TSh ".number_format($data['monthly_salary'], 0).') from the management portal.',
+            'ip_address' => $request->ip()]);
+        return redirect()->to(route('accountant.management.payroll', array_filter(['school' => $data['return_school'] ?? null])).'#staff')
+            ->with('success', "{$data['name']} registered in ".self::shortName($school->name).'.');
+    }
+
+    /**
+     * Move a staff member to another school: the record and active standing deductions are copied to the
+     * new school and the old record is set inactive. Payments already made stay in the old school's books.
+     */
+    public function moveStaff(Request $request)
+    {
+        $data = $request->validate(['key' => ['required', 'regex:/^\d+_\d+$/'], 'to_school_id' => 'required|integer', 'return_school' => 'nullable|integer']);
+        [$fromId, $staffId] = array_map('intval', explode('_', $data['key']));
+        $from = $this->access->school($request->user(), $fromId);
+        $to = $this->access->school($request->user(), (int)$data['to_school_id']);
+        abort_if($from->id === $to->id, 422, 'Choose a different school.');
+        $manager = $this->access->manager($request->user());
+        $toGrant = $this->access->grants($request->user())->firstWhere('school_id', $to->id);
+        [$person, $deds] = app(TenantDatabaseManager::class)->executeForSchool($from, fn () => [
+            (array)(DB::connection('tenant')->table('staff')->where('id', $staffId)->where('status', 'active')->first() ?? abort(404)),
+            DB::connection('tenant')->table('staff_deductions')->where('staff_id', $staffId)->where('is_active', true)->get(['name', 'type', 'default_amount', 'note'])->map(fn ($d) => (array)$d)->all(),
+        ]);
+        app(TenantDatabaseManager::class)->executeForSchool($to, function () use ($person, $deds, $toGrant, $from) {
+            DB::connection('tenant')->transaction(function () use ($person, $deds, $toGrant, $from) {
+                $id = $this->createStaffRow(['notes' => trim(($person['notes'] ?? '')."\nMoved from ".self::shortName($from->name).' on '.now('Africa/Dar_es_Salaam')->toDateString().'.')] + $person, (int)$toGrant->school_accountant_id);
+                // Deduction types are per school, so the copies keep name/type/amount without the old type id.
+                foreach ($deds as $d) StaffDeduction::create(['staff_id' => $id, 'name' => $d['name'], 'type' => $d['type'], 'default_amount' => $d['default_amount'], 'note' => $d['note'], 'is_active' => true]);
+            });
+        });
+        app(TenantDatabaseManager::class)->executeForSchool($from, fn () => DB::connection('tenant')->table('staff')->where('id', $staffId)->update([
+            'status' => 'inactive', 'notes' => trim(($person['notes'] ?? '')."\nMoved to ".self::shortName($to->name).' on '.now('Africa/Dar_es_Salaam')->toDateString().'.'), 'updated_at' => now()]));
+        ActivityLog::create(['school_id' => $to->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
+            'action' => 'management_staff_moved', 'description' => "Moved {$person['name']} from ".self::shortName($from->name).' to '.self::shortName($to->name).'.',
+            'ip_address' => $request->ip()]);
+        return redirect()->to(route('accountant.management.payroll', array_filter(['school' => $data['return_school'] ?? null])).'#staff')
+            ->with('success', "{$person['name']} moved from ".self::shortName($from->name).' to '.self::shortName($to->name).'. Earlier payments stay in '.self::shortName($from->name).'.');
+    }
+
+    /** Insert a staff row in the current tenant with the next free numeric staff code. */
+    private function createStaffRow(array $data, int $createdBy): int
+    {
+        $db = DB::connection('tenant');
+        $next = (int)$db->table('staff')->whereRaw("staff_id REGEXP '^[0-9]+$'")->max(DB::raw('CAST(staff_id AS UNSIGNED)')) + 1;
+        while ($db->table('staff')->where('staff_id', (string)$next)->exists()) $next++;
+        return $db->table('staff')->insertGetId([
+            'name' => $data['name'], 'staff_id' => (string)$next, 'position' => $data['position'], 'department' => $data['department'] ?? null,
+            'monthly_salary' => $data['monthly_salary'], 'phone' => $data['phone'] ?? null, 'email' => $data['email'] ?? null,
+            'bank_name' => $data['bank_name'] ?? null, 'bank_account' => $data['bank_account'] ?? null,
+            'status' => 'active', 'date_joined' => $data['date_joined'] ?? now('Africa/Dar_es_Salaam')->toDateString(),
+            'notes' => $data['notes'] ?? null, 'created_by' => $createdBy, 'created_at' => now(), 'updated_at' => now(),
+        ]);
     }
 
     /** Fee statements (invoices) for one school, generated without switching accounts. */

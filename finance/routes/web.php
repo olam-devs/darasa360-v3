@@ -94,7 +94,9 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::get('/school-management/expenses/{schoolId}/{submissionId}',[\App\Http\Controllers\SchoolManagementController::class, 'reviewExpense'])->whereNumber(['schoolId', 'submissionId'])->name('management.expense');
         Route::post('/school-management/expenses/{schoolId}/{submissionId}', [\App\Http\Controllers\SchoolManagementController::class, 'decideExpense'])->whereNumber(['schoolId', 'submissionId'])->name('management.expense.decide');
         Route::get('/school-management/payroll', [\App\Http\Controllers\SchoolManagementController::class, 'payroll'])->name('management.payroll');
-        Route::post('/school-management/payroll/{schoolId}/pay', [\App\Http\Controllers\SchoolManagementController::class, 'payPayroll'])->whereNumber('schoolId')->name('management.payroll.pay');
+        Route::post('/school-management/payroll/pay', [\App\Http\Controllers\SchoolManagementController::class, 'payPayroll'])->name('management.payroll.pay');
+        Route::post('/school-management/staff', [\App\Http\Controllers\SchoolManagementController::class, 'registerStaff'])->name('management.staff.register');
+        Route::post('/school-management/staff/move', [\App\Http\Controllers\SchoolManagementController::class, 'moveStaff'])->name('management.staff.move');
         Route::get('/school-management/invoices',[\App\Http\Controllers\SchoolManagementController::class, 'invoices'])->name('management.invoices');
         Route::get('/school-management/invoices/{schoolId}/download', [\App\Http\Controllers\SchoolManagementController::class, 'downloadInvoices'])->whereNumber('schoolId')->name('management.invoices.download');
         Route::get('/my-targets', [\App\Http\Controllers\SchoolManagementController::class, 'mine'])->name('my-targets');
