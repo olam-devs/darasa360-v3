@@ -5,14 +5,14 @@
     <strong>Class:</strong> {{ $student->schoolClass->name ?? 'N/A' }}<br>
     <strong>Date:</strong> {{ date('d/m/Y') }}
     @if(isset($invoiceData['has_scholarships']) && $invoiceData['has_scholarships'])
-        <br><span class="scholarship-badge" style="font-size: 9px; padding: 2px 6px;"> SCHOLARSHIP RECIPIENT</span>
+        <br><span class="scholarship-badge" style="font-size: 12px; padding: 2px 6px;"> SCHOLARSHIP RECIPIENT</span>
     @endif
 </div>
 
 @if(isset($invoiceData['has_scholarships']) && $invoiceData['has_scholarships'])
 <div class="scholarship-summary">
-    <div style="font-weight: bold; font-size: 10px; color: #856404; margin-bottom: 4px;"> SCHOLARSHIP SUMMARY</div>
-    <table style="width: 100%; font-size: 9px;">
+    <div style="font-weight: bold; font-size: 13px; color: #856404; margin-bottom: 4px;"> SCHOLARSHIP SUMMARY</div>
+    <table style="width: 100%; font-size: 12px;">
         <tr>
             <td>Original Fee Total:</td>
             <td style="text-align: right; font-weight: bold;">TSh {{ number_format($invoiceData['total_original_fees'], 2) }}</td>
@@ -96,7 +96,7 @@
                             @if(isset($part['quarters'][$q]))
                                 TSh {{ number_format($part['quarters'][$q]['charged'], 2) }}
                                 @if(!empty($part['quarters'][$q]['deadline']) && $part['quarters'][$q]['paid'] < $part['quarters'][$q]['charged'])
-                                    <div style="font-size:6px; font-weight:normal; color:#1565c0; background:#e3f2fd; border-radius:2px; padding:1px 3px; margin-top:2px; white-space:nowrap;">
+                                    <div style="font-size: 8px; font-weight:normal; color:#1565c0; background:#e3f2fd; border-radius:2px; padding:1px 3px; margin-top:2px; white-space:nowrap;">
                                         Due: {{ date('d M Y', strtotime($part['quarters'][$q]['deadline'])) }}
                                     </div>
                                 @endif
@@ -211,13 +211,13 @@
                         @if(isset($item['has_scholarship']) && $item['has_scholarship'])
                             <span class="scholarship-badge"> {{ $item['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
                             @if($item['scholarship_name'])
-                                <br><small style="color: #856404; font-size: 7px;">{{ $item['scholarship_name'] }}</small>
+                                <br><small style="color: #856404; font-size: 9px;">{{ $item['scholarship_name'] }}</small>
                             @endif
                         @endif
                         @if($item['deadline'])
-                            <br><small style="color: #666; font-size: 8px;">Deadline: {{ date('d/m/Y', strtotime($item['deadline'])) }}</small>
+                            <br><small style="color: #666; font-size: 10px;">Deadline: {{ date('d/m/Y', strtotime($item['deadline'])) }}</small>
                             @if($item['is_overdue'])
-                                <br><small style="color: #d9534f; font-weight: bold; font-size: 8px;">OVERDUE</small>
+                                <br><small style="color: #d9534f; font-weight: bold; font-size: 10px;">OVERDUE</small>
                             @endif
                         @endif
                     </td>
@@ -227,7 +227,7 @@
                         @endif
                         TSh {{ number_format($item['amount'], 2) }}
                         @if(isset($item['has_scholarship']) && $item['has_scholarship'] && $item['scholarship_amount'] > 0)
-                            <br><small style="color: #28a745; font-size: 7px;">(-{{ number_format($item['scholarship_amount'], 2) }} scholarship)</small>
+                            <br><small style="color: #28a745; font-size: 9px;">(-{{ number_format($item['scholarship_amount'], 2) }} scholarship)</small>
                         @endif
                     </td>
                     <td class="amount">TSh {{ number_format($item['paid'], 2) }}</td>
@@ -271,9 +271,9 @@
                 <td>
                     {{ $item['name'] }}
                     @if($item['deadline'])
-                        <br><small style="color: #666; font-size: 8px;">Deadline: {{ date('d/m/Y', strtotime($item['deadline'])) }}</small>
+                        <br><small style="color: #666; font-size: 10px;">Deadline: {{ date('d/m/Y', strtotime($item['deadline'])) }}</small>
                         @if($item['is_overdue'])
-                            <br><small style="color: #d9534f; font-weight: bold; font-size: 8px;">OVERDUE</small>
+                            <br><small style="color: #d9534f; font-weight: bold; font-size: 10px;">OVERDUE</small>
                         @endif
                     @endif
                 </td>
@@ -302,14 +302,14 @@
 @php $advanceBalance = $student->advance_balance ?? 0; @endphp
 <div class="balance-box {{ $invoiceData['balance_remaining'] <= 0 ? 'paid-full' : '' }}">
     @if($invoiceData['balance_remaining'] > 0)
-        <div style="font-size: 11px; margin-bottom: 5px; font-weight: bold;">TOTAL AMOUNT:</div>
+        <div style="font-size: 14px; margin-bottom: 5px; font-weight: bold;">TOTAL AMOUNT:</div>
         <div class="balance-amount">TSh {{ number_format($invoiceData['balance_remaining'], 2) }}</div>
-        <div style="margin-top: 8px; font-size: 9px; color: #666;">
+        <div style="margin-top: 8px; font-size: 12px; color: #666;">
             Please ensure payment is made by the deadline date(s) indicated above.
         </div>
 
         @if($advanceBalance > 0)
-        <div style="margin-top: 8px; font-size: 9px; background: #e8f5e9; border-left: 3px solid #2e7d32; padding: 5px 7px; border-radius: 3px; color: #1b5e20;">
+        <div style="margin-top: 8px; font-size: 12px; background: #e8f5e9; border-left: 3px solid #2e7d32; padding: 5px 7px; border-radius: 3px; color: #1b5e20;">
             <strong>Advance Credit on Account: TSh {{ number_format($advanceBalance, 2) }}</strong><br>
             This credit will be applied to your next fee assignment.
         </div>
@@ -317,7 +317,7 @@
 
         @if(isset($bankAccounts) && $bankAccounts->count() > 0)
         <div class="bank-section">
-            <div style="font-size: 10px; font-weight: bold; color: #333; margin-bottom: 4px;"> PAYMENT DETAILS:</div>
+            <div style="font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px;"> PAYMENT DETAILS:</div>
             @foreach($bankAccounts as $index => $bankAccount)
             <div class="bank-option">
                 <strong>{{ $index + 1 }}.</strong> {{ $bankAccount->bank_name }}: {{ $bankAccount->account_number }}
@@ -326,12 +326,12 @@
         </div>
         @endif
     @else
-        <div style="font-size: 14px; color: #155724; font-weight: bold;"> ALL FEES PAID IN FULL</div>
-        <div style="margin-top: 3px; font-size: 10px; color: #155724;">
+        <div style="font-size: 18px; color: #155724; font-weight: bold;"> ALL FEES PAID IN FULL</div>
+        <div style="margin-top: 3px; font-size: 13px; color: #155724;">
             Thank you for your prompt payment!
         </div>
         @if($advanceBalance > 0)
-        <div style="margin-top: 8px; font-size: 9px; background: #fff8e1; border-left: 3px solid #f57f17; padding: 5px 7px; border-radius: 3px; color: #e65100;">
+        <div style="margin-top: 8px; font-size: 12px; background: #fff8e1; border-left: 3px solid #f57f17; padding: 5px 7px; border-radius: 3px; color: #e65100;">
             <strong>Advance Credit on Account: TSh {{ number_format($advanceBalance, 2) }}</strong><br>
             This credit will be applied to your next fee assignment.
         </div>
