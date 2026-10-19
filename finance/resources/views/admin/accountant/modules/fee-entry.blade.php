@@ -875,10 +875,10 @@
 
         async function applyReceiptAdvance() {
             const studentId    = receiptStudentId;
-            const particularId = parseInt(document.getElementById('receiptParticular').value);
+            const { particularId, quarter } = parseReceiptParticularValue(document.getElementById('receiptParticular').value);
             const date         = document.getElementById('receiptDate').value;
             const amount       = parseMoneyInput(document.getElementById('receiptAdvAmt').value);
-            const p            = receiptParticulars.find(x => x.id === particularId);
+            const p            = findReceiptParticular(particularId, quarter);
 
             if (!studentId || !particularId) {
                 showDarasaToast({ type: 'warning', title: 'Apply advance', message: 'Select a student and particular first.' });
@@ -897,7 +897,7 @@
             if (btn) btn.disabled = true;
             try {
                 const res = await axios.post(`${API_BASE}/vouchers/apply-advance`, {
-                    student_id: studentId, particular_id: particularId, amount, date, notes,
+                    student_id: studentId, particular_id: particularId, quarter, academic_year_id: p.academic_year_id, amount, date, notes,
                 });
                 showDarasaToast({ type: 'success', title: 'Apply advance', message: 'Advance applied. Student/particular balance updated.' });
                 const student = allStudents.find(s => s.id == studentId);

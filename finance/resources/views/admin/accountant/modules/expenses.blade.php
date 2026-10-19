@@ -14,6 +14,9 @@
 
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-3xl font-bold text-rose-600">Expenses</h2>
+        @if(app(\App\Services\SchoolManagementAccess::class)->grants(auth()->user())->isNotEmpty())
+        <a href="{{ route('accountant.management') }}#approvals" class="text-sm font-semibold text-blue-700 hover:underline">Back to school management</a>
+        @endif
     </div>
 
     <!-- Tabs -->
@@ -59,11 +62,15 @@
                                 placeholder="Search or type category name..."
                                 oninput="onComposeCategoryInput(); showCategoryDropdown(this.value)"
                                 onfocus="showCategoryDropdown(this.value)"
+                                onclick="showCategoryDropdown(this.value)"
+                                onkeydown="if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); clearComposeCategory(); }"
                                 onblur="setTimeout(hideCategoryDropdown, 200)"
                                 autocomplete="off">
                             <input type="hidden" id="composeCategory">
+                            <p class="text-xs text-gray-500 mt-1">Press Esc in this field to clear the category.</p>
                             <p id="composeCategoryWarning" class="hidden text-xs text-amber-600 mt-1"></p>
                         </div>
+                        <button type="button" onclick="clearComposeCategory()" title="Clear category (Esc)" aria-label="Clear selected category" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded whitespace-nowrap self-start">Clear</button>
                         <button type="button" onclick="proposeNewCategory()" class="text-xs bg-gray-200 hover:bg-gray-300 px-3 py-2 rounded whitespace-nowrap self-start">+ New</button>
                     </div>
                 </div>
@@ -613,9 +620,13 @@ function showCategoryDropdown(val) {
     if (!matches.length) { dd.classList.add('hidden'); return; }
 
     _positionDropdown(dd, inp);
-    dd.innerHTML = matches.map(c =>
-        `<div class="px-3 py-1.5 hover:bg-rose-50 cursor-pointer"
-            onmousedown="selectCategoryDropdown(${c.id}, '${esc(c.name)}')">${esc(c.name)}</div>`
+    dd.innerHTML = matches.map((c, index) =>
+        `<div class="flex items-start gap-3 px-3 py-2 hover:bg-rose-50 cursor-pointer"
+            style="border-bottom: ${index < matches.length - 1 ? '1px solid #d1d5db' : 'none'};"
+            onmousedown="selectCategoryDropdown(${c.id}, '${esc(c.name)}')">
+            <span class="font-semibold text-rose-600" style="min-width: 24px;">${index + 1}.</span>
+            <span>${esc(c.name)}</span>
+        </div>`
     ).join('');
     dd.classList.remove('hidden');
 }
@@ -629,6 +640,14 @@ function selectCategoryDropdown(id, name) {
 
 function hideCategoryDropdown() {
     document.getElementById('categoryDropdown').classList.add('hidden');
+}
+
+function clearComposeCategory() {
+    const input = document.getElementById('composeCategoryInput');
+    input.value = '';
+    onComposeCategoryInput();
+    input.focus();
+    hideCategoryDropdown();
 }
 
 // Reposition dropdowns on scroll so they stay below their input
@@ -1061,6 +1080,14 @@ async function loadReviewQueue() {
                 loadFeeCategoriesForSelect(sel, sel.closest('[data-submission-id]').querySelector('.review-fee-category'));
             }
         });
+        const focusId = Number(new URLSearchParams(window.location.search).get('submission'));
+        if (Number.isSafeInteger(focusId) && focusId > 0) {
+            const card = box.querySelector(`[data-submission-id="${focusId}"]`);
+            if (card) {
+                card.style.outline = '2px solid #2563eb';
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
     } catch (e) {
         box.innerHTML = '<p class="text-red-600">Could not load the review queue.</p>';
     }
@@ -1886,6 +1913,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('composeDate').value = new Date().toISOString().slice(0, 10);
     await Promise.all([loadItemsCache(), loadCategoriesForSelects(), loadAcademicYearsForSelects(), loadBooksForSelect()]);
     addComposeLineRow();
+    if (IS_MAIN_ACCOUNTANT && new URLSearchParams(window.location.search).get('tab') === 'review') {
+        switchExpenseTab('review');
+    }
 });
 </script>
 @endpush

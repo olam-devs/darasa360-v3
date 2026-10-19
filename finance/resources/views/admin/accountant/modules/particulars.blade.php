@@ -273,6 +273,8 @@ const API_BASE = '/api';
 
         // ===== ASSIGN STUDENTS TO PARTICULAR =====
         async function showAssignStudentsForm(particularId, particularName) {
+            // Require an explicit selection whenever the assignment form opens.
+            selectedQuarter = null;
             // Store for later use
             currentParticularForExisting = { id: particularId, name: particularName };
 
@@ -339,7 +341,7 @@ const API_BASE = '/api';
                                 <button type="button" onclick="onQuarterChange(3)" id="qbtn-3" class="quarter-btn px-6 py-3 rounded-lg font-bold border-2 border-purple-300 bg-white text-purple-700 hover:bg-purple-100 transition">Q3</button>
                                 <button type="button" onclick="onQuarterChange(4)" id="qbtn-4" class="quarter-btn px-6 py-3 rounded-lg font-bold border-2 border-purple-300 bg-white text-purple-700 hover:bg-purple-100 transition">Q4</button>
                             </div>
-                            <p class="text-sm text-purple-600 text-center mt-2">All new assignments in this session will be linked to the selected quarter</p>
+                            <p class="text-sm text-purple-600 text-center mt-2">Required: select a quarter before assigning students. All new assignments will use that quarter.</p>
                         </div>
 
                         <!-- Advance Payment Option -->
@@ -391,6 +393,11 @@ const API_BASE = '/api';
 
         function onAcademicYearChange(yearId) {
             selectedAcademicYearId = parseInt(yearId);
+            selectedQuarter = null;
+            document.querySelectorAll('.quarter-btn').forEach(btn => {
+                btn.classList.remove('bg-purple-600', 'text-white', 'border-purple-700');
+                btn.classList.add('bg-white', 'text-purple-700', 'border-purple-300');
+            });
             _cachedAssignmentStudents = null;
             const si = document.getElementById('studentSearchInput');
             if (si) si.value = '';
@@ -1188,6 +1195,14 @@ const API_BASE = '/api';
         }
 
         async function assignSelectedStudents(particularId, selectAnother = false) {
+            if (!selectedAcademicYearId) {
+                alert(' Please select an Academic Year first');
+                return;
+            }
+            if (!selectedQuarter) {
+                alert(' Please select a Quarter first (Step 2)');
+                return;
+            }
             const selectedStudents = [];
             document.querySelectorAll('.student-checkbox:checked').forEach(cb => {
                 const studentId = cb.getAttribute('data-student-id');
@@ -1210,7 +1225,9 @@ const API_BASE = '/api';
 
             try {
                 await axios.post(`${API_BASE}/particulars/${particularId}/assign-students`, {
-                    students: selectedStudents
+                    students: selectedStudents,
+                    academic_year_id: selectedAcademicYearId,
+                    quarter: selectedQuarter
                 });
                 alert(` ${selectedStudents.length} student(s) assigned successfully!`);
 

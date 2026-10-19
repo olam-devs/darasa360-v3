@@ -82,6 +82,8 @@ class VoucherController extends Controller
             'date' => 'required|date',
             'student_id' => 'required|exists:students,id',
             'particular_id' => 'required|exists:particulars,id',
+            'quarter' => 'nullable|integer|between:1,4',
+            'academic_year_id' => 'nullable|exists:academic_years,id',
             'book_id' => 'nullable|exists:books,id',
             'voucher_type' => 'required|in:Sales,Receipt,Payment',
             'debit' => 'nullable|numeric|min:0',
@@ -108,9 +110,7 @@ class VoucherController extends Controller
 
             // Update particular_student pivot table
 
-            $pivot = $student->particulars()
-                ->where('particular_id', $particular->id)
-                ->first();
+            $pivot = Voucher::findFeeAssignment($student->id, $particular->id, $validated['academic_year_id'] ?? null, $validated['quarter'] ?? null);
 
             // A student's first ever voucher for a particular has no pivot row yet
             // (particulars are never explicitly "assigned" to a student anywhere in
@@ -124,11 +124,11 @@ class VoucherController extends Controller
                     'debit' => 0,
                     'credit' => 0,
                     'overpayment' => 0,
+                    'academic_year_id' => $validated['academic_year_id'] ?? null,
+                    'quarter' => $validated['quarter'] ?? null,
                 ]);
 
-                $pivot = $student->particulars()
-                    ->where('particular_id', $particular->id)
-                    ->first();
+                $pivot = Voucher::findFeeAssignment($student->id, $particular->id, $validated['academic_year_id'] ?? null, $validated['quarter'] ?? null);
             }
 
             // If this is a Receipt and exceeds outstanding balance, split into:
@@ -137,9 +137,9 @@ class VoucherController extends Controller
             $advanceVoucher = null;
             if (($validated['voucher_type'] ?? null) === 'Receipt' && $pivot) {
                 $incoming = (float) ($validated['debit'] ?? 0);
-                $sales = (float) ($pivot->pivot->sales ?? 0);
-                $debit = (float) ($pivot->pivot->debit ?? 0);
-                $credit = (float) ($pivot->pivot->credit ?? 0);
+                $sales = (float) ($pivot->sales ?? 0);
+                $debit = (float) ($pivot->debit ?? 0);
+                $credit = (float) ($pivot->credit ?? 0);
                 $outstanding = max(0.0, ($sales + $debit) - $credit);
 
                 $applyToParticular = min($outstanding, $incoming);
@@ -167,6 +167,8 @@ class VoucherController extends Controller
                 }
             }
 
+            $validated['particular_student_id'] = $pivot?->id;
+            unset($validated['quarter'], $validated['academic_year_id']);
             $voucher = Voucher::create($validated);
 
             if ($pivot) {
@@ -182,9 +184,10 @@ class VoucherController extends Controller
                 }
 
                 if ($salesDelta !== 0.0 || $creditDelta !== 0.0) {
-                    $student->particulars()->updateExistingPivot($particular->id, [
-                        'sales' => (float) $pivot->pivot->sales + $salesDelta,
-                        'credit' => (float) $pivot->pivot->credit + $creditDelta,
+                    DB::connection('tenant')->table('particular_student')->where('id', $pivot->id)->update([
+                        'updated_at' => now(),
+                        'sales' => (float) $pivot->sales + $salesDelta,
+                        'credit' => (float) $pivot->credit + $creditDelta,
                     ]);
                 }
             }
@@ -248,15 +251,16 @@ class VoucherController extends Controller
                     }
                 } else {
                     // Legacy path: no quarter specified, use the first matching pivot row
-                    $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
+                    $pivot = Voucher::findFeeAssignment($student->id, $particular->id, $validated['academic_year_id'] ?? null, $quarter ?? ($validated['quarter'] ?? null));
                     if (! $pivot) {
                         $student->particulars()->attach($particular->id, [
                             'sales' => 0, 'debit' => 0, 'credit' => 0, 'overpayment' => 0,
                         ]);
-                        $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
+                        $pivot = Voucher::findFeeAssignment($student->id, $particular->id, $validated['academic_year_id'] ?? null, $quarter ?? ($validated['quarter'] ?? null));
                     }
-                    $student->particulars()->updateExistingPivot($particular->id, [
-                        'credit' => (float) $pivot->pivot->credit + $amount,
+                    DB::connection('tenant')->table('particular_student')->where('id', $pivot->id)->update([
+                        'updated_at' => now(),
+                        'credit' => (float) $pivot->credit + $amount,
                     ]);
                 }
                 $particularsApplied[] = $particular->name;
@@ -347,9 +351,7 @@ class VoucherController extends Controller
                 $student = Student::find($voucher->student_id);
                 $particular = Particular::find($voucher->particular_id);
                 if ($student && $particular) {
-                    $pivot = $student->particulars()
-                        ->where('particular_id', $particular->id)
-                        ->first();
+                    $pivot = $voucher->feeAssignment();
 
                     if ($pivot) {
                         $oldSalesDelta = $oldType === 'Sales' ? $oldDebit : 0.0;
@@ -358,10 +360,11 @@ class VoucherController extends Controller
                         $newSalesDelta = $oldType === 'Sales' ? (float) ($voucher->debit) : 0.0;
                         $newCreditDelta = $oldType === 'Receipt' ? (float) ($voucher->debit) : 0.0;
 
-                        $sales = (float) $pivot->pivot->sales - $oldSalesDelta + $newSalesDelta;
-                        $credit = (float) $pivot->pivot->credit - $oldCreditDelta + $newCreditDelta;
+                        $sales = (float) $pivot->sales - $oldSalesDelta + $newSalesDelta;
+                        $credit = (float) $pivot->credit - $oldCreditDelta + $newCreditDelta;
 
-                        $student->particulars()->updateExistingPivot($particular->id, [
+                        DB::connection('tenant')->table('particular_student')->where('id', $pivot->id)->update([
+                            'updated_at' => now(),
                             'sales' => max(0, $sales),
                             'credit' => max(0, $credit),
                         ]);
@@ -413,18 +416,17 @@ class VoucherController extends Controller
             $originalDebit = (float) $voucher->debit;
 
             if ($student && $particular) {
-                $pivot = $student->particulars()
-                    ->where('particular_id', $particular->id)
-                    ->first();
+                $pivot = $voucher->feeAssignment();
 
                 if ($pivot) {
                     $salesDelta = $voucher->voucher_type === 'Sales' ? $originalDebit : 0.0;
                     $creditDelta = $voucher->voucher_type === 'Receipt' ? $originalDebit : 0.0;
 
                     if ($salesDelta !== 0.0 || $creditDelta !== 0.0) {
-                        $student->particulars()->updateExistingPivot($particular->id, [
-                            'sales' => max(0, (float) $pivot->pivot->sales - $salesDelta),
-                            'credit' => max(0, (float) $pivot->pivot->credit - $creditDelta),
+                        DB::connection('tenant')->table('particular_student')->where('id', $pivot->id)->update([
+                            'updated_at' => now(),
+                            'sales' => max(0, (float) $pivot->sales - $salesDelta),
+                            'credit' => max(0, (float) $pivot->credit - $creditDelta),
                         ]);
                     }
                 }
@@ -525,6 +527,8 @@ class VoucherController extends Controller
         $validated = $request->validate([
             'student_id' => 'required|exists:students,id',
             'particular_id' => 'required|exists:particulars,id',
+            'quarter' => 'nullable|integer|between:1,4',
+            'academic_year_id' => 'nullable|exists:academic_years,id',
             'amount' => 'required|numeric|min:0.01',
             'date' => 'required|date',
             'notes' => 'nullable|string|max:500',
@@ -542,14 +546,14 @@ class VoucherController extends Controller
             ], 400);
         }
 
-        $pivot = $student->particulars()->where('particular_id', $particular->id)->first();
+        $pivot = Voucher::findFeeAssignment($student->id, $particular->id, $validated['academic_year_id'] ?? null, $quarter ?? ($validated['quarter'] ?? null));
         if (! $pivot) {
             return response()->json([
                 'error' => 'This student is not assigned to that particular.',
             ], 400);
         }
 
-        $outstanding = max(0.0, (float) $pivot->pivot->sales + (float) $pivot->pivot->debit - (float) $pivot->pivot->credit);
+        $outstanding = max(0.0, (float) $pivot->sales + (float) $pivot->debit - (float) $pivot->credit);
         if ($amount > $outstanding + 0.0001) {
             return response()->json([
                 'error' => 'Amount exceeds outstanding balance for this particular (TSh '.number_format($outstanding, 2).').',
@@ -570,6 +574,7 @@ class VoucherController extends Controller
                 'date' => $validated['date'],
                 'student_id' => $student->id,
                 'particular_id' => $particular->id,
+                'particular_student_id' => $pivot->id,
                 'book_id' => null,
                 'voucher_type' => 'Receipt',
                 'debit' => $amount,
@@ -582,8 +587,9 @@ class VoucherController extends Controller
             $student->advance_balance = max(0.0, $available - $amount);
             $student->save();
 
-            $student->particulars()->updateExistingPivot($particular->id, [
-                'credit' => (float) $pivot->pivot->credit + $amount,
+            DB::connection('tenant')->table('particular_student')->where('id', $pivot->id)->update([
+                'updated_at' => now(),
+                'credit' => (float) $pivot->credit + $amount,
             ]);
 
             DB::commit();
@@ -659,6 +665,7 @@ class VoucherController extends Controller
                     'date'                   => $validated['date'],
                     'student_id'             => $student->id,
                     'particular_id'          => $row->particular_id,
+                    'particular_student_id'  => $row->pivot_id,
                     'book_id'                => null,
                     'voucher_type'           => 'Receipt',
                     'debit'                  => $amount,

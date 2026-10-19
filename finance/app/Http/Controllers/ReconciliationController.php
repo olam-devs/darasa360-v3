@@ -256,9 +256,7 @@ class ReconciliationController extends Controller
                 $student = Student::find($voucher->student_id);
                 $particular = Particular::find($voucher->particular_id);
                 if ($student && $particular) {
-                    $pivot = $student->particulars()
-                        ->where('particular_id', $particular->id)
-                        ->first();
+                    $pivot = $voucher->feeAssignment();
 
                     if ($pivot) {
                         $oldSalesDelta = $oldType === 'Sales' ? $oldD : 0.0;
@@ -267,10 +265,11 @@ class ReconciliationController extends Controller
                         $newSalesDelta = $oldType === 'Sales' ? $newD : 0.0;
                         $newCreditDelta = $oldType === 'Receipt' ? $newD : 0.0;
 
-                        $sales = (float) $pivot->pivot->sales - $oldSalesDelta + $newSalesDelta;
-                        $credit = (float) $pivot->pivot->credit - $oldCreditDelta + $newCreditDelta;
+                        $sales = (float) $pivot->sales - $oldSalesDelta + $newSalesDelta;
+                        $credit = (float) $pivot->credit - $oldCreditDelta + $newCreditDelta;
 
-                        $student->particulars()->updateExistingPivot($particular->id, [
+                        DB::connection('tenant')->table('particular_student')->where('id', $pivot->id)->update([
+                            'updated_at' => now(),
                             'sales' => max(0, $sales),
                             'credit' => max(0, $credit),
                         ]);

@@ -188,9 +188,9 @@ class ParentController extends Controller
             );
         }
 
-        // Use the same invoice format as accountant's student invoice page
+        // Use the parent format of the shared student invoice template
         $controller = new \App\Http\Controllers\LedgerController();
-        $request = new Request();
+        $request = new Request(['format' => 'parent']);
 
         return $controller->exportStudentInvoicePdf($studentId, $request);
     }

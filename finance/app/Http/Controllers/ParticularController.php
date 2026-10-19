@@ -105,6 +105,7 @@ class ParticularController extends Controller
                         Voucher::create([
                             'date' => now(),
                             'student_id' => $studentId,
+                            'particular_student_id' => Voucher::findFeeAssignment($studentId, $particular->id, $validated['academic_year_id'], $validated['quarter'])?->id,
                             'particular_id' => $id,
                             'book_id' => null,
                             'voucher_type' => 'Sales',
@@ -134,6 +135,7 @@ class ParticularController extends Controller
                                 Voucher::create([
                                     'date' => now(),
                                     'student_id' => $studentId,
+                                    'particular_student_id' => Voucher::findFeeAssignment($studentId, $particular->id, $validated['academic_year_id'], $validated['quarter'])?->id,
                                     'particular_id' => $id,
                                     'book_id' => null,
                                     'voucher_type' => 'Receipt',
@@ -202,6 +204,7 @@ class ParticularController extends Controller
                         Voucher::create([
                             'date' => now(),
                             'student_id' => $studentId,
+                            'particular_student_id' => Voucher::findFeeAssignment($studentId, $particular->id, $validated['academic_year_id'], $validated['quarter'])?->id,
                             'particular_id' => $id,
                             'book_id' => null,
                             'voucher_type' => 'Sales',
@@ -231,6 +234,7 @@ class ParticularController extends Controller
                                 Voucher::create([
                                     'date' => now(),
                                     'student_id' => $studentId,
+                                    'particular_student_id' => Voucher::findFeeAssignment($studentId, $particular->id, $validated['academic_year_id'], $validated['quarter'])?->id,
                                     'particular_id' => $id,
                                     'book_id' => null,
                                     'voucher_type' => 'Receipt',
@@ -476,6 +480,7 @@ class ParticularController extends Controller
                 Voucher::create([
                     'date' => now(),
                     'student_id' => $studentId,
+                    'particular_student_id' => Voucher::findFeeAssignment($studentId, $particular->id, $validated['academic_year_id'], $validated['quarter'])?->id,
                     'particular_id' => $particularId,
                     'book_id' => null,
                     'voucher_type' => 'Sales',
@@ -504,6 +509,7 @@ class ParticularController extends Controller
                         Voucher::create([
                             'date' => now(),
                             'student_id' => $studentId,
+                            'particular_student_id' => Voucher::findFeeAssignment($studentId, $particular->id, $validated['academic_year_id'], $validated['quarter'])?->id,
                             'particular_id' => $particularId,
                             'book_id' => null,
                             'voucher_type' => 'Receipt',

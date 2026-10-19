@@ -29,6 +29,13 @@
             </a>
 
             <!-- Finance Management -->
+            @if(auth()->user() instanceof \App\Models\Central\SchoolAccountant)
+                @if(app(\App\Services\SchoolManagementAccess::class)->grants(auth()->user())->isNotEmpty())
+                <a href="{{ route('accountant.management') }}" class="block rounded-lg px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">School management</a>
+                @endif
+            @endif
+
+            <!-- Finance Management -->
             <div class="sidebar-category">
                 <button type="button" onclick="toggleCategory('finance')"
                         class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-900 hover:bg-blue-50/90 transition">

@@ -19,6 +19,7 @@ class Voucher extends BaseModel
         'date',
         'student_id',
         'particular_id',
+        'particular_student_id',
         'book_id',
         'voucher_type',
         'voucher_no',
@@ -39,6 +40,34 @@ class Voucher extends BaseModel
         'credit' => 'decimal:2',
         'voided_at' => 'datetime',
     ];
+
+    /** Resolve one assignment; never silently choose a different quarter. */
+    public static function findFeeAssignment($studentId, $particularId, $year = null, $quarter = null): ?object
+    {
+        $query = \Illuminate\Support\Facades\DB::connection('tenant')->table('particular_student')
+            ->where('student_id', $studentId)->where('particular_id', $particularId);
+        if ($year !== null) $query->where('academic_year_id', $year);
+        if ($quarter !== null) $query->where('quarter', $quarter);
+        $rows = $query->limit(2)->get();
+        if ($rows->count() > 1) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'quarter' => 'Select the academic year and quarter for this fee assignment.',
+            ]);
+        }
+        return $rows->first();
+    }
+
+    public function feeAssignment(): ?object
+    {
+        if ($this->particular_student_id !== null) {
+            $row = \Illuminate\Support\Facades\DB::connection('tenant')->table('particular_student')
+                ->where('id', $this->particular_student_id)->where('student_id', $this->student_id)
+                ->where('particular_id', $this->particular_id)->first();
+            if (! $row) throw new \RuntimeException('The original fee assignment could not be found. No balance was changed.');
+            return $row;
+        }
+        return static::findFeeAssignment($this->student_id, $this->particular_id);
+    }
 
     public function isVoided(): bool
     {

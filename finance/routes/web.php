@@ -86,6 +86,11 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::middleware(['check.role:superadmin,accountant'])->prefix('accountant')->name('accountant.')->group(function () {
+        Route::get('/school-management', [\App\Http\Controllers\SchoolManagementController::class, 'index'])->name('management');
+        Route::post('/school-management/targets', [\App\Http\Controllers\SchoolManagementController::class, 'saveTarget'])->name('management.targets');
+        Route::post('/school-management/enter/{schoolId}', [\App\Http\Controllers\SchoolManagementController::class, 'enter'])->name('management.enter');
+        Route::post('/school-management/account-settings', [\App\Http\Controllers\SchoolManagementController::class, 'accountSettings'])->name('management.account-settings');
+        Route::get('/my-targets', [\App\Http\Controllers\SchoolManagementController::class, 'mine'])->name('my-targets');
         // Dedicated Module Pages
         Route::get('/books', function () {
             $settings = SchoolSetting::getSettings();

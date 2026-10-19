@@ -1735,6 +1735,8 @@ class LedgerController extends Controller
 
     public function exportAllStudentsInvoicesPdf(Request $request)
     {
+        $request->validate(['format' => 'sometimes|in:accountant,parent']);
+        $invoiceFormat = $request->get('format', 'accountant');
         $students = $this->studentsForInvoiceExport($request);
         $school = SchoolSetting::getSettings();
         $bankAccounts = BankAccount::all();
@@ -1747,17 +1749,22 @@ class LedgerController extends Controller
             ];
         }
 
-        $filename = 'all-students-invoices.pdf';
+        $filename = "all-students-{$invoiceFormat}-invoices.pdf";
         if ($request->filled('class')) {
             $class = SchoolClass::find($request->query('class'));
             if ($class) {
                 $safeName = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $class->name);
-                $filename = "{$safeName}-invoices.pdf";
+                $filename = "{$safeName}-{$invoiceFormat}-invoices.pdf";
             }
         }
 
+        if ($students->count() === 1) {
+            $safeName = trim(preg_replace('/[^a-zA-Z0-9_-]+/', '-', $students->first()->name), '-') ?: 'student-'.$students->first()->id;
+            $filename = "{$safeName}-{$invoiceFormat}-invoice.pdf";
+        }
+
         $invoiceHeading = trim($request->get('heading', 'FEE STATEMENT')) ?: 'FEE STATEMENT';
-        $pdf = Pdf::loadView('invoices.all-students-pdf', compact('allInvoices', 'school', 'bankAccounts', 'invoiceHeading'));
+        $pdf = Pdf::loadView('invoices.all-students-pdf', compact('allInvoices', 'school', 'bankAccounts', 'invoiceHeading', 'invoiceFormat'));
 
         return $pdf->download($filename);
     }
@@ -1772,6 +1779,8 @@ class LedgerController extends Controller
 
     public function exportStudentInvoicePdf($studentId, Request $request)
     {
+        $request->validate(['format' => 'sometimes|in:accountant,parent']);
+        $invoiceFormat = $request->get('format', 'accountant');
         $student = Student::with(['schoolClass', 'particulars', 'scholarships'])->findOrFail($studentId);
         $school = SchoolSetting::getSettings();
         $invoiceData = $this->buildStudentInvoiceData($student);
@@ -1780,13 +1789,13 @@ class LedgerController extends Controller
         $invoiceHeading = trim($request->get('heading', 'FEE STATEMENT')) ?: 'FEE STATEMENT';
 
         if ($request->get('preview') === '1') {
-            return view('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading'));
+            return view('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading', 'invoiceFormat'));
         }
 
-        $pdf = Pdf::loadView('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading'));
+        $pdf = Pdf::loadView('invoices.student-pdf', compact('student', 'school', 'invoiceData', 'bankAccounts', 'invoiceHeading', 'invoiceFormat'));
 
-        $safeName = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $student->name);
-        return $pdf->download("{$safeName}-invoice.pdf");
+        $safeName = trim(preg_replace('/[^a-zA-Z0-9_-]+/', '-', $student->name), '-') ?: 'student-'.$student->id;
+        return $pdf->download("{$safeName}-{$invoiceFormat}-invoice.pdf");
     }
 
     public function exportAllStudentsLedgersPdf(Request $request)

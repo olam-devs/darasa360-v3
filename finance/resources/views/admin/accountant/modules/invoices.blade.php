@@ -29,6 +29,15 @@
                     style="text-transform: uppercase;">
             </div>
 
+            <div class="mb-5">
+                <label for="invoiceFormat" class="block text-sm font-medium text-slate-700 mb-1">Invoice format</label>
+                <select id="invoiceFormat" class="w-full rounded-lg border border-slate-200 px-4 py-2 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200">
+                    <option value="accountant" selected>Accountant invoice (detailed)</option>
+                    <option value="parent">Parent invoice (required amounts)</option>
+                </select>
+                <p class="mt-1 text-xs text-slate-500">Parent invoices show required amounts for each fee item, with payment totals at the bottom.</p>
+            </div>
+
             <div class="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <button type="button" onclick="showAllStudentsInvoices()" class="rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700">
                     Download all students
@@ -121,12 +130,16 @@
             }
         }
 
+        function getInvoiceFormat() {
+            return encodeURIComponent(document.getElementById('invoiceFormat').value);
+        }
+
         function getInvoiceHeading() {
             return encodeURIComponent((document.getElementById('invoiceHeadingInput').value.trim() || 'INVOICE:').toUpperCase());
         }
 
         function showAllStudentsInvoices() {
-            const url = `${INVOICE_PDF_BASE}/all-students/pdf?heading=${getInvoiceHeading()}`;
+            const url = `${INVOICE_PDF_BASE}/all-students/pdf?heading=${getInvoiceHeading()}&format=${getInvoiceFormat()}`;
             const newWindow = window.open(url, '_blank');
             if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
                 alert('Pop-up blocked. Allow pop-ups for this site to download invoices.');
@@ -182,12 +195,12 @@
             const heading = getInvoiceHeading();
             let url;
             if (selectedClasses.length === allClasses.length) {
-                url = `${INVOICE_PDF_BASE}/all-students/pdf?heading=${heading}`;
+                url = `${INVOICE_PDF_BASE}/all-students/pdf?heading=${heading}&format=${getInvoiceFormat()}`;
             } else if (selectedClasses.length === 1) {
-                url = `${INVOICE_PDF_BASE}/all-students/pdf?class=${encodeURIComponent(selectedClasses[0])}&heading=${heading}`;
+                url = `${INVOICE_PDF_BASE}/all-students/pdf?class=${encodeURIComponent(selectedClasses[0])}&heading=${heading}&format=${getInvoiceFormat()}`;
             } else {
                 const classesParam = selectedClasses.map(c => `classes[]=${encodeURIComponent(c)}`).join('&');
-                url = `${INVOICE_PDF_BASE}/all-students/pdf?${classesParam}&heading=${heading}`;
+                url = `${INVOICE_PDF_BASE}/all-students/pdf?${classesParam}&heading=${heading}&format=${getInvoiceFormat()}`;
             }
 
             const newWindow = window.open(url, '_blank');
@@ -234,7 +247,7 @@
                 alert('Please search and select a student first.');
                 return;
             }
-            const url = `${INVOICE_PDF_BASE}/student/${selectedStudentId}/pdf?heading=${getInvoiceHeading()}`;
+            const url = `${INVOICE_PDF_BASE}/student/${selectedStudentId}/pdf?heading=${getInvoiceHeading()}&format=${getInvoiceFormat()}`;
             const newWindow = window.open(url, '_blank');
             if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
                 alert('Pop-up blocked. Allow pop-ups for this site to download invoices.');

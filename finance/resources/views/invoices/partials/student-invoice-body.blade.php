@@ -29,7 +29,7 @@
 </div>
 @endif
 
-@php $useQuarterFormat = isset($invoiceData['use_quarter_format']) && $invoiceData['use_quarter_format']; @endphp
+@php $parentInvoice = ($invoiceFormat ?? 'accountant') === 'parent'; $useQuarterFormat = isset($invoiceData['use_quarter_format']) && $invoiceData['use_quarter_format']; @endphp
 
 @if($useQuarterFormat)
 {{-- ── QUARTER-BASED INVOICE ─────────────────────────────── --}}
@@ -59,12 +59,12 @@
             $showTotal = $qCount > 1;           // hide Total column when only 1 quarter
             $qW       = 16;                     // fixed per-quarter column width %
             $totalW   = $showTotal ? 12 : 0;
-            $feeItemW = max(20, 100 - 9 - $totalW - ($qCount * $qW));
+            $feeItemW = max(20, 100 - ($parentInvoice ? 0 : 9) - $totalW - ($qCount * $qW));
         @endphp
         <table class="fees-table" style="margin-top: 0; table-layout: fixed; width: 100%;">
             <colgroup>
                 <col style="width: {{ $feeItemW }}%;">
-                <col style="width: 9%;">
+                @unless($parentInvoice)<col style="width: 9%;">@endunless
                 @foreach($yq as $q)
                     <col style="width: {{ $qW }}%;">
                 @endforeach
@@ -73,7 +73,7 @@
             <thead>
                 <tr>
                     <th style="text-align: left;">FEE ITEM</th>
-                    <th style="text-align: center;">STATUS</th>
+                    @unless($parentInvoice)<th style="text-align: center;">STATUS</th>@endunless
                     @foreach($yq as $q)
                         <th style="text-align: right;">{{ $ql[$q] ?? 'Q'.$q }}</th>
                     @endforeach
@@ -84,13 +84,13 @@
                 @foreach($yearData['particulars'] as $part)
                 {{-- Row 1: Required — name cell spans 2 rows --}}
                 <tr>
-                    <td rowspan="2" style="font-weight:bold; vertical-align:middle; border-right:2px solid #ddd;">
+                    <td rowspan="{{ $parentInvoice ? 1 : 2 }}" style="font-weight:bold; vertical-align:middle; border-right:2px solid #ddd;">
                         {{ $part['name'] }}
                         @if(!empty($part['has_scholarship']))
                             <span class="scholarship-badge"> {{ $part['scholarship_type'] === 'full' ? 'FULL' : 'PARTIAL' }}</span>
                         @endif
                     </td>
-                    <td style="text-align:center; font-size:7.5px; color:#555; background:#f5f5f5;">Required</td>
+                    @unless($parentInvoice)<td style="text-align:center; font-size:7.5px; color:#555; background:#f5f5f5;">Required</td>@endunless
                     @foreach($yq as $q)
                         <td class="amount">
                             @if(isset($part['quarters'][$q]))
@@ -107,6 +107,7 @@
                     @endforeach
                     @if($showTotal)<td class="amount">TSh {{ number_format($part['total_charged'], 2) }}</td>@endif
                 </tr>
+                @unless($parentInvoice)
                 {{-- Row 2: Paid --}}
                 <tr class="paid-row">
                     <td style="text-align:center; font-size:7.5px; color:#444; background:#f1f8e9;">Paid</td>
@@ -121,18 +122,19 @@
                     @endforeach
                     @if($showTotal)<td class="amount">TSh {{ number_format($part['total_paid'], 2) }}</td>@endif
                 </tr>
+                @endunless
                 @endforeach
 
                 {{-- Quarter totals section — pale colours, dark text --}}
                 <tr class="total-row" style="background-color:#bbdefb; color:#0d47a1;">
-                    <td colspan="2"><strong>Total Required</strong></td>
+                    <td colspan="{{ $parentInvoice ? 1 : 2 }}"><strong>Total Required</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['charged'] ?? 0, 2) }}</td>
                     @endforeach
                     @if($showTotal)<td class="amount">TSh {{ number_format($yearData['subtotal_fees'], 2) }}</td>@endif
                 </tr>
                 <tr class="total-row" style="background-color:#c8e6c9; color:#1b5e20;">
-                    <td colspan="2"><strong>Total Paid</strong></td>
+                    <td colspan="{{ $parentInvoice ? 1 : 2 }}"><strong>Total Paid</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['paid'] ?? 0, 2) }}</td>
                     @endforeach
@@ -140,7 +142,7 @@
                 </tr>
                 @php $balColor = $yearData['subtotal_balance'] > 0 ? '#ffcdd2' : '#c8e6c9'; $balText = $yearData['subtotal_balance'] > 0 ? '#b71c1c' : '#1b5e20'; @endphp
                 <tr class="total-row" style="background-color:{{ $balColor }}; color:{{ $balText }};">
-                    <td colspan="2"><strong>Invoice Amount</strong></td>
+                    <td colspan="{{ $parentInvoice ? 1 : 2 }}"><strong>Invoice Amount</strong></td>
                     @foreach($yq as $q)
                         <td class="amount">TSh {{ number_format($yearData['quarter_totals'][$q]['remaining'] ?? 0, 2) }}</td>
                     @endforeach
@@ -157,7 +159,7 @@
         <tbody>
             @php $grandShowTotal = count($activeQuarters) > 1; @endphp
             <tr class="total-row" style="background-color:#bbdefb; color:#0d47a1;">
-                <td colspan="2"><strong>GRAND TOTAL (All Years)</strong></td>
+                <td colspan="{{ $parentInvoice ? 1 : 2 }}"><strong>GRAND TOTAL (All Years)</strong></td>
                 @foreach($activeQuarters as $q)
                     @php
                         $grandCharged = collect($invoiceData['items_by_year'])->sum(fn($y) => $y['quarter_totals'][$q]['charged'] ?? 0);
@@ -172,11 +174,13 @@
 @else
     <table class="fees-table">
         <tbody>
-            <tr><td colspan="{{ 2 + count($activeQuarters) }}" style="text-align: center; padding: 15px;">No fees assigned yet</td></tr>
+            <tr><td colspan="{{ ($parentInvoice ? 1 : 2) + count($activeQuarters) }}" style="text-align: center; padding: 15px;">No fees assigned yet</td></tr>
         </tbody>
     </table>
 @endif
 
+@elseif($parentInvoice)
+    @include('invoices.partials.parent-legacy-body')
 @else
 {{-- ── LEGACY INVOICE (no quarters) ─────────────────────── --}}
 @if(isset($invoiceData['items_by_year']) && count($invoiceData['items_by_year']) > 0)
