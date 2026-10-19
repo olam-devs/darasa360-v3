@@ -2,10 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Book;
+use App\Models\BookFeeCategory;
 use App\Models\Central\ActivityLog;
+use App\Models\Central\School;
 use App\Models\Central\SchoolAccountant;
+use App\Models\ExpenseCategory;
+use App\Models\ExpenseCategoryPlan;
+use App\Models\ExpenseLineItem;
+use App\Models\ExpenseSubmission;
+use App\Models\SchoolClass;
 use App\Models\SchoolSetting;
 use App\Services\AccountantKpiService;
+use App\Services\ExpenseReviewService;
+use Illuminate\Support\Str;
 use App\Services\ManagementQuarterAnalytics;
 use App\Services\SchoolManagementAccess;
 use App\Services\TenantDatabaseManager;
@@ -36,12 +46,41 @@ class SchoolManagementController extends Controller
         return compact('from','to','year','quarter','periodMode','periodLabel');
     }
 
+    public static function shortName(string $name): string
+    {
+        return Str::title(Str::afterLast($name, ' - '));
+    }
+
+    /** Sidebar data: every granted school with its pending-approval count. */
+    private function nav(Request $request, ?int $selected = null): array
+    {
+        $schools = [];
+        foreach ($this->access->schools($request->user()) as $school) {
+            try {
+                $pending = app(TenantDatabaseManager::class)->executeForSchool($school, fn () => DB::connection('tenant')->table('expense_submissions')->where('status', 'pending')->count());
+            } catch (\Throwable $e) {
+                report($e);
+                $pending = 0;
+            }
+            $schools[] = ['id' => $school->id, 'name' => $school->name, 'short' => self::shortName($school->name), 'pending' => $pending];
+        }
+        return ['schools' => $schools, 'selected' => $selected, 'pending' => array_sum(array_column($schools, 'pending'))];
+    }
+
+    private function selectedSchool(Request $request): ?School
+    {
+        $request->validate(['school' => 'nullable|integer|min:1']);
+        return $request->filled('school') ? $this->access->school($request->user(), (int)$request->input('school')) : null;
+    }
+
     public function index(Request $request)
     {
         abort_if($this->access->grants($request->user())->isEmpty(), 403);
         $settings = (object)['school_name'=>'School management · all schools','logo_path'=>null];
         ['from'=>$from,'to'=>$to,'year'=>$year,'quarter'=>$quarter,'periodMode'=>$periodMode,'periodLabel'=>$periodLabel] = $this->period($request);
-        $schools = $this->access->schools($request->user());
+        $selectedSchool = $this->selectedSchool($request);
+        $schools = $selectedSchool ? collect([$selectedSchool]) : $this->access->schools($request->user());
+        $nav = $this->nav($request, $selectedSchool?->id);
         $yearOptions = collect([$year,now('Africa/Dar_es_Salaam')->year]);
         $snapshots = []; $kpiRows = [];
         foreach ($schools as $school) {
@@ -88,7 +127,111 @@ class SchoolManagementController extends Controller
         $yearOptions = $yearOptions->unique()->sortDesc()->values();
         $quarterLabels = ManagementQuarterAnalytics::LABELS;
         $metrics = AccountantKpiService::METRICS;
-        return view('admin.accountant.management.overview', compact('settings','schools','snapshots','kpiRows','from','to','metrics','year','quarter','periodMode','periodLabel','yearOptions','quarterLabels'));
+        return view('admin.accountant.management.overview', compact('settings','schools','snapshots','kpiRows','from','to','metrics','year','quarter','periodMode','periodLabel','yearOptions','quarterLabels','nav','selectedSchool'));
+    }
+
+    /** One pending submission, reviewed inside the portal without switching accounts. */
+    public function reviewExpense(Request $request, int $schoolId, int $submissionId)
+    {
+        $school = $this->access->school($request->user(), $schoolId);
+        $nav = $this->nav($request, $school->id);
+        $html = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($school, $submissionId, $nav) {
+            $submission = ExpenseSubmission::with(['lineItems.item', 'category', 'book'])->findOrFail($submissionId);
+            $books = Book::where('is_active', true)->orderBy('name')->get()
+                ->map(fn ($b) => ['id' => $b->id, 'name' => $b->name, 'balance' => (float)$b->getCashViewBalance(),
+                    'fees' => BookFeeCategory::where('book_id', $b->id)->where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()]);
+            $categories = ExpenseCategory::where('status', 'approved')->orderBy('name')->get(['id', 'name']);
+            $budget = (float)ExpenseCategoryPlan::where('expense_category_id', $submission->expense_category_id)
+                ->where('academic_year_id', $submission->academic_year_id)->sum('expected_amount');
+            $spent = (float)ExpenseLineItem::where('status', 'approved')->whereHas('submission', fn ($q) => $q
+                ->where('expense_category_id', $submission->expense_category_id)->where('academic_year_id', $submission->academic_year_id))->sum('line_total');
+            $submitter = SchoolAccountant::find($submission->submitted_by)?->name ?? 'Unknown';
+            $decider = $submission->decided_by ? (SchoolAccountant::find($submission->decided_by)?->name ?? 'Unknown') : null;
+            // Rendered here so every lazy lookup still reads this school's database.
+            return view('admin.accountant.management.expense-review', compact('school', 'submission', 'books', 'categories', 'budget', 'spent', 'submitter', 'decider', 'nav')
+                + ['activeSection' => 'approvals'])->render();
+        });
+        return response($html);
+    }
+
+    public function decideExpense(Request $request, int $schoolId, int $submissionId)
+    {
+        $school = $this->access->school($request->user(), $schoolId);
+        $grant = $this->access->grants($request->user())->firstWhere('school_id', $school->id);
+        $manager = $this->access->manager($request->user());
+        try {
+            $decision = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($request, $submissionId, $grant) {
+                // Validation runs against this school's database (exists rules use the tenant connection).
+                $validated = $request->validate([
+                    'decision_note' => 'required|string|max:2000',
+                    'overall_decision' => 'required|in:approve,deny',
+                    'expense_category_id' => 'nullable|exists:expense_categories,id',
+                    'book_id' => 'nullable|exists:books,id',
+                    'book_fee_category_id' => 'nullable|exists:book_fee_categories,id',
+                    'line_items' => 'required|array|min:1',
+                    'line_items.*.id' => 'required|exists:expense_line_items,id',
+                    'line_items.*.status' => 'required|in:approved,denied',
+                    'line_items.*.quantity' => 'nullable|numeric|min:0.001',
+                    'line_items.*.unit_price' => 'nullable|numeric|min:0',
+                    'line_items.*.denial_reason' => 'nullable|string|max:500',
+                ]);
+                if ($validated['overall_decision'] === 'deny') {
+                    // Denying the whole request keeps the submitted amounts and denies every item.
+                    $validated['line_items'] = array_map(fn ($line) => ['id' => $line['id'], 'status' => 'denied',
+                        'denial_reason' => ($line['denial_reason'] ?? null) ?: $validated['decision_note']], $validated['line_items']);
+                }
+                // Decisions are recorded under Ritha's own account in that school, as before.
+                app(ExpenseReviewService::class)->decide($submissionId, $validated, (int)$grant->school_accountant_id);
+                $s = ExpenseSubmission::findOrFail($submissionId);
+                return ['status' => $s->status, 'number' => $s->submission_number, 'total' => (float)$s->total_amount];
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+        ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
+            'action' => 'management_expense_'.$decision['status'],
+            'description' => "{$decision['number']} {$decision['status']} from the management portal (TSh ".number_format($decision['total'], 2).').',
+            'ip_address' => $request->ip()]);
+        $label = ['approved' => 'approved', 'partially_approved' => 'partly approved', 'denied' => 'denied'][$decision['status']] ?? $decision['status'];
+        return redirect()->to(route('accountant.management', ['school' => $school->id]).'#approvals')
+            ->with('success', "{$decision['number']} {$label} for ".self::shortName($school->name).'.');
+    }
+
+    /** Fee statements (invoices) for one school, generated without switching accounts. */
+    public function invoices(Request $request)
+    {
+        abort_if($this->access->grants($request->user())->isEmpty(), 403);
+        $selected = $this->selectedSchool($request) ?? $this->access->schools($request->user())->first();
+        $nav = $this->nav($request, $selected->id);
+        $data = app(TenantDatabaseManager::class)->executeForSchool($selected, function () {
+            $db = DB::connection('tenant');
+            return [
+                'classes' => SchoolClass::where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray(),
+                'students' => $db->table('students')->where('status', 'active')->orderBy('name')->get(['id', 'name', 'student_reg_no', 'class'])->toArray(),
+                'balances' => $db->table('particular_student')->selectRaw('student_id, SUM(GREATEST(0, sales-credit)) as balance')->groupBy('student_id')->pluck('balance', 'student_id')->toArray(),
+            ];
+        });
+        return view('admin.accountant.management.invoices', $data + ['school' => $selected, 'nav' => $nav, 'activeSection' => 'invoices']);
+    }
+
+    public function downloadInvoices(Request $request, int $schoolId)
+    {
+        $school = $this->access->school($request->user(), $schoolId);
+        $request->validate(['scope' => 'required|in:all,class,student', 'class' => 'required_if:scope,class|nullable|integer',
+            'student' => 'required_if:scope,student|nullable|integer', 'format' => 'nullable|in:accountant,parent',
+            'heading' => 'nullable|string|max:80', 'preview' => 'nullable|in:1']);
+        return app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($request) {
+            $ledger = app(LedgerController::class);
+            if ($request->input('scope') === 'student') {
+                $response = $ledger->exportStudentInvoicePdf((int)$request->input('student'), $request);
+                // A preview is a view; render it while this school's database is selected.
+                return $response instanceof \Illuminate\Contracts\View\View ? response($response->render()) : $response;
+            }
+            if ($request->input('scope') === 'all') {
+                $request->query->remove('class');
+            }
+            return $ledger->exportAllStudentsInvoicesPdf($request);
+        });
     }
 
     public function mine(Request $request)

@@ -21,7 +21,7 @@
             $charged=$rows->sum('required'); $settled=$rows->sum('paid'); $hasData=$rows->sum('assignments')>0;
         @endphp
         <tr data-quarter="{{ $number }}" @if($number===$quarter) class="management-selected-quarter" @endif>
-            <td><a href="{{ route('accountant.management',['year'=>$year,'quarter'=>$number]) }}#quarters" class="management-quarter-link">{{ $label }}</a></td>
+            <td><a href="{{ route('accountant.management',array_filter(['year'=>$year,'quarter'=>$number,'school'=>$selectedSchool?->id ?? null])) }}#quarters" class="management-quarter-link">{{ $label }}</a></td>
             <td class="number">{{ $hasData?number_format($charged,0):'—' }}</td><td class="number">{{ $hasData?number_format($settled,0):'—' }}</td><td class="number">{{ $hasData?number_format($rows->sum('outstanding'),0):'—' }}</td>
             <td class="number">{{ $charged>0?number_format(100*$settled/$charged,1).'%':($hasData?'No amount due':'No assignments') }}</td><td>{{ $rows->where('assignments','>',0)->count() }} / {{ $available->count() }}</td>
         </tr>

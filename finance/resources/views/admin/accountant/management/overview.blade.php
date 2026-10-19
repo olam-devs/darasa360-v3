@@ -1,9 +1,6 @@
-@extends('layouts.accountant')
+@extends('layouts.management')
 @section('title','School management — Darasa Finance')
-@section('page_title','School management')
-@section('topbar_actions')
-<form method="post" action="{{ route('accountant.management.account-settings') }}">@csrf<button class="text-sm font-semibold text-blue-700" type="submit">Account settings</button></form>
-@endsection
+@section('page_title', $selectedSchool ? \App\Http\Controllers\SchoolManagementController::shortName($selectedSchool->name) : 'All schools')
 @section('content')
 @include('admin.accountant.management.styles')
 @php
@@ -14,9 +11,16 @@
     $accounts=collect($kpiRows)->unique('accountant_id')->values();
 @endphp
 <div class="management-page">
+    @if($selectedSchool)
+    <p class="management-muted" style="text-transform:uppercase;letter-spacing:1.5px;font-size:11px;font-weight:700;">School management · one school</p>
+    <h2>{{ $selectedSchool->name }}</h2>
+    <p class="management-muted">Figures for this school only. <a href="{{ route('accountant.management') }}#overview" style="color:#1d4ed8;font-weight:600;">Compare all schools</a></p>
+    @else
     <p class="management-muted" style="text-transform:uppercase;letter-spacing:1.5px;font-size:11px;font-weight:700;">School management · {{ count($snapshots) }} schools</p>
     <h2>School overview</h2>
-    <p class="management-muted">Welcome, {{ auth()->user()->name }}. Compare results, see what needs attention and open the right school to act.</p>
+    <p class="management-muted">Welcome, {{ auth()->user()->name }}. Compare results, see what needs attention and open any school for its own figures.</p>
+    @endif
+    @if(session('error'))<div class="management-notice">{{ session('error') }}</div>@endif
     @include('admin.accountant.management.period')
     @if($from <= now('Africa/Dar_es_Salaam')->toDateString() && $to >= now('Africa/Dar_es_Salaam')->toDateString())
     <p class="management-muted">This period is still in progress. Previous-period figures cover the full {{ $periodMode==='quarter'?'previous quarter':'selected duration' }}.</p>
@@ -41,7 +45,7 @@
     <div class="management-grid" id="management-schools">
     @foreach($snapshots as $school)
         <section class="management-card" data-school="{{ $school['id'] }}">
-            <h3 title="{{ $school['name'] }}">{{ \Illuminate\Support\Str::title(\Illuminate\Support\Str::afterLast($school['name'],' - ')) }}</h3>
+            <h3 title="{{ $school['name'] }}">@if($selectedSchool){{ \Illuminate\Support\Str::title(\Illuminate\Support\Str::afterLast($school['name'],' - ')) }}@else<a href="{{ route('accountant.management',['school'=>$school['id']]) }}#overview" style="color:#1d4ed8;">{{ \Illuminate\Support\Str::title(\Illuminate\Support\Str::afterLast($school['name'],' - ')) }} <span style="font-size:13px;">→</span></a>@endif</h3>
             @if($school['error'])
                 <p class="management-error" style="margin-top:14px;">School data is temporarily unavailable. Refresh to retry.</p>
             @else
@@ -66,14 +70,21 @@
                 <div class="management-school-line"><span>Active students / expenses to review</span><strong>{{ $school['students'] }} / {{ $school['pending'] }}</strong></div>
             @endif
             <div class="management-links">
-            @foreach(['dashboard'=>'Open school','fee-entry'=>'Fee entry','expenses'=>'Expenses / review','overdue'=>'Overdue fees','ledgers'=>'Ledgers','invoices'=>'Invoices'] as $destination=>$label)
-                <form method="post" action="{{ route('accountant.management.enter',$school['id']) }}">@csrf<input type="hidden" name="page" value="{{ $destination }}"><button type="submit">{{ $label }}</button></form>
-            @endforeach
+                <a href="{{ route('accountant.management',['school'=>$school['id']]) }}#approvals" class="management-link-primary">Approvals ({{ $school['pending'] ?? 0 }})</a>
+                <a href="{{ route('accountant.management.invoices',['school'=>$school['id']]) }}" class="management-link-primary">Invoices</a>
             </div>
+            <details class="management-work-inside">
+                <summary>Work inside this school's accounts</summary>
+                <div class="management-links">
+                @foreach(['dashboard'=>'Dashboard','fee-entry'=>'Fee entry','overdue'=>'Overdue fees','ledgers'=>'Ledgers'] as $destination=>$label)
+                    <form method="post" action="{{ route('accountant.management.enter',$school['id']) }}">@csrf<input type="hidden" name="page" value="{{ $destination }}"><button type="submit">{{ $label }}</button></form>
+                @endforeach
+                </div>
+            </details>
         </section>
     @endforeach
     </div>
-    <p class="management-muted" style="margin-bottom:20px;">Collections and expenses use the selected transaction dates. Outstanding fees, overdue fees, advances, book balances and pending reviews are current positions. Opening a school switches your active school in this browser; return through School management to choose another.</p>
+    <p class="management-muted" style="margin-bottom:20px;">Collections and expenses use the selected transaction dates. Outstanding fees, overdue fees, advances, book balances and pending reviews are current positions. Book balances show money recorded in the system since each book was opened; they match the bank only after the books are reconciled. "Work inside this school's accounts" switches your active school in this browser; return through School management to choose another.</p>
 
     <div class="management-pair">
         <section class="management-panel">
@@ -102,7 +113,7 @@
     <div id="panel-approvals" role="tabpanel" aria-labelledby="tab-approvals" data-management-panel="approvals" hidden>
         <section class="management-panel">
             <h3>Expenses waiting for your approval</h3>
-            <p class="management-muted" style="margin:8px 0 18px;">All three schools in one list, grouped by school. Review opens the correct school's approval queue. Check the items and book before approving or denying. This queue shows current pending submissions, regardless of the analytics period.</p>
+            <p class="management-muted" style="margin:8px 0 18px;">{{ $selectedSchool ? 'Pending expenses for this school.' : 'All schools in one list, grouped by school.' }} Review opens the expense here, where you check the items and the book before approving or denying. This queue shows current pending submissions, regardless of the analytics period.</p>
             <div class="management-scroll"><table class="management-table" id="management-approval-table">
                 <thead><tr><th>School / submitted</th><th>Expense</th><th class="number">Requested (TSh)</th><th>Action</th></tr></thead>
                 <tbody>
@@ -112,7 +123,7 @@
                         <td>{{ \Illuminate\Support\Str::title(\Illuminate\Support\Str::afterLast($school['name'],' - ')) }}<div class="management-muted">{{ \Carbon\Carbon::parse($expense->created_at)->format('d M Y') }}</div></td>
                         <td><strong>{{ $expense->title ?: $expense->submission_number }}</strong><div class="management-muted">{{ $expense->category_name }} · {{ $expense->submission_number }}</div></td>
                         <td class="number">{{ number_format($expense->total_amount,2) }}</td>
-                        <td><form method="post" action="{{ route('accountant.management.enter',$school['id']) }}">@csrf<input type="hidden" name="page" value="expenses"><input type="hidden" name="submission_id" value="{{ $expense->id }}"><button class="management-primary" type="submit">Review</button></form></td>
+                        <td><a class="management-primary" style="display:inline-block;" href="{{ route('accountant.management.expense',[$school['id'],$expense->id]) }}">Review</a></td>
                     </tr>
                     @endforeach
                     @if($school['pending']>100)<tr><td colspan="4">{{ $school['name'] }}: showing the oldest 100. Open the school's Expenses page for the full queue.</td></tr>@endif
@@ -153,9 +164,11 @@
         if(!['overview','quarters','approvals','targets'].includes(name)) name='overview';
         document.querySelectorAll('[data-management-panel]').forEach(p=>p.hidden=p.dataset.managementPanel!==name);
         document.querySelectorAll('[data-management-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.managementTab===name)));
+        document.querySelectorAll('.mgmt-nav a[data-section]').forEach(a=>{ if(a.dataset.section===name) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
         history.replaceState(null,'','#'+name);
     }
     document.querySelectorAll('[data-management-tab]').forEach(b=>b.addEventListener('click',()=>showManagementTab(b.dataset.managementTab)));
+    window.addEventListener('hashchange',()=>showManagementTab(location.hash.slice(1)));
     showManagementTab(location.hash.slice(1)||'overview');
     const periodMode=document.getElementById('management-period-mode');
     function toggleCustomDates() {
