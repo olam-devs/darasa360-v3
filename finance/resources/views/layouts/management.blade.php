@@ -18,47 +18,56 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         html, body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-        .mgmt-nav a { position:relative; display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:8px; font-size:14px; font-weight:500; color:#44403c; }
-        .mgmt-nav a i { color:#a8a29e; }
-        .mgmt-nav a:hover { background:#f5f5f4; color:#1c1917; }
-        .mgmt-nav a[aria-current="page"] { background:#f5f5f4; color:#1c1917; font-weight:650; }
-        .mgmt-nav a[aria-current="page"]::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:3px; background:#1c1917; }
-        .mgmt-nav a[aria-current="page"] i { color:#1c1917; }
-        .mgmt-nav .mgmt-count { margin-left:auto; background:#e7e5e4; color:#1c1917; border-radius:999px; font-size:11px; font-weight:700; padding:1px 8px; }
-        .mgmt-nav h4 { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#a8a29e; font-weight:700; margin:18px 12px 6px; }
+        #mgmt-sidebar { background: linear-gradient(180deg, #ecfdf5 0%, #f7fdf9 45%, #ffffff 100%); }
+        .mgmt-brand { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff;
+            background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 10px rgba(4,120,87,.25); }
+        .mgmt-nav a { position:relative; display:flex; align-items:center; gap:10px; padding:7px 10px; margin:2px 0; border-radius:12px; font-size:14px; font-weight:500; color:#334155; transition: background .15s, box-shadow .15s; }
+        .mgmt-nav a:hover { background:rgba(255,255,255,.85); }
+        .mgmt-nav a[aria-current="page"] { background:#fff; color:#065f46; font-weight:650; box-shadow: 0 1px 2px rgba(15,23,42,.06), 0 4px 12px rgba(4,120,87,.10); }
+        .mgmt-nav a[aria-current="page"]::before { content:''; position:absolute; left:-3px; top:10px; bottom:10px; width:4px; border-radius:4px; background:#10b981; }
+        .mgmt-ico { width:28px; height:28px; flex:none; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:13px; }
+        .mgmt-ico.green { background:#d1fae5; color:#047857; } .mgmt-ico.violet { background:#ede9fe; color:#6d28d9; } .mgmt-ico.amber { background:#fef3c7; color:#b45309; }
+        .mgmt-ico.rose { background:#ffe4e6; color:#be123c; } .mgmt-ico.teal { background:#ccfbf1; color:#0f766e; } .mgmt-ico.orange { background:#ffedd5; color:#c2410c; } .mgmt-ico.slate { background:#f1f5f9; color:#475569; }
+        .mgmt-dot { width:10px; height:10px; border-radius:50%; flex:none; margin:0 9px 0 9px; box-shadow: 0 0 0 3px rgba(255,255,255,.9); }
+        .mgmt-nav .mgmt-count { margin-left:auto; background:#f59e0b; color:#fff; border-radius:999px; font-size:11px; font-weight:700; padding:1px 8px; box-shadow: 0 1px 3px rgba(180,83,9,.3); }
+        .mgmt-nav h4 { font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#059669; font-weight:700; margin:20px 12px 6px; }
     </style>
     @stack('head')
 </head>
-<body class="min-h-screen bg-stone-50 text-stone-900 antialiased">
-    <aside id="mgmt-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 -translate-x-full overflow-y-auto border-r border-stone-200 bg-white px-3 py-5 transition-transform lg:translate-x-0">
-        <div class="px-3 pb-4 border-b border-stone-200">
-            <p class="text-xs font-semibold uppercase tracking-widest text-stone-400">Darasa Finance</p>
-            <p class="mt-1 text-base font-bold text-stone-900">School management</p>
-            <p class="text-xs text-stone-500">{{ auth()->user()->name }}</p>
+<body class="min-h-screen bg-slate-50 text-slate-900 antialiased">
+    <aside id="mgmt-sidebar" class="fixed inset-y-0 left-0 z-50 w-64 -translate-x-full overflow-y-auto border-r border-emerald-100 px-3 py-5 transition-transform lg:translate-x-0">
+        <div class="flex items-center gap-3 px-2 pb-4 border-b border-emerald-100">
+            <div class="mgmt-brand">{{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</div>
+            <div class="min-w-0">
+                <p class="text-[11px] font-semibold uppercase tracking-widest text-emerald-600">Darasa Finance</p>
+                <p class="text-[15px] font-bold leading-tight text-slate-900">School management</p>
+                <p class="truncate text-xs text-slate-500">{{ auth()->user()->name }}</p>
+            </div>
         </div>
+        @php $navPending = $selected ? (collect($nav['schools'])->firstWhere('id', $selected)['pending'] ?? 0) : $nav['pending']; @endphp
         <nav class="mgmt-nav mt-3" aria-label="School management">
-            <a href="{{ route('accountant.management', $schoolQuery) }}#overview" data-section="overview" @if($active==='overview') aria-current="page" @endif><i class="fa-solid fa-chart-pie w-4"></i> Overview</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#analytics" data-section="analytics" @if($active==='analytics') aria-current="page" @endif><i class="fa-solid fa-chart-column w-4"></i> Analytics</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#books" data-section="books" @if($active==='books') aria-current="page" @endif><i class="fa-solid fa-building-columns w-4"></i> Books</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#quarters" data-section="quarters" @if($active==='quarters') aria-current="page" @endif><i class="fa-solid fa-calendar-days w-4"></i> Quarter analytics</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#approvals" data-section="approvals" @if($active==='approvals') aria-current="page" @endif><i class="fa-solid fa-file-circle-check w-4"></i> Expense approvals
-                @php $navPending = $selected ? (collect($nav['schools'])->firstWhere('id', $selected)['pending'] ?? 0) : $nav['pending']; @endphp
+            <a href="{{ route('accountant.management', $schoolQuery) }}#overview" data-section="overview" @if($active==='overview') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-chart-pie"></i></span> Overview</a>
+            <a href="{{ route('accountant.management', $schoolQuery) }}#analytics" data-section="analytics" @if($active==='analytics') aria-current="page" @endif><span class="mgmt-ico violet"><i class="fa-solid fa-chart-column"></i></span> Analytics</a>
+            <a href="{{ route('accountant.management', $schoolQuery) }}#books" data-section="books" @if($active==='books') aria-current="page" @endif><span class="mgmt-ico teal"><i class="fa-solid fa-building-columns"></i></span> Books</a>
+            <a href="{{ route('accountant.management', $schoolQuery) }}#quarters" data-section="quarters" @if($active==='quarters') aria-current="page" @endif><span class="mgmt-ico orange"><i class="fa-solid fa-calendar-days"></i></span> Quarter analytics</a>
+            <a href="{{ route('accountant.management', $schoolQuery) }}#approvals" data-section="approvals" @if($active==='approvals') aria-current="page" @endif><span class="mgmt-ico amber"><i class="fa-solid fa-file-circle-check"></i></span> Expense approvals
                 @if($navPending > 0)<span class="mgmt-count">{{ $navPending }}</span>@endif</a>
-            <a href="{{ route('accountant.management.invoices', $schoolQuery) }}" @if($active==='invoices') aria-current="page" @endif><i class="fa-solid fa-file-invoice w-4"></i> Invoices</a>
-            <a href="{{ route('accountant.management', $schoolQuery) }}#targets" data-section="targets" @if($active==='targets') aria-current="page" @endif><i class="fa-solid fa-bullseye w-4"></i> Accountant targets</a>
+            <a href="{{ route('accountant.management.invoices', $schoolQuery) }}" @if($active==='invoices') aria-current="page" @endif><span class="mgmt-ico rose"><i class="fa-solid fa-file-invoice"></i></span> Invoices</a>
+            <a href="{{ route('accountant.management', $schoolQuery) }}#targets" data-section="targets" @if($active==='targets') aria-current="page" @endif><span class="mgmt-ico slate"><i class="fa-solid fa-bullseye"></i></span> Accountant targets</a>
 
             <h4>Schools</h4>
-            <a href="{{ route('accountant.management') }}#overview" @if(!$selected && $active!=='invoices') aria-current="page" @endif><i class="fa-solid fa-layer-group w-4"></i> All schools</a>
-            @foreach($nav['schools'] as $s)
+            <a href="{{ route('accountant.management') }}#overview" @if(!$selected && $active!=='invoices') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-layer-group"></i></span> All schools</a>
+            @php $schoolDots = ['#2a78d6', '#eb6834', '#1baf7a']; @endphp
+            @foreach($nav['schools'] as $i => $s)
                 <a href="{{ route('accountant.management', ['school' => $s['id']]) }}#overview" @if($selected === $s['id']) aria-current="page" @endif title="{{ $s['name'] }}">
-                    <i class="fa-solid fa-school w-4"></i> {{ $s['short'] }}
+                    <span class="mgmt-dot" style="background:{{ $schoolDots[$i % 3] }};"></span> {{ $s['short'] }}
                     @if($s['pending'] > 0)<span class="mgmt-count" title="Expenses waiting for approval">{{ $s['pending'] }}</span>@endif
                 </a>
             @endforeach
         </nav>
-        <div class="mt-6 border-t border-stone-200 pt-4">
+        <div class="mt-6 border-t border-emerald-100 pt-4">
             <form method="post" action="{{ route('accountant.management.account-settings') }}">@csrf
-                <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm text-stone-600 hover:bg-stone-100"><i class="fa-solid fa-user-gear w-4 text-stone-400"></i> Account settings</button>
+                <button type="submit" class="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm text-slate-600 hover:bg-white"><span class="mgmt-ico slate"><i class="fa-solid fa-user-gear"></i></span> Account settings</button>
             </form>
         </div>
     </aside>
@@ -72,7 +81,7 @@
                         <i class="fa-solid fa-bars"></i>
                     </button>
                     <div class="min-w-0">
-                        <p class="truncate text-xs font-medium text-stone-500">School management</p>
+                        <p class="truncate text-xs font-medium text-emerald-600">School management</p>
                         <h1 class="truncate text-sm font-semibold">@yield('page_title', 'Overview')</h1>
                     </div>
                 </div>
