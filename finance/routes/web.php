@@ -99,7 +99,11 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::post('/school-management/staff',[\App\Http\Controllers\SchoolManagementController::class, 'registerStaff'])->name('management.staff.register');
         Route::post('/school-management/staff/update', [\App\Http\Controllers\SchoolManagementController::class, 'updateStaff'])->name('management.staff.update');
         Route::post('/school-management/staff/move',[\App\Http\Controllers\SchoolManagementController::class, 'moveStaff'])->name('management.staff.move');
-        Route::get('/school-management/overdue', [\App\Http\Controllers\SchoolManagementController::class, 'overdue'])->name('management.overdue');
+        Route::get('/school-management/receipts', [\App\Http\Controllers\ReceiptCheckController::class, 'index'])->name('management.receipts');
+        Route::post('/school-management/receipts/confirm', [\App\Http\Controllers\ReceiptCheckController::class, 'confirm'])->name('management.receipts.confirm');
+        Route::post('/school-management/receipts/{groupId}/undo', [\App\Http\Controllers\ReceiptCheckController::class, 'undo'])->whereNumber('groupId')->name('management.receipts.undo');
+        Route::get('/school-management/bank-ledger', [\App\Http\Controllers\ReceiptCheckController::class, 'ledger'])->name('management.bank-ledger');
+        Route::get('/school-management/overdue',[\App\Http\Controllers\SchoolManagementController::class, 'overdue'])->name('management.overdue');
         Route::get('/school-management/advance', [\App\Http\Controllers\SchoolManagementController::class, 'advance'])->name('management.advance');
         Route::get('/school-management/invoices/bundle', [\App\Http\Controllers\SchoolManagementController::class, 'downloadInvoiceBundle'])->name('management.invoices.bundle');
         Route::get('/school-management/invoices',[\App\Http\Controllers\SchoolManagementController::class, 'invoices'])->name('management.invoices');

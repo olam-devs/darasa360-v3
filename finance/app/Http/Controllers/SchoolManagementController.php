@@ -31,7 +31,7 @@ class SchoolManagementController extends Controller
 {
     public function __construct(protected SchoolManagementAccess $access, protected AccountantKpiService $kpis) {}
 
-    private function period(Request $request): array
+    protected function period(Request $request): array
     {
         $request->validate(['from'=>'nullable|date_format:Y-m-d', 'to'=>'nullable|date_format:Y-m-d',
             'year'=>'nullable|integer|between:2000,2100','quarter'=>'nullable|integer|between:1,4',
@@ -62,7 +62,7 @@ class SchoolManagementController extends Controller
     }
 
     /** Sidebar data: every granted school with its pending-approval count. */
-    private function nav(Request $request, ?int $selected = null): array
+    protected function nav(Request $request, ?int $selected = null): array
     {
         $schools = [];
         foreach ($this->access->schools($request->user()) as $school) {
@@ -77,7 +77,7 @@ class SchoolManagementController extends Controller
         return ['schools' => $schools, 'selected' => $selected, 'pending' => array_sum(array_column($schools, 'pending'))];
     }
 
-    private function selectedSchool(Request $request): ?School
+    protected function selectedSchool(Request $request): ?School
     {
         $request->validate(['school' => 'nullable|integer|min:1']);
         return $request->filled('school') ? $this->access->school($request->user(), (int)$request->input('school')) : null;
@@ -258,7 +258,7 @@ class SchoolManagementController extends Controller
     }
 
     /** [year, quarter] that a date window mostly covers. */
-    private function homeQuarter(string $from, string $to): array
+    protected function homeQuarter(string $from, string $to): array
     {
         $best = [0, 0]; $bestDays = 0;
         for ($y = (int)substr($from, 0, 4); $y <= (int)substr($to, 0, 4); $y++) {

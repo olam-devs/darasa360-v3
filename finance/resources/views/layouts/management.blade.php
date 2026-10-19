@@ -59,7 +59,7 @@
             $groups = [
                 'reports' => ['Reports', 'fa-chart-line', ['quarters', 'analytics', 'budget', 'books']],
                 'spending' => ['Spending', 'fa-wallet', ['approvals', 'payroll', 'staff']],
-                'fees' => ['Fees', 'fa-file-invoice-dollar', ['invoices', 'overdue', 'advance']],
+                'fees' => ['Fees', 'fa-file-invoice-dollar', ['invoices', 'overdue', 'advance', 'receipts', 'ledger']],
             ];
             $openGroup = collect($groups)->search(fn($g) => in_array($active, $g[2]));
             // School links keep the current page (and tab, added in the browser); only the school changes.
@@ -91,6 +91,8 @@
                 <a href="{{ route('accountant.management.invoices', $schoolQuery) }}" @if($active==='invoices') aria-current="page" @endif><span class="mgmt-ico rose"><i class="fa-solid fa-file-invoice"></i></span> Invoices</a>
                 <a href="{{ route('accountant.management.overdue', $schoolQuery) }}" @if($active==='overdue') aria-current="page" @endif><span class="mgmt-ico rose"><i class="fa-solid fa-triangle-exclamation"></i></span> Overdue fees</a>
                 <a href="{{ route('accountant.management.advance', $schoolQuery) }}" @if($active==='advance') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-piggy-bank"></i></span> Advance credit</a>
+                <a href="{{ route('accountant.management.receipts', $schoolQuery) }}" @if($active==='receipts') aria-current="page" @endif><span class="mgmt-ico teal"><i class="fa-solid fa-receipt"></i></span> Receipt check</a>
+                <a href="{{ route('accountant.management.bank-ledger', $schoolQuery) }}" @if($active==='ledger') aria-current="page" @endif><span class="mgmt-ico teal"><i class="fa-solid fa-book"></i></span> Bank ledger</a>
             </details>
 
             <a href="{{ $link('targets') }}" data-section="targets" @if($active==='targets') aria-current="page" @endif><span class="mgmt-ico slate"><i class="fa-solid fa-bullseye"></i></span> Accountant targets</a>
