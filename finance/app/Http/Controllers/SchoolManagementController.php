@@ -328,7 +328,10 @@ class SchoolManagementController extends Controller
                     'fees' => BookFeeCategory::where('book_id', $b->id)->where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()])->all();
             // Staff paid this month who are no longer active still appear in the history.
             $paidNames = $db->table('staff')->whereIn('id', $paid->keys())->pluck('name', 'id');
-            return compact('paid', 'staff', 'deductions', 'books', 'paidNames');
+            // Months of the year each staff member is already paid for (multi-month payments skip these).
+            $paidMonths = $db->table('payroll_entries')->where('year', $year)->get(['staff_id', 'month'])
+                ->groupBy('staff_id')->map(fn ($rows) => $rows->pluck('month')->map(fn ($m) => (int)$m)->unique()->values()->all())->all();
+            return compact('paid', 'staff', 'deductions', 'books', 'paidNames', 'paidMonths');
         });
         $payerNames = SchoolAccountant::whereIn('id', $data['paid']->pluck('created_by')->filter()->unique())->pluck('name', 'id');
         return view('admin.accountant.management.payroll', $data + compact('month', 'year', 'nav', 'payerNames') + ['school' => $selected, 'activeSection' => 'payroll']);
@@ -345,6 +348,7 @@ class SchoolManagementController extends Controller
         $manager = $this->access->manager($request->user());
         $base = $request->validate([
             'month' => 'required|integer|between:1,12', 'year' => 'required|integer|between:2000,2100',
+            'months' => 'nullable|array|max:12', 'months.*' => 'integer|between:1,12',
             'book_id' => 'required|integer', 'payment_date' => 'required|date_format:Y-m-d',
             'payment_method' => 'required|in:cash,bank_transfer,cheque,mobile_money',
             'book_fee_category_id' => 'nullable|integer', 'reference_number' => 'nullable|string|max:255',
@@ -354,42 +358,50 @@ class SchoolManagementController extends Controller
             'rows.*.deductions.*.type' => 'required|in:fixed,percentage,insurance,penalty,other',
             'rows.*.deductions.*.amount' => 'required|numeric|min:0', 'rows.*.deductions.*.deduction_type_id' => 'nullable|integer',
         ]);
-        $results = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($base, $grant) {
+        // Several months can be paid at once with the same amounts; months already paid are skipped per staff.
+        $months = collect($base['months'] ?? [$base['month']])->map(fn ($m) => (int)$m)->unique()->sort()->values()->all();
+        $results = app(TenantDatabaseManager::class)->executeForSchool($school, function () use ($base, $grant, $months) {
             abort_unless(Book::where('is_active', true)->whereKey($base['book_id'])->exists(), 422, 'Choose an active book of this school.');
             $out = [];
-            foreach (array_unique($base['selected']) as $staffId) {
-                $staff = DB::connection('tenant')->table('staff')->where('id', $staffId)->where('status', 'active')->first();
-                $row = $base['rows'][$staffId] ?? null;
-                if (!$staff || !$row) { $out[] = [false, "Staff #$staffId", 'not found or inactive']; continue; }
-                if (PayrollEntry::where('staff_id', $staffId)->where('month', $base['month'])->where('year', $base['year'])->exists()) {
-                    $out[] = [false, $staff->name, 'already paid for this month']; continue;
-                }
-                try {
-                    [$entry, $fee] = app(PayrollPaymentService::class)->pay([
-                        'staff_id' => $staffId, 'book_id' => $base['book_id'], 'month' => $base['month'], 'year' => $base['year'],
-                        'gross_salary' => $row['gross'], 'payment_date' => $base['payment_date'], 'payment_method' => $base['payment_method'],
-                        'reference_number' => $base['reference_number'] ?? null, 'notes' => 'Paid from the management portal',
-                        'deductions' => array_values($row['deductions'] ?? []), 'book_fee_category_id' => $base['book_fee_category_id'] ?? null,
-                    ], (int)$grant->school_accountant_id, true);
-                    $out[] = [true, $staff->name, (float)$entry->net_salary + (float)$fee];
-                } catch (\RuntimeException $e) {
-                    $out[] = [false, $staff->name, $e->getMessage()];
+            foreach ($months as $month) {
+                $label = date('M', mktime(0, 0, 0, $month, 1));
+                foreach (array_unique($base['selected']) as $staffId) {
+                    $staff = DB::connection('tenant')->table('staff')->where('id', $staffId)->where('status', 'active')->first();
+                    $row = $base['rows'][$staffId] ?? null;
+                    if (!$staff || !$row) { $out[] = [false, "Staff #$staffId", 'not found or inactive', $label]; continue; }
+                    if (PayrollEntry::where('staff_id', $staffId)->where('month', $month)->where('year', $base['year'])->exists()) {
+                        $out[] = [null, $staff->name, 'already paid', $label]; continue;
+                    }
+                    try {
+                        [$entry, $fee] = app(PayrollPaymentService::class)->pay([
+                            'staff_id' => $staffId, 'book_id' => $base['book_id'], 'month' => $month, 'year' => $base['year'],
+                            'gross_salary' => $row['gross'], 'payment_date' => $base['payment_date'], 'payment_method' => $base['payment_method'],
+                            'reference_number' => $base['reference_number'] ?? null, 'notes' => 'Paid from the management portal',
+                            'deductions' => array_values($row['deductions'] ?? []), 'book_fee_category_id' => $base['book_fee_category_id'] ?? null,
+                        ], (int)$grant->school_accountant_id, true);
+                        $out[] = [true, $staff->name, (float)$entry->net_salary + (float)$fee, $label];
+                    } catch (\RuntimeException $e) {
+                        $out[] = [false, $staff->name, $e->getMessage(), $label];
+                    }
                 }
             }
             return $out;
         });
-        $paid = array_filter($results, fn ($r) => $r[0]);
-        $failed = array_filter($results, fn ($r) => !$r[0]);
+        $paid = array_filter($results, fn ($r) => $r[0] === true);
+        $skipped = array_filter($results, fn ($r) => $r[0] === null);
+        $failed = array_filter($results, fn ($r) => $r[0] === false);
+        $monthNames = implode(', ', array_map(fn ($m) => date('M', mktime(0, 0, 0, $m, 1)), $months)).' '.$base['year'];
         if ($paid) {
             ActivityLog::create(['school_id' => $school->id, 'user_type' => 'accountant', 'user_id' => $manager->id, 'user_name' => $manager->name,
                 'action' => 'management_payroll_paid',
-                'description' => count($paid).' salary payment(s) for '.date('F Y', mktime(0, 0, 0, $base['month'], 1, $base['year'])).' from the management portal (TSh '
-                    .number_format(array_sum(array_column($paid, 2)), 2).'): '.implode(', ', array_column($paid, 1)).'.',
+                'description' => count($paid).' salary payment(s) for '.$monthNames.' from the management portal (TSh '
+                    .number_format(array_sum(array_column($paid, 2)), 2).'): '.implode(', ', array_map(fn ($r) => "{$r[1]} ({$r[3]})", $paid)).'.',
                 'ip_address' => $request->ip()]);
         }
         $redirect = redirect()->route('accountant.management.payroll', ['school' => $school->id, 'month' => $base['month'], 'year' => $base['year']])
-            ->with('success', count($paid).' salary payment(s) recorded, total TSh '.number_format(array_sum(array_column($paid, 2)), 0).' (net pay plus any transaction fees).');
-        return $failed ? $redirect->with('error', 'Not paid: '.implode('; ', array_map(fn ($r) => "{$r[1]}: {$r[2]}", $failed))) : $redirect;
+            ->with('success', count($paid).' salary payment(s) recorded for '.$monthNames.', total TSh '.number_format(array_sum(array_column($paid, 2)), 0).' (net pay plus any transaction fees).'
+                .($skipped ? ' '.count($skipped).' skipped because already paid.' : ''));
+        return $failed ? $redirect->with('error', 'Not paid: '.implode('; ', array_map(fn ($r) => "{$r[1]} ({$r[3]}): {$r[2]}", $failed))) : $redirect;
     }
 
     /** Fee statements (invoices) for one school, generated without switching accounts. */

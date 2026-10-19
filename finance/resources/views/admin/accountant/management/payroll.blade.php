@@ -40,11 +40,22 @@
     <form method="post" action="{{ route('accountant.management.payroll.pay', $school->id) }}" id="payroll-form" class="management-panel" data-select-group="payroll">
         @csrf
         <input type="hidden" name="month" value="{{ $month }}"><input type="hidden" name="year" value="{{ $year }}">
-        <h3>Salaries for {{ $period }}</h3>
-        <p class="management-muted" style="margin:6px 0 14px;">Saved salaries and deductions are filled in; change any amount for this month before paying. Percentage deductions are a percent of gross. Tick staff to see the totals.</p>
+        <h3>Salaries · {{ $year }}</h3>
+        <p class="management-muted" style="margin:6px 0 14px;">Saved salaries and deductions are filled in; change any amount before paying. Percentage deductions are a percent of gross. Tick the months and the staff to pay: each ticked staff member is paid the same amount for every ticked month they are not yet paid for; months already paid are skipped.</p>
+
+        <div class="management-months" role="group" aria-label="Months to pay">
+            <span class="management-muted" style="font-weight:600;">Months to pay</span>
+            @foreach(range(1, 12) as $m)
+                @php $paidAll = $staff->isNotEmpty() && $staff->every(fn($s) => in_array($m, $paidMonths[$s->id] ?? [])); @endphp
+                <label class="management-month @if($paidAll) is-paid @endif" title="{{ $paidAll ? 'All staff paid' : date('F', mktime(0, 0, 0, $m, 1)) }}">
+                    <input type="checkbox" name="months[]" value="{{ $m }}" data-month @checked($m === $month) @disabled($paidAll)>
+                    <span>{{ date('M', mktime(0, 0, 0, $m, 1)) }}@if($paidAll) ✓@endif</span>
+                </label>
+            @endforeach
+        </div>
 
         <div class="management-bulk">
-            <div class="management-bulk-total"><span class="management-muted">Selected</span><strong><span data-sel-count>0</span> staff · net TSh <span data-sel-net>0</span></strong><span class="management-muted">gross TSh <span data-sel-gross>0</span> · deductions TSh <span data-sel-ded>0</span></span></div>
+            <div class="management-bulk-total"><span class="management-muted">Selected</span><strong><span data-sel-count>0</span> payment(s) · net TSh <span data-sel-net>0</span></strong><span class="management-muted"><span data-sel-staff>0</span> staff × <span data-sel-months>0</span> month(s) · gross TSh <span data-sel-gross>0</span> · deductions TSh <span data-sel-ded>0</span></span></div>
             <label>Pay from
                 <select name="book_id" id="payroll-book" required>
                     @php $richest = collect($books)->sortByDesc('balance')->first()['id'] ?? null; @endphp
@@ -60,19 +71,13 @@
         <p class="management-notice" id="payroll-balance-warning" hidden>The selected net pay is more than this book's balance. Payments are made one by one and stop being accepted once the book runs out; choose another book or fewer staff.</p>
 
         <div class="management-scroll"><table class="management-table" id="payroll-table" style="min-width:900px;">
-            <thead><tr><th style="width:36px;"><input type="checkbox" data-select-all aria-label="Select all unpaid staff" @disabled($unpaid->isEmpty())></th><th>Staff</th><th class="number">Gross (TSh)</th><th>Deductions</th><th class="number">Net pay (TSh)</th><th>Status</th></tr></thead>
+            <thead><tr><th style="width:36px;"><input type="checkbox" data-select-all aria-label="Select all staff"></th><th>Staff</th><th class="number">Gross (TSh)</th><th>Deductions</th><th class="number">Net pay (TSh)</th><th>Paid in {{ $year }}</th></tr></thead>
             <tbody>
             @foreach($staff as $s)
-                @php $entry = $paid->get($s->id); $deds = $deductions->get($s->id, collect()); @endphp
-                <tr data-row @if($entry) data-paid @endif>
-                    <td>@unless($entry)<input type="checkbox" data-select-item name="selected[]" value="{{ $s->id }}" aria-label="Select {{ $s->name }}">@endunless</td>
+                @php $deds = $deductions->get($s->id, collect()); $doneMonths = $paidMonths[$s->id] ?? []; sort($doneMonths); @endphp
+                <tr data-row data-paid-months="{{ implode(',', $doneMonths) }}">
+                    <td><input type="checkbox" data-select-item name="selected[]" value="{{ $s->id }}" aria-label="Select {{ $s->name }}"></td>
                     <td><strong>{{ $s->name }}</strong><div class="management-muted">{{ $s->position }}@if($s->bank_account) · {{ $s->bank_name }} {{ $s->bank_account }}@endif</div></td>
-                    @if($entry)
-                        <td class="number">{{ $money($entry->gross_salary) }}</td>
-                        <td class="management-muted">TSh {{ $money($entry->total_deductions) }}</td>
-                        <td class="number"><strong>{{ $money($entry->net_salary) }}</strong></td>
-                        <td><span class="management-badge" style="background:#dcfce7;color:#166534;">Paid</span><div class="management-muted">{{ \Carbon\Carbon::parse($entry->payment_date)->format('d M Y') }}</div></td>
-                    @else
                         <td class="number"><input type="number" name="rows[{{ $s->id }}][gross]" value="{{ (float)$s->monthly_salary }}" min="0" step="1" data-gross style="width:120px;border:1px solid #cbd5e1;border-radius:6px;padding:5px;text-align:right;"></td>
                         <td>
                             @forelse($deds as $i => $d)
@@ -90,8 +95,7 @@
                             @endforelse
                         </td>
                         <td class="number"><strong data-net>0</strong></td>
-                        <td><span class="management-badge" style="background:#fef3c7;color:#92400e;">Not paid</span></td>
-                    @endif
+                        <td>@forelse($doneMonths as $m)<span class="management-badge" style="background:#dcfce7;color:#166534;margin:0 3px 3px 0;">{{ date('M', mktime(0, 0, 0, $m, 1)) }}</span>@empty<span class="management-badge" style="background:#fef3c7;color:#92400e;">None yet</span>@endforelse</td>
                 </tr>
             @endforeach
             </tbody>
@@ -146,12 +150,20 @@
         return {gross, ded, net};
     }
     function update() {
-        let count = 0, gross = 0, ded = 0, net = 0;
-        form.querySelectorAll('tr[data-row]:not([data-paid])').forEach(row => {
+        const months = [...form.querySelectorAll('[data-month]:checked')].map(m => +m.value);
+        let count = 0, people = 0, gross = 0, ded = 0, net = 0;
+        form.querySelectorAll('tr[data-row]').forEach(row => {
             const f = rowFigures(row);
-            if (row.querySelector('[data-select-item]').checked) { count++; gross += f.gross; ded += f.ded; net += f.net; }
+            if (!row.querySelector('[data-select-item]').checked) return;
+            people++;
+            // Months this person is already paid for are skipped, so they do not count.
+            const done = (row.dataset.paidMonths || '').split(',').filter(Boolean).map(Number);
+            const due = months.filter(m => !done.includes(m)).length;
+            count += due; gross += f.gross * due; ded += f.ded * due; net += f.net * due;
         });
         form.querySelector('[data-sel-count]').textContent = count;
+        form.querySelector('[data-sel-staff]').textContent = people;
+        form.querySelector('[data-sel-months]').textContent = months.length;
         form.querySelector('[data-sel-net]').textContent = fmt(net);
         form.querySelector('[data-sel-gross]').textContent = fmt(gross);
         form.querySelector('[data-sel-ded]').textContent = fmt(ded);
@@ -160,7 +172,7 @@
         document.getElementById('payroll-balance-warning').hidden = net <= balance;
         const items = [...form.querySelectorAll('[data-select-item]')], all = form.querySelector('[data-select-all]');
         if (all) { all.checked = items.length > 0 && items.every(i => i.checked); all.indeterminate = !all.checked && items.some(i => i.checked); }
-        return {count, net};
+        return {count, net, months};
     }
     form.addEventListener('input', update);
     form.addEventListener('change', e => {
@@ -169,8 +181,9 @@
         update();
     });
     form.addEventListener('submit', e => {
-        const {count, net} = update();
-        if (!form.reportValidity() || !window.confirm(`Pay ${count} staff a total net of TSh ${fmt(net)} from ${book.selectedOptions[0].text.split(' · ')[0]}?`)) { e.preventDefault(); return; }
+        const {count, net, months} = update();
+        const names = months.map(m => new Date(2000, m - 1, 1).toLocaleString('en', {month: 'short'})).join(', ');
+        if (!form.reportValidity() || !window.confirm(`Make ${count} salary payment(s) for ${names} {{ $year }}, total net TSh ${fmt(net)}, from ${book.selectedOptions[0].text.split(' · ')[0]}?\n\nMonths already paid are skipped.`)) { e.preventDefault(); return; }
         document.getElementById('payroll-pay').disabled = true;
     });
     fillFees(); update();
