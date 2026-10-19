@@ -149,18 +149,9 @@ class SmsController extends Controller
         $school = $creditCheck['school'];
 
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiToken,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->post($this->apiUrl . '/api/sms/v2/text/single', [
-                'from' => $this->senderName,
-                'to' => $recipient,
-                'text' => $log->message,
-            ]);
-
-            $responseData = $response->json();
-            $newMessageId = $responseData['messages'][0]['messageId'] ?? null;
+            $response = app(\App\Services\SmsGateway::class)->send($school, $recipient, $log->message);
+            $responseData = $response->raw;
+            $newMessageId = $response->messageId;
 
             SmsLog::create([
                 'student_id' => $log->student_id,
@@ -171,14 +162,16 @@ class SmsController extends Controller
                 'reference' => 'resend_of_' . $log->id,
                 'status' => $response->successful() ? 'sent' : 'failed',
                 'status_code' => $response->status(),
-                'status_description' => $responseData['messages'][0]['status']['description'] ?? 'Unknown',
+                'status_description' => $response->description,
                 'sent_at' => now(),
                 'sms_count' => $smsCount,
             ]);
 
             if ($response->successful()) {
                 if ($school) {
-                    $school->deductSmsCredits($smsCount);
+                    if (! $response->ownGateway) {
+                        $school->deductSmsCredits($smsCount);
+                    }
                     $this->recordDeliveryIndex($newMessageId, $school->id);
                 }
 
@@ -316,6 +309,21 @@ class SmsController extends Controller
                 ]);
             }
 
+            // Own gateway (e.g. Onfon): the balance is the school's own wallet.
+            $gateway = app(\App\Services\SmsGateway::class)->gatewayFor($school);
+            if ($gateway) {
+                $balance = app(\App\Services\SmsGateway::class)->onfonBalance($gateway->client_id, $gateway->api_key);
+                return response()->json([
+                    'assigned' => null,
+                    'used' => (int) SmsLog::whereIn('status', ['sent', 'delivered'])->where('created_at', '>=', now()->startOfMonth())->sum('sms_count'),
+                    'remaining' => $balance['ok'] ? (int) preg_replace('/[^0-9]/', '', explode('.', (string) $balance['credits'])[0]) : 0,
+                    'school_name' => $school->name,
+                    'school_id' => $school->id,
+                    'gateway' => 'Own SMS account · sender '.$gateway->sender_id,
+                    'gateway_error' => $balance['error'],
+                ]);
+            }
+
             return response()->json([
                 'assigned' => $school->sms_credits_assigned ?? 0,
                 'used' => $school->sms_credits_used ?? 0,
@@ -376,11 +384,16 @@ class SmsController extends Controller
         }
 
         if (!$school) {
-            return ['allowed' => true, 'school' => null, 'message' => 'School not identified - SMS credits not tracked'];
+            return ['allowed' => true, 'school' => null, 'own_gateway' => false, 'message' => 'School not identified - SMS credits not tracked'];
         }
 
         // Refresh school data from central database
         $school = School::on('central')->find($school->id);
+
+        // A school with its own SMS gateway pays from its own wallet, not Darasa SMS credits.
+        if (app(\App\Services\SmsGateway::class)->usesOwnGateway($school)) {
+            return ['allowed' => true, 'school' => $school, 'own_gateway' => true];
+        }
 
         if (!$school->hasSmsCredits($requiredCount)) {
             return [
@@ -389,7 +402,7 @@ class SmsController extends Controller
             ];
         }
 
-        return ['allowed' => true, 'school' => $school];
+        return ['allowed' => true, 'school' => $school, 'own_gateway' => false];
     }
 
     /**
@@ -524,17 +537,8 @@ class SmsController extends Controller
         // in separate try blocks so a log-write failure can never turn an
         // actually-sent message into a reported failure.
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiToken,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->post($this->apiUrl . '/api/sms/v2/text/single', [
-                'from' => $this->senderName,
-                'to' => $validated['recipient_phone'],
-                'text' => $validated['message'],
-            ]);
-
-            $responseData = $response->json();
+            $response = app(\App\Services\SmsGateway::class)->send($school, $validated['recipient_phone'], $validated['message']);
+            $responseData = $response->raw;
         } catch (\Exception $e) {
             \App\Models\Central\AppErrorLog::record($school?->id, 'sms.single_send.gateway_failed', $e, [
                 'recipient_phone' => $validated['recipient_phone'],
@@ -552,10 +556,10 @@ class SmsController extends Controller
                 'sent_by' => auth()->id(),
                 'recipient_phone' => $validated['recipient_phone'],
                 'message' => $validated['message'],
-                'message_id' => $responseData['messages'][0]['messageId'] ?? null,
+                'message_id' => $response->messageId,
                 'status' => $response->successful() ? 'sent' : 'failed',
                 'status_code' => $response->status(),
-                'status_description' => $responseData['messages'][0]['status']['description'] ?? 'Unknown',
+                'status_description' => $response->description,
                 'sent_at' => now(),
                 'sms_count' => $smsCount,
             ]);
@@ -568,8 +572,10 @@ class SmsController extends Controller
 
         if ($response->successful()) {
             if ($school) {
-                $school->deductSmsCredits($smsCount);
-                $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
+                if (! $response->ownGateway) {
+                        $school->deductSmsCredits($smsCount);
+                    }
+                $this->recordDeliveryIndex($response->messageId, $school->id);
             }
 
             return response()->json([
@@ -707,7 +713,7 @@ class SmsController extends Controller
 
             foreach ($phoneNumbers as $phone) {
                 // Check remaining credits before each send (only when school is tracked)
-                if ($school && !$school->fresh()->hasSmsCredits($smsCount)) {
+                if ($school && ! $creditCheck['own_gateway'] && !$school->fresh()->hasSmsCredits($smsCount)) {
                     $failed++;
                     $errors[] = "{$student->name}: Insufficient SMS credits";
                     continue;
@@ -721,17 +727,8 @@ class SmsController extends Controller
                 // duplicate send every time the accountant retried, with no
                 // credit deducted and no record kept either time.
                 try {
-                    $response = Http::withHeaders([
-                        'Authorization' => 'Bearer ' . $this->apiToken,
-                        'Content-Type' => 'application/json',
-                        'Accept' => 'application/json',
-                    ])->post($this->apiUrl . '/api/sms/v2/text/single', [
-                        'from' => $this->senderName,
-                        'to' => $phone,
-                        'text' => $personalizedMessage,
-                    ]);
-
-                    $responseData = $response->json();
+                    $response = app(\App\Services\SmsGateway::class)->send($school, $phone, $personalizedMessage);
+            $responseData = $response->raw;
                 } catch (\Exception $e) {
                     $failed++;
                     $errors[] = $this->sendFailureMessage($student->name);
@@ -748,10 +745,10 @@ class SmsController extends Controller
                         'sent_by' => auth()->id(),
                         'recipient_phone' => $phone,
                         'message' => $personalizedMessage,
-                        'message_id' => $responseData['messages'][0]['messageId'] ?? null,
+                        'message_id' => $response->messageId,
                         'status' => $response->successful() ? 'sent' : 'failed',
                         'status_code' => $response->status(),
-                        'status_description' => $responseData['messages'][0]['status']['description'] ?? 'Unknown',
+                        'status_description' => $response->description,
                         'sent_at' => now(),
                         'sms_count' => $smsCount,
                     ]);
@@ -769,8 +766,10 @@ class SmsController extends Controller
 
                 if ($response->successful()) {
                     if ($school) {
+                        if (! $response->ownGateway) {
                         $school->deductSmsCredits($smsCount);
-                        $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
+                    }
+                        $this->recordDeliveryIndex($response->messageId, $school->id);
                     }
                     $totalSmsUsed += $smsCount;
                     $sent++;
@@ -883,6 +882,11 @@ class SmsController extends Controller
 
     public function checkBalance()
     {
+        $gateway = app(\App\Services\SmsGateway::class)->gatewayFor($this->getCurrentSchool());
+        if ($gateway) {
+            return response()->json(app(\App\Services\SmsGateway::class)->onfonBalance($gateway->client_id, $gateway->api_key));
+        }
+
         try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiToken,
@@ -1132,7 +1136,7 @@ class SmsController extends Controller
                 $smsCount = $this->calculateSmsCount($message);
 
                 // Check credits before each send (only when school is tracked)
-                if ($school && !$school->fresh()->hasSmsCredits($smsCount)) {
+                if ($school && ! $creditCheck['own_gateway'] && !$school->fresh()->hasSmsCredits($smsCount)) {
                     $failed++;
                     continue;
                 }
@@ -1142,17 +1146,8 @@ class SmsController extends Controller
                 // failure can never turn an actually-sent message into a
                 // reported "failure".
                 try {
-                    $response = Http::withHeaders([
-                        'Authorization' => 'Bearer ' . $this->apiToken,
-                        'Content-Type' => 'application/json',
-                        'Accept' => 'application/json',
-                    ])->post($this->apiUrl . '/api/sms/v2/text/single', [
-                        'from' => $this->senderName,
-                        'to' => $student->parent_phone_1,
-                        'text' => $message,
-                    ]);
-
-                    $responseData = $response->json();
+                    $response = app(\App\Services\SmsGateway::class)->send($school, $student->parent_phone_1, $message);
+            $responseData = $response->raw;
                 } catch (\Exception $e) {
                     $failed++;
                     \App\Models\Central\AppErrorLog::record($school?->id, 'sms.overdue_reminders.gateway_failed', $e, [
@@ -1167,10 +1162,10 @@ class SmsController extends Controller
                         'sent_by' => auth()->id(),
                         'recipient_phone' => $student->parent_phone_1,
                         'message' => $message,
-                        'message_id' => $responseData['messages'][0]['messageId'] ?? null,
+                        'message_id' => $response->messageId,
                         'status' => $response->successful() ? 'sent' : 'failed',
                         'status_code' => $response->status(),
-                        'status_description' => $responseData['messages'][0]['status']['description'] ?? 'Unknown',
+                        'status_description' => $response->description,
                         'sent_at' => now(),
                         'sms_count' => $smsCount,
                     ]);
@@ -1183,8 +1178,10 @@ class SmsController extends Controller
 
                 if ($response->successful()) {
                     if ($school) {
+                        if (! $response->ownGateway) {
                         $school->deductSmsCredits($smsCount);
-                        $this->recordDeliveryIndex($responseData['messages'][0]['messageId'] ?? null, $school->id);
+                    }
+                        $this->recordDeliveryIndex($response->messageId, $school->id);
                     }
                     $totalSmsUsed += $smsCount;
                     $sent++;

@@ -830,6 +830,11 @@ let selectedStudents = [];
                 document.getElementById('sms-used').textContent = formatNumber(data.used || 0);
                 document.getElementById('sms-remaining').textContent = formatNumber(data.remaining || 0);
                 document.getElementById('sms-school').textContent = data.school_name || (data.message ? 'Not linked' : 'Unknown');
+                if (data.gateway) {
+                    // Own SMS account: "Assigned" shows the account, "Used" is this month, "Remaining" is the wallet.
+                    document.getElementById('sms-assigned').textContent = data.gateway_error ? 'Account error' : 'Own account';
+                    document.getElementById('sms-assigned').title = data.gateway_error || data.gateway;
+                }
 
                 // Log debug info to console for troubleshooting
                 if (data.debug) {

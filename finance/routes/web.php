@@ -52,6 +52,7 @@ Route::post('/api/bank-webhook', [BankAPIController::class, 'webhook'])->name('a
 // Public SMS delivery-callback webhook (no auth - called by the NextSMS gateway;
 // verified via a shared token instead, see SmsController::deliveryCallback)
 Route::post('/api/sms/delivery-callback', [SmsController::class, 'deliveryCallback'])->name('api.sms.delivery-callback');
+Route::get('/api/sms/onfon-dlr/{token}', [\App\Http\Controllers\SmsCampaignController::class, 'onfonDelivery'])->name('api.sms.onfon-dlr');
 
 // Parent SMS/WhatsApp messenger (connect school office number via Twilio/Meta → this endpoint)
 Route::post('/api/messenger/parent', [ParentMessengerController::class, 'handle'])->name('api.messenger.parent');
@@ -99,6 +100,15 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::post('/school-management/staff',[\App\Http\Controllers\SchoolManagementController::class, 'registerStaff'])->name('management.staff.register');
         Route::post('/school-management/staff/update', [\App\Http\Controllers\SchoolManagementController::class, 'updateStaff'])->name('management.staff.update');
         Route::post('/school-management/staff/move',[\App\Http\Controllers\SchoolManagementController::class, 'moveStaff'])->name('management.staff.move');
+        Route::get('/school-management/sms', [\App\Http\Controllers\SmsCampaignController::class, 'index'])->name('management.sms');
+        Route::get('/school-management/sms/setup', [\App\Http\Controllers\SmsCampaignController::class, 'setup'])->name('management.sms.setup');
+        Route::post('/school-management/sms/setup', [\App\Http\Controllers\SmsCampaignController::class, 'saveSetup'])->name('management.sms.setup.save');
+        Route::post('/school-management/sms/setup/{schoolId}/test', [\App\Http\Controllers\SmsCampaignController::class, 'testSetup'])->whereNumber('schoolId')->name('management.sms.setup.test');
+        Route::post('/school-management/sms/lists', [\App\Http\Controllers\SmsCampaignController::class, 'storeList'])->name('management.sms.lists.store');
+        Route::post('/school-management/sms/contacts/{contactId}/toggle', [\App\Http\Controllers\SmsCampaignController::class, 'toggleContact'])->whereNumber('contactId')->name('management.sms.contacts.toggle');
+        Route::post('/school-management/sms/preview', [\App\Http\Controllers\SmsCampaignController::class, 'preview'])->name('management.sms.preview');
+        Route::post('/school-management/sms/send', [\App\Http\Controllers\SmsCampaignController::class, 'send'])->name('management.sms.send');
+        Route::get('/school-management/sms/campaigns/{campaignId}', [\App\Http\Controllers\SmsCampaignController::class, 'campaign'])->whereNumber('campaignId')->name('management.sms.campaign');
         Route::get('/school-management/receipts', [\App\Http\Controllers\ReceiptCheckController::class, 'index'])->name('management.receipts');
         Route::post('/school-management/receipts/confirm', [\App\Http\Controllers\ReceiptCheckController::class, 'confirm'])->name('management.receipts.confirm');
         Route::post('/school-management/receipts/{groupId}/undo', [\App\Http\Controllers\ReceiptCheckController::class, 'undo'])->whereNumber('groupId')->name('management.receipts.undo');

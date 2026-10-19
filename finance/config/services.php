@@ -45,4 +45,10 @@ return [
         'secret' => env('INTERNAL_API_SECRET'),
     ],
 
+    // SMS_FAKE_SEND=true on test copies: messages are recorded as sent without contacting any gateway.
+    'sms' => [
+        'fake_send' => (bool) env('SMS_FAKE_SEND', false),
+        'onfon_dlr_token' => env('SMS_ONFON_DLR_TOKEN'),
+    ],
+
 ];
