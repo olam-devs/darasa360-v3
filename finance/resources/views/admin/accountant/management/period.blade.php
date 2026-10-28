@@ -15,7 +15,7 @@
     <label data-custom-dates @if($periodMode!=='custom') hidden @endif>To <input type="date" name="to" value="{{ $to }}" @disabled($periodMode!=='custom') required></label>
     <button class="management-primary" type="submit">Apply</button>
     @php([$nowYear, $nowQuarter] = \App\Services\ManagementQuarterAnalytics::quarterOf(now('Africa/Dar_es_Salaam')))
-    <a href="{{ route('accountant.management',array_filter(['year'=>$nowYear,'quarter'=>$nowQuarter,'school'=>$selectedSchool?->id ?? null])) }}">Current quarter</a>
+    <a href="{{ url()->current().'?'.http_build_query(array_filter(['year'=>$nowYear,'quarter'=>$nowQuarter,'school'=>$selectedSchool?->id ?? null, 'account'=>request('account'), 'student'=>request('student')])) }}">Current quarter</a>
 </form>
 <p class="management-muted">Showing <strong>{{ $periodLabel }}</strong> ({{ $from }} – {{ $to }}) for cash flow, books and targets; fee figures cover <strong>{{ $qLabel }} {{ $year }}</strong> by each fee's assigned quarter. Ticked quarters form one span: ticking Q1 and Q3 also includes Q2.</p>
 <script>

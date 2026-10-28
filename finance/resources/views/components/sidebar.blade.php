@@ -40,13 +40,15 @@
                 <button type="button" onclick="toggleCategory('finance')"
                         class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-semibold text-slate-900 hover:bg-blue-50/90 transition">
                     <span>Finance</span>
-                    <svg class="w-4 h-4 transform transition-transform {{ request()->routeIs('accountant.fee-entry', 'accountant.ledgers', 'accountant.particular-ledger', 'accountant.overdue', 'accountant.suspense', 'accountant.advance-payments', 'accountant.reconciliation') ? 'rotate-180' : '' }}" id="finance-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 transform transition-transform {{ request()->routeIs('accountant.fee-entry', 'accountant.ledgers', 'accountant.particular-ledger', 'accountant.overdue', 'accountant.suspense', 'accountant.advance-payments', 'accountant.reconciliation', 'accountant.receipt-check', 'accountant.bank-ledger') ? 'rotate-180' : '' }}" id="finance-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </button>
-                <div id="finance-submenu" class="ml-3 mt-1 space-y-1 {{ request()->routeIs('accountant.fee-entry', 'accountant.ledgers', 'accountant.particular-ledger', 'accountant.overdue', 'accountant.suspense', 'accountant.advance-payments', 'accountant.reconciliation') ? '' : 'hidden' }}">
+                <div id="finance-submenu" class="ml-3 mt-1 space-y-1 {{ request()->routeIs('accountant.fee-entry', 'accountant.ledgers', 'accountant.particular-ledger', 'accountant.overdue', 'accountant.suspense', 'accountant.advance-payments', 'accountant.reconciliation', 'accountant.receipt-check', 'accountant.bank-ledger') ? '' : 'hidden' }}">
                     <a href="{{ route('accountant.fee-entry') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.fee-entry') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Fee Entry</a>
                     <a href="{{ route('accountant.ledgers') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.ledgers') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Ledgers</a>
+                    <a href="{{ route('accountant.receipt-check') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.receipt-check') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Receipt Check</a>
+                    <a href="{{ route('accountant.bank-ledger') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.bank-ledger') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Bank Ledger</a>
                     @if(auth()->user() && auth()->user()->can_edit_history)
                     <a href="{{ route('accountant.reconciliation') }}" class="block rounded-md px-3 py-2 text-sm transition {{ request()->routeIs('accountant.reconciliation') ? 'bg-blue-600 text-white shadow-sm shadow-blue-900/15' : 'text-slate-700 hover:bg-blue-50/90' }}">Reconciliation</a>
                     @endif

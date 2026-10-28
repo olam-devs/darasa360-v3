@@ -113,6 +113,12 @@ Route::middleware(['auth', 'verified', 'tenant.context'])->group(function () {
         Route::post('/school-management/receipts/confirm', [\App\Http\Controllers\ReceiptCheckController::class, 'confirm'])->name('management.receipts.confirm');
         Route::post('/school-management/receipts/{groupId}/undo', [\App\Http\Controllers\ReceiptCheckController::class, 'undo'])->whereNumber('groupId')->name('management.receipts.undo');
         Route::get('/school-management/bank-ledger', [\App\Http\Controllers\ReceiptCheckController::class, 'ledger'])->name('management.bank-ledger');
+        Route::post('/school-management/receipts/{groupId}/update', [\App\Http\Controllers\ReceiptCheckController::class, 'update'])->whereNumber('groupId')->name('management.receipts.update');
+        Route::get('/receipt-check', [\App\Http\Controllers\AccountantReceiptController::class, 'index'])->name('receipt-check');
+        Route::post('/receipt-check/confirm', [\App\Http\Controllers\AccountantReceiptController::class, 'confirm'])->name('receipt-check.confirm');
+        Route::post('/receipt-check/{groupId}/update', [\App\Http\Controllers\AccountantReceiptController::class, 'update'])->whereNumber('groupId')->name('receipt-check.update');
+        Route::post('/receipt-check/{groupId}/undo', [\App\Http\Controllers\AccountantReceiptController::class, 'undo'])->whereNumber('groupId')->name('receipt-check.undo');
+        Route::get('/bank-ledger', [\App\Http\Controllers\AccountantReceiptController::class, 'ledger'])->name('bank-ledger');
         Route::get('/school-management/overdue',[\App\Http\Controllers\SchoolManagementController::class, 'overdue'])->name('management.overdue');
         Route::get('/school-management/advance', [\App\Http\Controllers\SchoolManagementController::class, 'advance'])->name('management.advance');
         Route::get('/school-management/invoices/bundle', [\App\Http\Controllers\SchoolManagementController::class, 'downloadInvoiceBundle'])->name('management.invoices.bundle');
