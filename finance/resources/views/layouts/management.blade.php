@@ -66,7 +66,8 @@
             // School links keep the current page (and tab, added in the browser); only the school changes.
             $onReview = request()->routeIs('accountant.management.expense');
             $schoolUrl = fn($id) => $onReview ? route('accountant.management', array_filter(['school' => $id])).'#approvals'
-                : ($id ? request()->fullUrlWithQuery(['school' => $id]) : request()->fullUrlWithoutQuery(['school']));
+                // A student, search or contact list belongs to one school, so it is dropped when switching.
+                : url()->current().'?'.http_build_query(array_filter(request()->except(['school', 'student', 'q', 'list']) + ['school' => $id]));
         @endphp
         <nav class="mgmt-nav mt-3" aria-label="School management">
             <a href="{{ $link('overview') }}" data-section="overview" @if($active==='overview') aria-current="page" @endif><span class="mgmt-ico green"><i class="fa-solid fa-chart-pie"></i></span> Overview</a>

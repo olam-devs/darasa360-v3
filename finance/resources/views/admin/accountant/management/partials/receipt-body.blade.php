@@ -120,16 +120,21 @@
                 <td>{{ $g->reference ?: '—' }}</td>
                 <td class="number"><strong>{{ $money($g->total) }}</strong></td>
                 <td style="white-space:nowrap;">
-                    <details class="receipt-edit"><summary class="management-chip-button">Edit</summary>
-                        <form method="post" action="{{ $routes['update']($g->id) }}">
-                            @csrf<input type="hidden" name="school_id" value="{{ $g->school_id }}">
-                            <label>Bank date<input type="date" name="receipt_date" value="{{ $g->receipt_date }}" required></label>
-                            <label>Reference<input type="text" name="reference" value="{{ $g->reference }}" maxlength="120"></label>
-                            <label>Note<input type="text" name="note" value="{{ $g->note }}" maxlength="500"></label>
-                            <button type="submit" class="management-primary">Save</button>
-                        </form>
-                    </details>
+                    <button type="button" class="management-chip-button" data-edit-toggle>Edit</button>
                     <form method="post" action="{{ $routes['undo']($g->id) }}" style="display:inline;" onsubmit="return confirm('Undo this confirmed receipt? Its entries go back to the list.');">@csrf<input type="hidden" name="school_id" value="{{ $g->school_id }}"><button type="submit" class="management-chip-button">Undo</button></form>
+                </td>
+            </tr>
+            <tr class="receipt-edit-row" hidden>
+                <td colspan="8">
+                    <form method="post" action="{{ $routes['update']($g->id) }}" class="receipt-edit">
+                        @csrf<input type="hidden" name="school_id" value="{{ $g->school_id }}">
+                        <strong style="align-self:center;">Change this receipt:</strong>
+                        <label>Bank date<input type="date" name="receipt_date" value="{{ $g->receipt_date }}" required></label>
+                        <label>Bank reference<input type="text" name="reference" value="{{ $g->reference }}" maxlength="120"></label>
+                        <label style="flex:1;min-width:180px;">Note<input type="text" name="note" value="{{ $g->note }}" maxlength="500"></label>
+                        <button type="submit" class="management-primary">Save</button>
+                        <button type="button" class="management-chip-button" data-edit-toggle>Cancel</button>
+                    </form>
                 </td>
             </tr>
         @empty
@@ -147,10 +152,9 @@
     .receipt-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-top:10px; }
     .receipt-actions label, .receipt-edit label { display:flex; flex-direction:column; gap:4px; font-size:12px; font-weight:600; color:#475569; }
     .receipt-actions input, .receipt-edit input { border:1px solid #cbd5e1; border-radius:7px; padding:7px 10px; font-size:14px; font-weight:400; color:#0f172a; }
-    .receipt-edit { display:inline-block; margin-right:6px; }
-    .receipt-edit summary { list-style:none; cursor:pointer; display:inline-block; }
-    .receipt-edit summary::-webkit-details-marker { display:none; }
-    .receipt-edit[open] form { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-top:8px; padding:10px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; }
+    .receipt-edit { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; padding:12px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; }
+    .receipt-edit-row td { background:#fff; }
+    [data-confirm]:disabled { opacity:.4; cursor:not-allowed; }
 </style>
 @push('scripts')
 <script>
@@ -172,6 +176,11 @@
         boxes.forEach(b => b.addEventListener('change', update));
         update();
     });
+    // Edit opens the change form on its own full-width row under the receipt.
+    document.querySelectorAll('[data-edit-toggle]').forEach(btn => btn.addEventListener('click', () => {
+        const row = btn.closest('tr').classList.contains('receipt-edit-row') ? btn.closest('tr') : btn.closest('tr').nextElementSibling;
+        row.hidden = !row.hidden;
+    }));
 })();
 </script>
 @endpush
