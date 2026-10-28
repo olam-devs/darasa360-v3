@@ -10,8 +10,8 @@ use Illuminate\Http\Request;
 /**
  * Receipt check and bank ledger for a school's own accountants: check fee entries against the physical
  * receipts and bank slips, merge entries that were one payment, set the real bank date and reference.
- * The bank ledger of an account shared with the school's sister schools (same manager, same account
- * number) covers all of them.
+ * Their bank ledger shows only their own school; the combined ledger of accounts shared by several
+ * schools is in the management portal.
  */
 class AccountantReceiptController extends SchoolManagementController
 {
@@ -74,9 +74,8 @@ class AccountantReceiptController extends SchoolManagementController
         $school = $this->school($request);
         $period = $this->period($request);
         $request->validate(['account' => ['nullable', 'regex:/^(account:[0-9A-Za-z]+|book:\d+:\d+)$/'], 'download' => 'nullable|in:csv']);
-        // This school's accounts; an account number shared with sister schools covers all of them.
-        $all = $this->service()->accountChoices($this->access->linkedSchools($school->id));
-        $choices = array_filter($all, fn ($c) => in_array($school->id, $c['schools']));
+        // Only this school's own movements; the combined ledger of shared accounts is for the manager (owner).
+        $choices = $this->service()->accountChoices(collect([$school]));
         $account = $request->input('account');
         if (!$account || !isset($choices[$account])) {
             $account = array_key_first(array_filter($choices, fn ($c) => str_starts_with($c['value'], 'account:'))) ?? array_key_first($choices);

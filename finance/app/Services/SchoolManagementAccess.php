@@ -53,20 +53,4 @@ class SchoolManagementAccess
         return School::findOrFail($schoolId);
     }
 
-    /**
-     * Schools managed together with this one (same manager in school_management_access), including itself.
-     * Used where schools share bank accounts, so an account's ledger covers all of them.
-     */
-    public function linkedSchools(int $schoolId): Collection
-    {
-        $ids = collect([$schoolId]);
-        if (Schema::connection('central')->hasTable('school_management_access')) {
-            $managers = DB::connection('central')->table('school_management_access')->where('school_id', $schoolId)->pluck('manager_accountant_id');
-            foreach ($managers as $m) {
-                $manager = SchoolAccountant::find($m);
-                if ($manager) $ids = $ids->merge($this->directGrants($manager)->pluck('school_id'));
-            }
-        }
-        return School::whereIn('id', $ids->unique())->where('is_active', true)->orderBy('name')->get();
-    }
 }
